@@ -1,0 +1,525 @@
+
+cameraSetting
+{
+    eye  -0.813158 5.627658 -7.363544
+    lookat -0.829789 5.576271 -7.279386   
+    geo_normal 1
+    fov 60
+}
+#material Floorboards
+#{
+  #color 0.2140345275402069 0.09112358093261719 0.052377521991729736
+   #roughness 0.1
+   #metallic 0.5
+  # specular 0.5
+ #  albedoTex house/textures/chair_wood.jpg
+#}
+
+material Floorboards
+{
+   color 0.2140345275402069 0.09112358093261719 0.052377521991729736
+   roughness 0.1
+   metallic 0.5
+   specular 0.5
+   albedoTex house/textures/chair_wood.jpg
+}
+
+material Black_Diffuse
+{
+   color 0.02365032024681568 0.02365032024681568 0.02365032024681568
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material Blue
+{
+   color 0.053333330899477005 0.138825461268425 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material BlueGlossy
+{
+   color 0.11753152310848236 0.19192995131015778 0.432563841342926
+   roughness 0.22360679507255554
+   metallic 0.5
+   specular 0.5
+}
+
+material BrassOld
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material BrickTextureBase
+{
+   color 0.800000011920929 0.662617027759552 0.6109861731529236
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/Chocofur_shaders_free_04_diff.jpg
+}
+
+material Brown
+{
+   color 0.33432266116142273 0.25537508726119995 0.189200296998024
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material Chrome.001
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.06324555277824402
+   metallic 1.0
+   specular 0.5
+}
+
+material DarkerGrey
+{
+   color 0.07948407530784607 0.08001118153333664 0.07895676791667938
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material DeckWoodBase
+{
+   color 0.28829526901245117 0.17620065808296204 0.12102562189102173
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/Wood.jpg
+}
+
+material DrivewayBase
+{
+   color 0.15743385255336761 0.15743385255336761 0.15743385255336761
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/5cceae599e438.jpg
+}
+
+material FenceWoodBase
+{
+   color 0.2529367208480835 0.20368874073028564 0.16991984844207764
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/QUARTERSAWNTEAK.jpg
+}
+
+
+material GarageDoorBase
+{
+   color 0.38437342643737793 0.28705593943595886 0.2303706258535385
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/chair_wood.jpg
+}
+
+material Glass
+{
+   color 0.8 0.8 0.8
+   roughness 0
+   metallic 0.0
+   specular 0.5
+   brdf 1
+}
+
+material Grey
+{
+   color 0.08001111447811127 0.08001111447811127 0.08001111447811127
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material GroundMaterial
+{
+   color 0.6618622541427612 0.6618622541427612 0.6618622541427612
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material Chrome
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0
+   metallic 1.0
+   specular 0.5
+}
+
+material OuterwallsBase
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   #albedoTex house/textures/preview_74114.jpg
+}
+
+material PaleYellow
+{
+   color 0.2738306522369385 0.25856298208236694 0.18313981592655182
+   roughness 0.22360679507255554
+   metallic 0.5
+   specular 0.5
+}
+
+material Pink
+{
+   color 0.800000011920929 0.662617027759552 0.6109861731529236
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material Red
+{
+   color 0.800000011920929 0.06190032884478569 0.03133363649249077
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material RoofTileBase
+{
+   color 0.15743385255336761 0.15743385255336761 0.15743385255336761
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/1-1PR0120602213_290_290.jpg
+}
+
+material ShowerFloorBase
+{
+   color 0.48689568042755127 0.2378351092338562 0.2130003422498703
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/5cceae599e438.jpg
+}
+
+material StainlessSteel
+{
+   color 0.008627166971564293 0.008627166971564293 0.008627166971564293
+   roughness 0.007745966449620311
+   metallic 0.09999999403953552
+   specular 0.5
+}
+
+material Step_Base
+{
+   color 0.21403411030769348 0.14269281923770905 0.1131376102566719
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/chair_wood.jpg
+}
+
+material TileBase
+{
+   color 0.48689568042755127 0.2378351092338562 0.2130003422498703
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex house/textures/Chocofur_shaders_free_04_bump.jpg
+}
+
+material WallMaterial
+{
+   color 0.3931131064891815 0.2951456308364868 0.21730758249759674
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material WhiteGlossy
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.22360679507255554
+   metallic 0.5
+   specular 0.5
+}
+
+material MirrorMaterial
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0
+   metallic 0.5
+   specular 0.5
+}
+
+material White_Diffuse
+{
+   color 0.688883364200592 0.6981925964355469 0.6981925964355469
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+material YellowDiffuse
+{
+   color 0.6981925964355469 0.6035653352737427 0.42661505937576294
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.obj
+ 
+    material RoofTileBase
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.001_uv.obj
+ 
+    material White_Diffuse
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.002.obj
+ 
+    material WhiteGlossy
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.003.obj
+ 
+    material Black_Diffuse
+}
+
+#mesh
+#{
+#    file house\geometry\Subsurfed_Porch.004.obj
+#    material Glass
+#}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.005.obj
+ 
+    material DarkerGrey
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.006.obj
+ 
+    material Chrome
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.007.obj
+ 
+    material DrivewayBase
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.008_uv.obj
+ 
+    material Pink
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.009.obj
+ 
+    material FenceWoodBase
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.010.obj
+ 
+    material BrickTextureBase
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.011.obj
+ 
+    material GarageDoorBase
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.012.obj 
+    material Brown
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.013.obj
+ 
+
+    material DeckWoodBase
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.014.obj
+ 
+
+    material GroundMaterial
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.015.obj
+ 
+
+    material Floorboards
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.016.obj
+ 
+
+    material Chrome.001
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.017.obj
+ 
+
+    material TileBase
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.018.obj
+ 
+
+    material Blue
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.019.obj
+
+ 
+
+    material Red
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.020.obj
+ 
+
+
+    material WallMaterial
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.021.obj
+ 
+
+    material Step_Base
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.022.obj
+ 
+
+    material MirrorMaterial
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.023.obj
+ 
+
+    material BlueGlossy
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.024.obj
+ 
+
+    material StainlessSteel
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.025.obj 
+
+    material Grey
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.026.obj 
+
+    material PaleYellow
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.027.obj 
+
+    material BrassOld
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.028.obj 
+
+    material YellowDiffuse
+}
+
+mesh
+{
+    file house\geometry\Subsurfed_Porch.029.obj
+ 
+
+    material ShowerFloorBase
+}
+
+
+
+
+
+        light
+        {
+            position 5.5 -1 7
+            v1 -24.5 -1 7
+            v2 5.5 11 7
+            emission 70 55 45
+            type Quad
+		divLevel 10
+        }
+        
+
+        light
+        {
+            position 5.5 1 7
+            v1 5.5 7 7
+            v2 5.5 1 -13
+            emission 70 55 45
+		divLevel 10
+            type Quad
+        }
