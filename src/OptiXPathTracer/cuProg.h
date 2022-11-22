@@ -732,6 +732,46 @@ RT_FUNCTION float lerp(const float &a, const float &b, const float t)
 }
 
 
+RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
+{
+    float3 N = normal;
+    float NDotL = dot(N, L);
+    float NDotV = dot(N, V);
+
+    if (NDotL == 0 || NDotV == 0) return make_float3(0);
+
+    float3 Cdlin = make_float3(mat.base_color);
+    float Cdlum = 0.3f * Cdlin.x + 0.6f * Cdlin.y + 0.1f * Cdlin.z; // luminance approx.
+    float3 Ctint = Cdlum > 0.0f ? Cdlin / Cdlum : make_float3(1.0f); // normalize lum. to isolate hue+sat
+    float3 Cspec0 = lerp(mat.specular * 0.08f * lerp(make_float3(1.0f), Ctint, mat.specularTint), Cdlin, mat.metallic);
+
+    // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
+    float mateta = 1.01f;
+    float eta = NDotV > 0 ? (mateta / 1.0f) : (1.0f / mateta);
+    float3 wh = normalize(V + L * eta);
+    if (dot(wh,N) < 0) wh = -wh;
+
+    // Same side?
+    if (dot(L, wh) * dot(V, wh) > 0) return make_float3(0);
+
+    float sqrtDenom = dot(V, wh) + eta * dot(L, wh);
+    float factor =  1 / eta;
+    float mattrans = 0.999;
+    float3 T = mattrans * make_float3(sqrt(mat.base_color.x), sqrt(mat.base_color.y), sqrt(mat.base_color.z));
+    
+    float roughg = sqr(mat.roughness * 0.5f + 0.5f);
+    float Gs = smithG_GGX(NDotL, roughg) * smithG_GGX(NDotV, roughg);
+    float a = max(0.001f, mat.roughness);
+    float Ds = GTR2(dot(wh,N), a);
+    float FH = SchlickFresnel(dot(V, wh));
+    float3 Fs = lerp(Cspec0, make_float3(1.0f), FH);
+
+    return (make_float3(1.f) - Fs) * T *
+        std::abs(Ds * Gs * eta * eta *
+            abs(dot(L, wh)) * abs(dot(V, wh)) * factor * factor /
+            (NDotL * NDotL * sqrtDenom * sqrtDenom));
+
+}
 RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
 {
 #ifdef BRDF
@@ -741,10 +781,13 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
     }
 #endif
     float3 N = normal;
-
+ 
     float NDotL = dot(N, L);
     float NDotV = dot(N, V);
-    if (NDotL <= 0.0f || NDotV <= 0.0f) return make_float3(0.0f);
+    if (NDotL <= 0.0f && NDotV < 0.0f)
+        return make_float3(0);
+
+    if (NDotL <= 0.0f || NDotV <= 0.0f) return Eval_Transmit(mat,normal,V,L);
 
     float3 H = normalize(L + V);
     float NDotH = dot(N, H);
@@ -791,8 +834,11 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
     float Fr = lerp(0.04f, 1.0f, FH);
     float Gr = smithG_GGX(NDotL, 0.25f) * smithG_GGX(NDotV, 0.25f);
 
+    float trans = mat.trans;
+    trans = 0.999f;
+
     float3 out = ((1.0f / M_PIf) * lerp(Fd, ss, mat.subsurface) * Cdlin + Fsheen)
-        * (1.0f - mat.metallic)
+        * (1.0f - mat.metallic)*(1-trans)
         + Gs * Fs * Ds + 0.25f * mat.clearcoat * Gr * Fr * Dr;
 
     return out;
@@ -829,7 +875,25 @@ RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const f
     //float3 N = normal;
     //float3 V = in_dir;
     //prd.origin = state.fhp;
+    float transRatio = mat.trans;
+    transRatio = 0.999f;
+    float transprob = rnd(seed);
+    if (transprob < transRatio) // sample transmit
+    {
+        if (dot(V,N) == 0) return -V;
+        float mateta = 1.01f;
+        float eta = dot(V, N) > 0 ? (1 / mateta) : (mateta);
 
+        float cosThetaI = dot(N, V);
+        float sin2ThetaI = 1 - cosThetaI * cosThetaI;
+        float sin2ThetaT = eta * eta * sin2ThetaI;
+        if (sin2ThetaT >= 1)
+        {
+            return N * 2 * dot(N, V) - V;
+        }
+        float cosThetaT = sqrt(1 - sin2ThetaT);
+        return  eta * -V + (eta * cosThetaI - cosThetaT) * N;
+    }
     float3 dir;
 
     float probability = rnd(seed);
@@ -872,29 +936,49 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
         return 1.0f;// return abs(dot(L, normal));
 #endif
 
-
+    float mattrans = 0.99f;
+    float transRatio = mattrans;
     float3 n = normal;
+    float pdf;
+    if (dot(n, V) * dot(n, L) > 0)
+    {
+        float specularAlpha = max(0.001f, mat.roughness);
+        float clearcoatAlpha = lerp(0.1f, 0.001f, mat.clearcoatGloss);
 
-    float specularAlpha = max(0.001f, mat.roughness);
-    float clearcoatAlpha = lerp(0.1f, 0.001f, mat.clearcoatGloss);
+        float diffuseRatio = 0.5f * (1.f - mat.metallic);
+        float specularRatio = 1.f - diffuseRatio;
 
-    float diffuseRatio = 0.5f * (1.f - mat.metallic);
-    float specularRatio = 1.f - diffuseRatio;
+        float3 half = normalize(L + V);
 
-    float3 half = normalize(L + V);
+        float cosTheta = abs(dot(half, n));
+        float pdfGTR2 = GTR2(cosTheta, specularAlpha) * cosTheta;
+        float pdfGTR1 = GTR1(cosTheta, clearcoatAlpha) * cosTheta;
 
-    float cosTheta = abs(dot(half, n));
-    float pdfGTR2 = GTR2(cosTheta, specularAlpha) * cosTheta;
-    float pdfGTR1 = GTR1(cosTheta, clearcoatAlpha) * cosTheta;
+        // calculate diffuse and specular pdfs and mix ratio
+        float ratio = 1.0f / (1.0f + mat.clearcoat);
+        float pdfSpec = lerp(pdfGTR1, pdfGTR2, ratio) / (4.0 * abs(dot(L, half)));
+        float pdfDiff = abs(dot(L, n)) * (1.0f / M_PIf);
 
-    // calculate diffuse and specular pdfs and mix ratio
-    float ratio = 1.0f / (1.0f + mat.clearcoat);
-    float pdfSpec = lerp(pdfGTR1, pdfGTR2, ratio) / (4.0 * abs(dot(L, half)));
-    float pdfDiff = abs(dot(L, n)) * (1.0f / M_PIf);
+        pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * (1 - transRatio);
+    }
+    else
+    {
+        float mateta = 1.01f;
+        float eta = dot(V, n) > 0 ? (1 / mateta) : (mateta);
+        float3 wh = normalize(V + L * eta);
+        if (dot(V, wh) * dot(L, wh) > 0) return 0;
 
-    // weight pdfs according to ratios
-    float pdf = diffuseRatio * pdfDiff + specularRatio * pdfSpec;
-     
+        // Compute change of variables _dwh\_dwi_ for microfacet transmission
+        float sqrtDenom = dot(V, wh) + eta * dot(L, wh);
+        float dwh_dwi =
+            std::abs((eta * eta * dot(L, wh)) / (sqrtDenom * sqrtDenom));
+        float a = max(0.001f, mat.roughness);
+        float Ds = GTR2(dot(wh, n), a);
+        float pdfTrans = Ds * abs(dot(n,wh)) * dwh_dwi;
+
+        pdf = transRatio * pdfTrans;
+    }
+    
     return pdf;
 }
 
