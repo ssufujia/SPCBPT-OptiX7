@@ -72,6 +72,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         mtl.pbr.base_color = make_float4(p.color,1.0);
         mtl.pbr.metallic = p.metallic;
         mtl.pbr.roughness = p.roughness;
+        mtl.pbr.trans = p.trans;
         mtl.pbr.brdf = p.brdf;
         if (p.albedoID != 0)
         {

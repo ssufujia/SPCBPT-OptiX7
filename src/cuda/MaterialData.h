@@ -94,7 +94,7 @@ struct MaterialData
         float                clearcoat;
         float                clearcoatGloss;
 
-        float                trans = 0.5f;
+        float                trans;
         float                eta = 1.1f;
         Texture              base_color_tex;
         Texture              metallic_roughness_tex;

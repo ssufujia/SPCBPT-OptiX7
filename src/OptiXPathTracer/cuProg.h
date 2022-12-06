@@ -1,4 +1,4 @@
-//
+Ôªø//
 // Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -301,7 +301,7 @@ struct SubspaceSampler_device:public SubspaceSampler
     }
 };
 struct PayloadBDPTVertex
-{//º«µ√≥ı ºªØ
+{//ËÆ∞ÂæóÂàùÂßãÂåñ
     BDPTPath path;
     float3 origin;
     float3 ray_direction;
@@ -712,6 +712,20 @@ RT_FUNCTION float smithG_GGX(float NDotv, float alphaG)
     return 1.0f / (NDotv + sqrtf(a + b - a * b));
 }
 
+RT_FUNCTION float D(const float3 &wh,const float3 &n)
+{
+    //BeckmannDistribution
+    const float alphax = 0.5f;
+    const float alphay = 0.5f;// what does this mean?
+    float wDotn = dot(wh, n);
+    float TanTheta = length(cross(wh, n)) / wDotn;
+    float tan2Theta = TanTheta * TanTheta;
+    if (isinf(tan2Theta)) return 0.;
+    float cos4Theta = wDotn * wDotn * wDotn * wDotn;
+    return exp(-tan2Theta * (1.0f / (alphax * alphax))) /
+        (M_PIf * alphax * alphay * cos4Theta);
+}
+
 RT_FUNCTION float fresnel(float cos_theta_i, float cos_theta_t, float eta)
 {
     const float rs = (cos_theta_i - cos_theta_t * eta) /
@@ -731,7 +745,21 @@ RT_FUNCTION float lerp(const float &a, const float &b, const float t)
     return a + t * (b - a);
 }
 
-
+RT_FUNCTION float Lambda(const float3& w,const float3& n)
+{
+    //BeckmannDistribution
+    const float alphax = 0.5f;
+    const float alphay = 0.5f;// what does this mean?
+    float wDotn = dot(w, n);
+    float absTanTheta = abs(length(cross(w,n))/wDotn);
+    if (isinf(absTanTheta)) return 0.;
+    // Compute _alpha_ for direction _w_
+    float alpha = alphax;
+        //std::sqrt(wDotn * wDotn * alphax * alphax + (1 - wDotn * wDotn) * alphay * alphay);
+    float a = 1 / (alpha * absTanTheta);
+    if (a >= 1.6f) return 0;
+    return (1 - 1.259f * a + 0.396f * a * a) / (3.535f * a + 2.181f * a * a);
+}
 RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
 {
     float3 N = normal;
@@ -747,29 +775,33 @@ RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& nor
 
     // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
     float mateta = 1.01f;
-    float eta = NDotV > 0 ? (mateta / 1.0f) : (1.0f / mateta);
-    float3 wh = normalize(V + L * eta);
+    float eta = NDotL > 0 ? (mateta / 1.0f) : (1.0f / mateta);
+    float3 wh = normalize(L + V * eta);
     if (dot(wh,N) < 0) wh = -wh;
 
     // Same side?
     if (dot(L, wh) * dot(V, wh) > 0) return make_float3(0);
 
-    float sqrtDenom = dot(V, wh) + eta * dot(L, wh);
+    float sqrtDenom = dot(L, wh) + eta * dot(V, wh);
     float factor =  1 / eta;
-    float mattrans = 0.999;
-    float3 T = mattrans * make_float3(sqrt(mat.base_color.x), sqrt(mat.base_color.y), sqrt(mat.base_color.z));
-    
+    float3 T = mat.trans * make_float3(sqrt(mat.base_color.x), sqrt(mat.base_color.y), sqrt(mat.base_color.z));
+    //printf("%f\n", mat.trans);
     float roughg = sqr(mat.roughness * 0.5f + 0.5f);
-    float Gs = smithG_GGX(NDotL, roughg) * smithG_GGX(NDotV, roughg);
+    float Gs = 1 / (1 + Lambda(V, N) + Lambda(L, N));
     float a = max(0.001f, mat.roughness);
-    float Ds = GTR2(dot(wh,N), a);
+    float Ds = GTR2(dot(N,wh), a);//D(wh, N);
+        //GTR2(dot(wh,N), a);
     float FH = SchlickFresnel(dot(V, wh));
     float3 Fs = lerp(Cspec0, make_float3(1.0f), FH);
-
-    return (make_float3(1.f) - Fs) * T *
+    float F = fresnel(dot(L,wh),dot(V,wh),eta);
+    //printf("Fresnel: %f\n", F);
+    float3 out = (make_float3(1.f) - Fs) * T *
         std::abs(Ds * Gs * eta * eta *
             abs(dot(L, wh)) * abs(dot(V, wh)) * factor * factor /
             (NDotL * NDotL * sqrtDenom * sqrtDenom));
+    //if(out.x!=0)
+    //printf("trans: %f,%f,%f\n", out.x, out.y, out.z);
+    return out;
 
 }
 RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
@@ -784,11 +816,12 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
  
     float NDotL = dot(N, L);
     float NDotV = dot(N, V);
-    if (NDotL <= 0.0f && NDotV < 0.0f)
+    if (NDotL < 0.0f && NDotV < 0.0f)
         return make_float3(0);
 
-    if (NDotL <= 0.0f || NDotV <= 0.0f) return Eval_Transmit(mat,normal,V,L);
-
+    if (NDotL * NDotV <= 0.0f) 
+        return Eval_Transmit(mat,normal,V,L);
+        //return make_float3(0);
     float3 H = normalize(L + V);
     float NDotH = dot(N, H);
     float LDotH = dot(L, H);
@@ -835,12 +868,11 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
     float Gr = smithG_GGX(NDotL, 0.25f) * smithG_GGX(NDotV, 0.25f);
 
     float trans = mat.trans;
-    trans = 0.999f;
 
     float3 out = ((1.0f / M_PIf) * lerp(Fd, ss, mat.subsurface) * Cdlin + Fsheen)
         * (1.0f - mat.metallic)*(1-trans)
         + Gs * Fs * Ds + 0.25f * mat.clearcoat * Gr * Fr * Dr;
-
+    //printf("eval: %f,%f,%f\n", out.x, out.y, out.z);
     return out;
 }
 
@@ -876,33 +908,43 @@ RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const f
     //float3 V = in_dir;
     //prd.origin = state.fhp;
     float transRatio = mat.trans;
-    transRatio = 0.999f;
     float transprob = rnd(seed);
+    float r1 = rnd(seed);
+    float r2 = rnd(seed);
+    float3 dir;
+    Onb onb(N); // basis
     if (transprob < transRatio) // sample transmit
     {
-        if (dot(V,N) == 0) return -V;
+
         float mateta = 1.01f;
         float eta = dot(V, N) > 0 ? (1 / mateta) : (mateta);
 
-        float cosThetaI = dot(N, V);
+        float a = mat.roughness;
+
+        float phi = r1 * 2.0f * M_PIf;
+
+        float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
+        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+        float sinPhi = sinf(phi);
+        float cosPhi = cosf(phi);
+        float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+        onb.inverse_transform(half);
+
+        if (dot(V, N) == 0) return -V;
+
+        float cosThetaI = dot(half, V);
         float sin2ThetaI = 1 - cosThetaI * cosThetaI;
         float sin2ThetaT = eta * eta * sin2ThetaI;
         if (sin2ThetaT >= 1)
         {
-            return N * 2 * dot(N, V) - V;
+            return half * 2 * dot(half, V) - V;
         }
         float cosThetaT = sqrt(1 - sin2ThetaT);
-        return  eta * -V + (eta * cosThetaI - cosThetaT) * N;
+        return  eta * -V + (eta * cosThetaI - cosThetaT) * half;
     }
-    float3 dir;
 
     float probability = rnd(seed);
     float diffuseRatio = 0.5f * (1.0f - mat.metallic);
-
-    float r1 = rnd(seed);
-    float r2 = rnd(seed);
-
-    Onb onb(N); // basis
 
     if (probability < diffuseRatio) // sample diffuse
     {
@@ -935,9 +977,7 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
     if (mat.brdf)
         return 1.0f;// return abs(dot(L, normal));
 #endif
-
-    float mattrans = 0.99f;
-    float transRatio = mattrans;
+    float transRatio = mat.trans;
     float3 n = normal;
     float pdf;
     if (dot(n, V) * dot(n, L) > 0)
@@ -960,21 +1000,23 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
         float pdfDiff = abs(dot(L, n)) * (1.0f / M_PIf);
 
         pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * (1 - transRatio);
+
     }
-    else
+    else if(dot(n,V) * dot(n,L) < 0)
     {
+
         float mateta = 1.01f;
-        float eta = dot(V, n) > 0 ? (1 / mateta) : (mateta);
-        float3 wh = normalize(V + L * eta);
+        float eta = dot(L, n) > 0 ? (mateta) : (1/mateta);
+        float3 wh = normalize(L + V * eta);
         if (dot(V, wh) * dot(L, wh) > 0) return 0;
 
         // Compute change of variables _dwh\_dwi_ for microfacet transmission
-        float sqrtDenom = dot(V, wh) + eta * dot(L, wh);
+        float sqrtDenom = dot(L, wh) + eta * dot(V, wh);
         float dwh_dwi =
-            std::abs((eta * eta * dot(L, wh)) / (sqrtDenom * sqrtDenom));
+            std::abs((eta * eta * dot(V, wh)) / (sqrtDenom * sqrtDenom));
         float a = max(0.001f, mat.roughness);
         float Ds = GTR2(dot(wh, n), a);
-        float pdfTrans = Ds * abs(dot(n,wh)) * dwh_dwi;
+        float pdfTrans = Ds * abs(dot(n, wh)) * dwh_dwi;
 
         pdf = transRatio * pdfTrans;
     }
@@ -984,7 +1026,7 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
 
 RT_FUNCTION float3 contriCompute(const BDPTVertex* path, int path_size)
 {
-    //“™«Û£∫µ⁄0∏ˆ∂•µ„Œ™eye£¨µ⁄size-1∏ˆ∂•µ„Œ™light
+    //Ë¶ÅÊ±ÇÔºöÁ¨¨0‰∏™È°∂ÁÇπ‰∏∫eyeÔºåÁ¨¨size-1‰∏™È°∂ÁÇπ‰∏∫light
     float3 throughput = make_float3(1);
     const BDPTVertex& light = path[path_size - 1];
     const BDPTVertex& lastMidPoint = path[path_size - 2];
@@ -1024,7 +1066,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
 
     int eyePathLength = strategy_id;
     int lightPathLength = path_size - eyePathLength; 
-    /*π‚‘¥ƒ¨»œŒ™√Êπ‚‘¥…œ“ªµ„£¨“Ú¥Àø…“‘”√cos¿¥Ω¸À∆ƒ£ƒ‚∆‰π‚’’–ßπ˚£¨»Áπ˚ «µ„π‚‘¥–Ë“™–ﬁ∏ƒ“‘œ¬¥˙¬Î*/
+    /*ÂÖâÊ∫êÈªòËÆ§‰∏∫Èù¢ÂÖâÊ∫ê‰∏ä‰∏ÄÁÇπÔºåÂõ†Ê≠§ÂèØ‰ª•Áî®cosÊù•Ëøë‰ººÊ®°ÊãüÂÖ∂ÂÖâÁÖßÊïàÊûúÔºåÂ¶ÇÊûúÊòØÁÇπÂÖâÊ∫êÈúÄË¶Å‰øÆÊîπ‰ª•‰∏ã‰ª£Á†Å*/
 
     float pdf = 1.0;
     if (lightPathLength > 0)
@@ -1040,7 +1082,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         float3 lightDirection = normalize(lightLine);
         pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
 
-        /*“Úæ‡¿Î∫Õ«„Ω«µº÷¬µƒpdf*/
+        /*Âõ†Ë∑ùÁ¶ªÂíåÂÄæËßíÂØºËá¥ÁöÑpdf*/
         for (int i = 1; i < lightPathLength; i++)
         {
             const BDPTVertex& midPoint = path[path_size - i - 1];
@@ -1065,7 +1107,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         }
 
     }
-    /*”…”⁄Õ∂”∞Ω«µº÷¬µƒpdf±‰ªØ*/
+    /*Áî±‰∫éÊäïÂΩ±ËßíÂØºËá¥ÁöÑpdfÂèòÂåñ*/
     for (int i = 1; i < eyePathLength; i++)
     {
         const BDPTVertex& midPoint = path[i];
@@ -1074,7 +1116,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         float3 lineDirection = normalize(line);
         pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
     }
-    /*≤…—˘∑ΩœÚµƒ∏≈¬ */
+    /*ÈááÊ†∑ÊñπÂêëÁöÑÊ¶ÇÁéá*/
     for (int i = 1; i < eyePathLength - 1; i++)
     {
         const BDPTVertex& midPoint = path[i];
@@ -1109,7 +1151,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
             float3 lineDirection = normalize(line);
             pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
         }
-        /*≤…—˘∑ΩœÚµƒ∏≈¬ */
+        /*ÈááÊ†∑ÊñπÂêëÁöÑÊ¶ÇÁéá*/
         for (int i = 1; i < eyePathLength - 1; i++)
         {
             const BDPTVertex& midPoint = path[i];
@@ -1137,7 +1179,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
             const BDPTVertex& light = path[path_size - 1];
             const BDPTVertex& lastMidPoint = path[path_size - 2];
 
-            /*“Úæ‡¿Î∫Õ«„Ω«µº÷¬µƒpdf*/
+            /*Âõ†Ë∑ùÁ¶ªÂíåÂÄæËßíÂØºËá¥ÁöÑpdf*/
             for (int i = 1; i < lightPathLength; i++)
             {
                 const BDPTVertex& midPoint = path[path_size - i - 1];
