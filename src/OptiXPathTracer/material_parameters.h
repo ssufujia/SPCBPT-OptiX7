@@ -44,6 +44,7 @@ struct MaterialParameter
 	float sheenTint;
 	float clearcoat;
 	float clearcoatGloss;
+	float trans;
 	BrdfType brdf;
 };
 

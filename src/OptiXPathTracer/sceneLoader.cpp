@@ -104,6 +104,7 @@ Scene* LoadScene(const char* filename)
 				sscanf(line, " sheenTint %f", &material.sheenTint);
 				sscanf(line, " clearcoat %f", &material.clearcoat);
 				sscanf(line, " clearcoatGloss %f", &material.clearcoatGloss);
+				sscanf(line, " trans %f", &material.trans);
 				sscanf(line, " brdf %i", &material.brdf);
 			}
 

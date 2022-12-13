@@ -720,7 +720,8 @@ int main( int argc, char* argv[] )
 
     try
     {
-        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");
+        string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell.scene");
+//        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/testMirror/testmirror.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
