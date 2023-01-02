@@ -27,6 +27,7 @@ namespace rmis
 
     RT_FUNCTION float getRR(const BDPTVertex& vertex)
     {
+        return Tracer::rrRate(vertex.color);
         float rr_rate = fmaxf(vertex.color);
 
 
@@ -313,7 +314,7 @@ namespace rmis
     }
     RT_FUNCTION void construct_virtual_env_light(BDPTVertex& lightVertex, float3 flux, float pdf, float3 direction, int label)
     {
-        lightVertex.type = DIRECTION;
+        lightVertex.type = BDPTVertex::Type::DIRECTION;
         lightVertex.flux = flux;
         lightVertex.pdf = pdf;
         lightVertex.singlePdf = pdf;

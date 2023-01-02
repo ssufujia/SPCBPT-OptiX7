@@ -55,6 +55,8 @@ struct MaterialData
         pbr.sheenTint = 0.5f;
         pbr.clearcoat = 0.0f;
         pbr.clearcoatGloss = 1.0f;
+        pbr.trans = 0;
+        pbr.eta = 1.5;
     }
 
     enum AlphaMode
@@ -87,6 +89,8 @@ struct MaterialData
         float                specular;
         float                specularTint;
 
+        float                eta;
+        float                trans;
         float                subsurface;  
         float                anisotropic;
         float                sheen;

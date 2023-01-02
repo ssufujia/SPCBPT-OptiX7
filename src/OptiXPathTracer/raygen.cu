@@ -40,7 +40,6 @@
 //
 //
 //------------------------------------------------------------------------------
-#define ISINVALIDVALUE(ans) (ans.x>100000.0f|| isnan(ans.x)||ans.y>100000.0f|| isnan(ans.y)||ans.z>100000.0f|| isnan(ans.z))
  
 __device__ inline float4 ToneMap_exposure(const float4& c, float exposure)
 {
@@ -163,36 +162,13 @@ extern "C" __global__ void __raygen__pinhole()
         const float3 accum_color_prev = make_float3( Tracer::params.accum_buffer[image_index] );
         accum_color                   = lerp( accum_color_prev, accum_color, a );
     }
+    //if (subframe_index > 100)return;
     Tracer::params.accum_buffer[image_index] = make_float4( accum_color, 1.0f );
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
     Tracer::params.frame_buffer[image_index] = make_color( make_float3(val) );
 } 
 
-RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample, BDPTVertex& v)
-{  
-    v.position = light_sample.position;
-    v.normal = light_sample.normal();
-    v.flux = light_sample.emission;
-    v.pdf = light_sample.pdf;
-    v.singlePdf = v.pdf;
-    v.isOrigin = true;
-    v.isBrdf = false;
-    v.subspaceId = light_sample.subspaceId;
-    v.depth = 0;
-    v.materialId = light_sample.bindLight->id;
-    v.RMIS_pointer = 1;
-    v.uv = light_sample.uv;
-    if (light_sample.bindLight->type == Light::Type::QUAD)
-    {
-        v.type = LightType::QUAD;
-    }
-    else if (light_sample.bindLight->type == Light::Type::ENV)
-    {
-        v.type = LightType::ENV;
-    }
-    //其他光源的状况待补充
-}
 RT_FUNCTION void init_lightSubPath_from_lightSample(Tracer::lightSample& light_sample, BDPTPath& p)
 {
     p.clear();
@@ -213,22 +189,6 @@ RT_FUNCTION void init_lightSubPath_from_lightSample(Tracer::lightSample& light_s
 }
 
 
-RT_FUNCTION void init_EyeSubpath(BDPTPath& p, float3 origin, float3 direction)
-{
-    p.push();
-    p.currentVertex().position = origin;
-    p.currentVertex().flux = make_float3(1.0);
-    p.currentVertex().pdf = 1.0f;
-    p.currentVertex().RMIS_pointer = 0;
-    p.currentVertex().normal = direction;
-    p.currentVertex().isOrigin = true;
-    p.currentVertex().depth = 0;
-    p.currentVertex().singlePdf = 1.0;
-
-
-    p.nextVertex().singlePdf = 1.0f;
-     
-}
 
 
 __device__ float3 direction_connect_ZGCBPT(const BDPTVertex& a, const BDPTVertex& b)
@@ -447,15 +407,19 @@ RT_FUNCTION float3 eval_path(const BDPTVertex* path, int path_size, int strategy
     //return Tracer::contriCompute(path,path_size);
     float pdf = Tracer::pdfCompute(path, path_size, strategy_id);
     float3 contri = Tracer::contriCompute(path, path_size);
+    float3 ans = contri / pdf;
 
-    float MIS_weight_not_normalize = Tracer::MISWeight_SPCBPT(path, path_size, strategy_id);
-    float MIS_weight_dominator = 0.0;
-    for (int i = 2; i <= path_size; i++)
+    //mis computation
     {
-        MIS_weight_dominator += Tracer::MISWeight_SPCBPT(path, path_size, i);
-    }
+        float MIS_weight_not_normalize = Tracer::MISWeight_SPCBPT(path, path_size, strategy_id);
+        float MIS_weight_dominator = 0.0;
+        for (int i = 2; i <= path_size; i++)
+        {
+            MIS_weight_dominator += Tracer::MISWeight_SPCBPT(path, path_size, i);
+        }
 
-    float3 ans = contri / pdf * (MIS_weight_not_normalize / MIS_weight_dominator);
+        ans = ans * (MIS_weight_not_normalize / MIS_weight_dominator);
+    } 
     if (ISINVALIDVALUE(ans))
     {
         return make_float3(0.0f);
@@ -600,11 +564,378 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
+   
+    float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
+    Tracer::params.frame_buffer[image_index] = make_color(make_float3(val));
+}
+/*
+extern "C" __global__ void __raygen__SPCBPT_for_enhance_no_rmis()
+{
+    const uint3  launch_idx = optixGetLaunchIndex();
+    const uint3  launch_dims = optixGetLaunchDimensions();
+    const float3 eye = Tracer::params.eye;
+    const float3 U = Tracer::params.U;
+    const float3 V = Tracer::params.V;
+    const float3 W = Tracer::params.W;
+    const int    subframe_index = Tracer::params.subframe_index;
+
+    float3 normalizeV = normalize(V);
+    // Generate camera ray
+    //
+    unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+
+    // The center of each pixel is at fraction (0.5,0.5)
+    const float2 subpixel_jitter =
+        subframe_index == 0 ? make_float2(0.5f, 0.5f) : make_float2(rnd(seed), rnd(seed));
+
+    const float2 d =
+        2.0f
+        * make_float2((static_cast<float>(launch_idx.x) + subpixel_jitter.x) / static_cast<float>(launch_dims.x),
+            (static_cast<float>(launch_idx.y) + subpixel_jitter.y) / static_cast<float>(launch_dims.y))
+        - 1.0f;
+    float3 ray_direction = normalize(d.x * U + d.y * V + W);
+    float3 ray_origin = eye;
+    float3 result = make_float3(0);
+    bool shift_valid_eye = true;
+    Tracer::PayloadBDPTVertex payload;
+    payload.clear();
+    payload.seed = seed;
+    payload.ray_direction = ray_direction;
+    payload.origin = ray_origin;
+    init_EyeSubpath(payload.path, ray_origin, ray_direction);
+
+
+#define MAX_PATH_LENGTH_FOR_MIS 20
+    BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
+    int buffer_size = 0;
+    pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
+
+    unsigned first_hit_id;
+    while (true)
+    {
+        ray_direction = payload.ray_direction;
+        ray_origin = payload.origin;
+        if (payload.done || payload.depth > 50)
+        {
+            break;
+        }
+        int begin_depth = payload.path.size;
+        Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+            SCENE_EPSILON,  // tmin
+            1e16f,  // tmax
+            &payload);
+        if (payload.path.size == begin_depth)
+        {
+            break;
+        }
+        payload.depth += 1;
+
+
+        pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
+        if (payload.path.hit_lightSource())
+        {
+            float3 res = make_float3(0.0);
+            Tracer::lightSample light_sample;
+            light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
+
+            BDPTVertex light_vertex;
+            init_vertex_from_lightSample(light_sample, light_vertex);
+            pathBuffer[buffer_size - 1] = light_vertex;
+            res += Shift::eval_path(pathBuffer, buffer_size, buffer_size);
+            result += res;
+            break;
+        }
+        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS)break;
+
+        BDPTVertex& eye_subpath = payload.path.currentVertex();
+        for (int it = 0; it < CONNECTION_N; it++)
+        {
+
+            float pmf_firstStage = 1;
+            float pmf_secondStage;
+            const BDPTVertex& light_subpath =
+                reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSample(payload.seed, pmf_secondStage);
+
+            //int light_id = 0;
+            //float pmf_firstStage = 1;
+            //if (Tracer::params.subspace_info.light_tree)
+            //{
+            //    light_id =
+            //        reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);
+            //}
+            //if (Tracer::params.sampler.subspace[light_id].size == 0)
+            //{
+            //    continue;
+            //}
+            //float pmf_secondStage = 1;
+            //const BDPTVertex& light_subpath =
+            //    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
+
+            if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
+                (Tracer::visibilityTest(Tracer::params.handle, eye_subpath.position, light_subpath.position)))
+            {
+                float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
+
+                int origin_buffer_size = buffer_size;
+                const BDPTVertex* light_ptr = &light_subpath;
+                while (true)
+                {
+                    pathBuffer[buffer_size] = *light_ptr; buffer_size++;
+                    if (light_ptr->depth == 0)break;
+                    light_ptr--;
+                }
+                int n_buffer_size = buffer_size;
+                buffer_size = origin_buffer_size;
+                if (Shift::glossy(light_subpath) && shift_valid_eye && Shift::glossy(eye_subpath) == false && light_subpath.depth < SHIFT_VALID_SIZE)
+                {
+                    BDPTVertex light_sub_new[SHIFT_VALID_SIZE];
+                    //                    light_sub[1] = light_subpath;
+                    //                    light_sub[0] = *(&(light_subpath)-1);
+                    float shift_pdf;
+                    //float3 posA, posB;
+                    //bool shift_good2 = path_shift_quick_dirty(light_sub, 2, light_sub_new, eye_subpath.position, shift_pdf);
+                    //bool shift_good = path_shift_scale(light_sub, 2, light_sub_new, eye_subpath.position, shift_pdf);
+                    //posA = light_sub_new[0].flux;
+                    Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
+                    Shift::PathContainer finalPath(light_sub_new + originPath.size() - 1, -1);
+                    bool shift_good = Shift::path_shift(originPath, finalPath, eye_subpath.position, shift_pdf);
+                    //bool shift_good = Shift::path_shift_tanScale(originPath, finalPath, eye_subpath.position, shift_pdf);
+                    //shift_pdf = 1;
+                    //posB = light_sub_new[0].flux;
+                    //printf("position A %f %f %f B %f %f %f\n", posA.x, posA.y, posA.z, posB.x, posB.y, posB.z);
+
+                    //printf("shift comparison %d %d\n", shift_good, shift_good2);
+                    if (shift_good == false)continue;
+
+                    //printf("AAB");
+//                    printf("shift comparison %f %f\n", shift_pdf, shift_pdf2);
+                    for (int i = 0; i < finalPath.size(); i++)
+                    {
+                        pathBuffer[n_buffer_size - i - 1] = light_sub_new[i];
+                    }
+                    //pathBuffer[n_buffer_size - 1] = light_sub_new[0];
+                    //pathBuffer[n_buffer_size - 2] = light_sub_new[1];
+                    //float pdf = eye_subpath.pdf * light_subpath.pdf * shift_pdf;
+                    //float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size);
+
+//                    float3 res = contri / pdf / pmf ;
+                    float3 res = Shift::eval_path(pathBuffer, n_buffer_size, origin_buffer_size) / pmf;
+
+                    if (!ISINVALIDVALUE(res))
+                    {
+                        result += res / CONNECTION_N;
+                    }
+                }
+                else
+                {
+                    //float pdf = Tracer::pdfCompute(pathBuffer, n_buffer_size, origin_buffer_size);
+                    //float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size);
+                    //float3 res = contri / pdf / pmf; 
+
+                    float3 res = Shift::eval_path(pathBuffer, n_buffer_size, origin_buffer_size) / pmf;
+                    if (!ISINVALIDVALUE(res))
+                    {
+                        result += res / CONNECTION_N;
+                    }
+                }
+            }
+        }
+        //printf("%d size error depth%d\n", Tracer::params.lights.count, payload.path.size);
+        if (Shift::glossy(eye_subpath) == false) shift_valid_eye = false;
+        //break;
+    }
+    //
+    // Update results 
+    ////  
+    //result = make_float3(rnd(first_hit_id), rnd(first_hit_id), rnd(first_hit_id));  
+    const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
+    float3             accum_color = result;
+
+    if (subframe_index > 0)
+    {
+        const float  a = 1.0f / static_cast<float>(subframe_index + 1);
+        const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
+        accum_color = lerp(accum_color_prev, accum_color, a);
+    }
+    //if (subframe_index > 100)return;
+    Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
+
+    float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
+    Tracer::params.frame_buffer[image_index] = make_color(make_float3(val));
+}*/
+
+extern "C" __global__ void __raygen__glossy_shift_only()
+{
+    const uint3  launch_idx = optixGetLaunchIndex();
+    const uint3  launch_dims = optixGetLaunchDimensions();
+    const float3 eye = Tracer::params.eye;
+    const float3 U = Tracer::params.U;
+    const float3 V = Tracer::params.V;
+    const float3 W = Tracer::params.W;
+    const int    subframe_index = Tracer::params.subframe_index;
+
+    float3 normalizeV = normalize(V);
+    // Generate camera ray
+    //
+    unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+
+    // The center of each pixel is at fraction (0.5,0.5)
+    const float2 subpixel_jitter =
+        subframe_index == 0 ? make_float2(0.5f, 0.5f) : make_float2(rnd(seed), rnd(seed));
+
+    const float2 d =
+        2.0f
+        * make_float2((static_cast<float>(launch_idx.x) + subpixel_jitter.x) / static_cast<float>(launch_dims.x),
+            (static_cast<float>(launch_idx.y) + subpixel_jitter.y) / static_cast<float>(launch_dims.y))
+        - 1.0f;
+    float3 ray_direction = normalize(d.x * U + d.y * V + W);
+    float3 ray_origin = eye;
+    float3 result = make_float3(0);
+    bool shift_valid_eye = true;
+    Tracer::PayloadBDPTVertex payload;
+    payload.clear();
+    payload.seed = seed;
+    payload.ray_direction = ray_direction;
+    payload.origin = ray_origin;
+    init_EyeSubpath(payload.path, ray_origin, ray_direction);
+
+
+#define MAX_PATH_LENGTH_FOR_MIS 20
+    BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
+    int buffer_size = 0;
+    pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
+
+    unsigned first_hit_id;
+    while (true)
+    {
+        ray_direction = payload.ray_direction;
+        ray_origin = payload.origin;
+        if (payload.done || payload.depth > 50)
+        {
+            break;
+        }
+        int begin_depth = payload.path.size;
+        Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+            SCENE_EPSILON,  // tmin
+            1e16f,  // tmax
+            &payload);
+        if (payload.path.size == begin_depth)
+        {
+            break;
+        }
+        payload.depth += 1;
+
+
+        pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
+        if (payload.path.hit_lightSource())
+        {
+            float3 res = make_float3(0.0);
+            Tracer::lightSample light_sample;
+            light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
+
+            BDPTVertex light_vertex;
+            init_vertex_from_lightSample(light_sample, light_vertex);
+            pathBuffer[buffer_size - 1] = light_vertex;
+            if(payload.depth == 1)
+                res += eval_path(pathBuffer, buffer_size, buffer_size);
+            result += res;
+            break;
+        }
+        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS)break;
+
+        BDPTVertex& eye_subpath = payload.path.currentVertex();
+        for (int it = 0; it < CONNECTION_N; it++)
+        { 
+            float pmf_firstStage = 1;  
+            float pmf_secondStage;
+            if (Tracer::params.sampler.glossy_count == 0)continue;
+            const BDPTVertex& light_subpath =
+                reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleGlossy(payload.seed, pmf_secondStage);
+             
+            if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
+                (Tracer::visibilityTest(Tracer::params.handle, eye_subpath.position, light_subpath.position)))
+            {
+                float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
+
+                int origin_buffer_size = buffer_size;
+                const BDPTVertex* light_ptr = &light_subpath;
+                while (true)
+                {
+                    pathBuffer[buffer_size] = *light_ptr; buffer_size++;
+                    if (light_ptr->depth == 0)break;
+                    light_ptr--;
+                }
+                int n_buffer_size = buffer_size;
+                buffer_size = origin_buffer_size;
+                if (Shift::glossy(light_subpath)  && //light_subpath.depth == 1&&
+                    shift_valid_eye &&Shift::glossy(eye_subpath) == false && light_subpath.depth < SHIFT_VALID_SIZE - 1)
+                { 
+                    BDPTVertex light_sub_new[SHIFT_VALID_SIZE]; 
+                    float shift_pdf; 
+                    Shift::PathContainer originPath(const_cast<BDPTVertex*>( &light_subpath), -1, light_subpath.depth + 1); 
+                    Shift::PathContainer finalPath(light_sub_new + originPath.size() - 1, -1);
+
+                    
+                    bool shift_good = Shift::path_shift(originPath, finalPath, eye_subpath.position, shift_pdf); 
+                    if (shift_good == false)continue;
+
+
+                    for (int i = 0; i < finalPath.size(); i++)
+                    {
+                        pathBuffer[n_buffer_size - i - 1] = finalPath.get(-i - 1);
+                    } 
+
+                    float pdf = eye_subpath.pdf * light_subpath.pdf * shift_pdf;
+                    float3 fractFactor = make_float3(1);
+                    //if(finalPath.size() == 2)
+                    fractFactor = Shift::evalFract(finalPath, eye_subpath.position, payload.seed);
+                    float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size) * fractFactor;
+                    
+
+                    float3 res = contri / pdf / pmf ; 
+                    if (!ISINVALIDVALUE(res))
+                    {
+                        result += res / CONNECTION_N;
+                    } 
+                } 
+                else
+                { 
+                    //float pdf = Tracer::pdfCompute(pathBuffer, n_buffer_size, origin_buffer_size);
+                    //float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size);
+                    //float3 res = contri / pdf / pmf; 
+
+                    float3 res = make_float3(.0);
+                    if (!ISINVALIDVALUE(res))
+                    {
+                        result += res / CONNECTION_N;
+                    }
+                }
+            }
+        }
+        //printf("%d size error depth%d\n", Tracer::params.lights.count, payload.path.size);
+        if (Shift::glossy(eye_subpath) == false) shift_valid_eye = false;
+        if(shift_valid_eye == false)
+            break;
+    }
+    //
+    // Update results 
+    ////  
+    //result = make_float3(rnd(first_hit_id), rnd(first_hit_id), rnd(first_hit_id));  
+    const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
+    float3             accum_color = result;
+
+    if (subframe_index > 0)
+    {
+        const float  a = 1.0f / static_cast<float>(subframe_index + 1);
+        const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
+        accum_color = lerp(accum_color_prev, accum_color, a);
+    }
+    //if (subframe_index > 10)return;
+    Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
     Tracer::params.frame_buffer[image_index] = make_color(make_float3(val));
 }
-
 
 
 
@@ -696,6 +1027,72 @@ extern "C" __global__ void __miss__constant_radiance()
 }
 
 
+extern "C" __global__ void __miss__env__BDPTVertex()
+{
+    if (SKY.valid == false)
+    {
+        Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
+        prd->done = true;
+        return;
+    }
+    Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
+    prd->done = true;
+
+    if (prd->path.size == 1)
+    {
+        prd->result = SKY.color(prd->ray_direction);
+        return;
+    }
+    //return;
+    prd->path.push();
+    BDPTVertex& MidVertex = prd->path.currentVertex(); 
+    BDPTVertex& LastVertex = prd->path.lastVertex(); 
+    MidVertex.normal = -prd->ray_direction;
+
+    MidVertex.type = BDPTVertex::Type::ENV_MISS;
+    MidVertex.uv = dir2uv(prd->ray_direction); 
+    Tracer::lightSample light_sample;
+    light_sample.ReverseSample(Tracer::params.lights[SKY.light_id], MidVertex.uv);
+
+    float lightPdf = light_sample.pdf;
+
+    float pdf_G = abs(dot(MidVertex.normal, prd->ray_direction) * dot(LastVertex.normal, prd->ray_direction));
+    if (LastVertex.isOrigin)
+    {
+        MidVertex.flux = LastVertex.flux * pdf_G * SKY.color(prd->ray_direction);
+    }
+    else
+    {
+        MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G * SKY.color(prd->ray_direction);
+    }
+
+
+
+    MidVertex.lastPosition = LastVertex.position;
+    MidVertex.lastNormalProjection = abs(dot(LastVertex.normal, prd->ray_direction));
+
+    //MidVertex.zoneId = SUBSPACE_NUM - lightMaterialId - 1;
+    MidVertex.subspaceId = SKY.getLabel(prd->ray_direction);
+    //MidVertex.zoneId = -1;
+    MidVertex.lastZoneId = LastVertex.subspaceId;
+
+
+    MidVertex.singlePdf = MidVertex.singlePdf;
+    MidVertex.pdf = LastVertex.pdf * MidVertex.singlePdf;
+
+    //MidVertex.dLast = LastVertex.d;
+
+    MidVertex.depth = LastVertex.depth + 1;
+     
+      
+    float3 dir = -MidVertex.normal;
+    BDPTVertex virtual_light;
+    rmis::construct_virtual_env_light(virtual_light, SKY.color(dir), light_sample.pdf, dir, SKY.getLabel(dir));
+    float dd = rmis::light_hit_env(LastVertex, virtual_light);
+    //printf("env hit compare %f %f\n", dd, 1.0 / MidVertex.d);
+    MidVertex.RMIS_pointer = 1.0 / dd;
+
+}
 extern "C" __global__ void __miss__BDPTVertex()
 {
     Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
@@ -803,7 +1200,7 @@ extern "C" __global__ void __raygen__TrainData()
         } 
         if (payload.path.hit_lightSource())
         { 
-            if (payload.path.size > 2 && rr_acc_accept(resample_number, payload.seed))
+            if (payload.path.currentVertex().type != BDPTVertex::Type::ENV_MISS && payload.path.size > 2 && rr_acc_accept(resample_number, payload.seed))
             {
                 Tracer::lightSample light_sample;
                 int light_id = payload.path.currentVertex().materialId;
@@ -886,8 +1283,8 @@ RT_FUNCTION bool eye_step(Tracer::PayloadBDPTVertex& prd)
         prd.done = true;
         return false;
     }
-
-#define ISLIGHTSOURCE(a) (a.type == HIT_LIGHT_SOURCE||a.type == ENV_MISS)
+    
+#define ISLIGHTSOURCE(a) (a.type == BDPTVertex::Type::HIT_LIGHT_SOURCE||a.type == BDPTVertex::Type::ENV_MISS)
 #define ISVALIDVERTEX(a) (fmaxf(a.flux / a.pdf)>= 0.00000001f)
     if (ISLIGHTSOURCE(prd.path.currentVertex()))
     {

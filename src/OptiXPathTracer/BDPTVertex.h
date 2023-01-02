@@ -4,8 +4,8 @@
 
 #include <optix.h>
 #include"rt_function.h" 
-#include"light_parameters.h"
-
+#include"light_parameters.h" 
+#include"MaterialData.h"
 struct BDPTVertex
 {
     float3 position;
@@ -52,7 +52,11 @@ struct BDPTVertex
 
     //used for RMIS computing
     short lastZoneId;
-    short type = QUAD;
+    enum Type
+    {
+        SPHERE, QUAD, DIRECTION, ENV, HIT_LIGHT_SOURCE, ENV_MISS, NORMALHIT, VertexTypeNum
+    };
+    short type = Type::QUAD;
 
 
     bool isOrigin;
@@ -65,8 +69,23 @@ struct BDPTVertex
 
     __host__ __device__ BDPTVertex() :isBrdf(false), lastBrdf(false) {}
     __host__ __device__ bool is_LL_DIRECTION()const { return isLastVertex_direction; }
-    __host__ __device__ bool is_DIRECTION()const { return type == DIRECTION||type == ENV; }
+    __host__ __device__ bool is_DIRECTION()const { return type == BDPTVertex::Type::DIRECTION||type == BDPTVertex::Type::ENV; }
+    __host__ __device__ bool hit_lightSource()const { return type == BDPTVertex::Type::ENV_MISS||type == BDPTVertex::Type::HIT_LIGHT_SOURCE; }
     __host__ __device__ float contri_float() { return flux.x + flux.y + flux.z; } 
+    
+    template<typename B, typename T = MaterialData::Pbr>
+    __host__ __device__ T  getMat(B mats)const
+    {
+        if (type != BDPTVertex::Type::NORMALHIT)
+        {
+            printf("call get Mat in undesigned case!!! %d\n", type);
+            return mats[0];
+        }
+        T mat = mats[materialId];
+        mat.base_color = make_float4(color, 1);
+        return mat;
+    }
+
 };
 
 struct BDPTPath
@@ -112,7 +131,7 @@ struct BDPTPath
     }
     RT_FUNCTION bool hit_lightSource()
     {
-        return currentVertex().type == HIT_LIGHT_SOURCE || currentVertex().type == ENV_MISS;
+        return currentVertex().type == BDPTVertex::Type::HIT_LIGHT_SOURCE || currentVertex().type == BDPTVertex::Type::ENV_MISS;
     }
 };
 struct RAWVertex

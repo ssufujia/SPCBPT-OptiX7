@@ -105,6 +105,9 @@ Scene* LoadScene(const char* filename)
 				sscanf(line, " clearcoat %f", &material.clearcoat);
 				sscanf(line, " clearcoatGloss %f", &material.clearcoatGloss);
 				sscanf(line, " brdf %i", &material.brdf);
+
+				sscanf(line, " trans %f", &material.trans);
+				sscanf(line, " eta %f", &material.eta);
 			}
 
 			// Check if texture is already loaded

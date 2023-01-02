@@ -92,8 +92,10 @@ struct SubspaceSampler
     Subspace* subspace;
     float* cmfs;
     int* jump_buffer;
+    int* glossy_index;
     int vertex_count;
     int path_count;
+    int glossy_count;
 };
 struct envInfo
 {
@@ -106,6 +108,7 @@ struct envInfo
     int height;
     int divLevel;
     int ssBase;
+    int light_id;
     bool valid;
     __device__ __host__ float projectPdf() { return 1; } 
 
@@ -119,14 +122,14 @@ struct envInfo
         int h = index / width;
         return make_int2(w, h);
     }
-    RT_FUNCTION __host__ float2 coord2uv(int2 coord)
+    RT_FUNCTION __host__ float2 coord2uv(int2 coord)const
     {
         float u, v;
         u = coord.x / float(width);
         v = coord.y / float(height);
         return make_float2(u, v);
     }
-    RT_FUNCTION __host__ int2 uv2coord(float2 uv)
+    RT_FUNCTION __host__ int2 uv2coord(float2 uv)const
     {
         int x = uv.x * width;
         int y = uv.y * height;
@@ -163,6 +166,7 @@ RT_FUNCTION __host__ float2 dir2uv(float3 dir)
 
     return uv;
 }
+
 struct subspaceMacroInfo
 {
     int subspaceNum;
@@ -316,7 +320,7 @@ namespace TrainData
             weight = eye_side ? make_float3(pdf) : a.flux;
             if (eye_side == false && a.depth == 0)
             {
-                if (a.type == QUAD) setLightSourceFlag(false);
+                if (a.type == BDPTVertex::Type::QUAD) setLightSourceFlag(false);
                 if (a.is_DIRECTION()) setLightSourceFlag(true);
             }
         }

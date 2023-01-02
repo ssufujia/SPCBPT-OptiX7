@@ -4,6 +4,7 @@
 #include"stb_image.h"
 #include<direct.h>
 #include<map>
+
 sutil::Aabb get_aabb(std::vector<float3> v)
 {
 
@@ -43,7 +44,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
 
         if (!pixels)
         {
-            std::cout << "error image loading" << std::endl;
+            std::cout << "error image loading" << name<< std::endl;
         }
         auto data_p = reinterpret_cast<uint32_t*>(pixels);
 
@@ -72,6 +73,8 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         mtl.pbr.base_color = make_float4(p.color,1.0);
         mtl.pbr.metallic = p.metallic;
         mtl.pbr.roughness = p.roughness;
+        mtl.pbr.trans = p.trans;
+        mtl.pbr.eta = p.eta;
         mtl.pbr.brdf = p.brdf;
         if (p.albedoID != 0)
         {
@@ -116,7 +119,7 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
         Light light;
         if (SL.lightType == LightType::DIRECTION)
         {
-            Dst.addDirectionalLight(light.directional.direction, light.directional.intensity);
+            Dst.addDirectionalLight(SL.direction, SL.emission);
             continue;
             light.type = Light::Type::DIRECTIONAL;
             light.directional.intensity = SL.emission;
@@ -147,6 +150,7 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
     {
         Light light;
         light.type = Light::Type::ENV;
+        light.id = lights.size();
         lights.push_back(light);
 
     }

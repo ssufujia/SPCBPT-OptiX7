@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include<thrust/device_vector.h> 
 #include"../decisionTree/classTree_common.h"
+#include"../../cuda/MaterialData.h"
+#include"../../cuda/BufferView.h"
+#include<thrust/host_vector.h>
+
 void useCUDA();
 
 
@@ -109,6 +113,7 @@ struct timerecord_stage
 namespace MyThrustOp
 {
     SubspaceSampler LVC_Process(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange);
+    SubspaceSampler LVC_Process_glossyOnly(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange, BufferView<MaterialData::Pbr> mats);
 
     int valid_sample_gather(thrust::device_ptr<preTracePath> raw_paths, int maxPathSize,
         thrust::device_ptr<preTraceConnection> raw_conns, int maxConns);
@@ -132,6 +137,8 @@ namespace MyThrustOp
     void load_Gamma_file(thrust::device_ptr<float>& Gamma);
 
     thrust::device_ptr<float> envMapCMFBuild(float* pmf, int size);
+    thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size); 
+    thrust::host_vector<float4> copy_to_host(float4* data, int size);
 }
 
 

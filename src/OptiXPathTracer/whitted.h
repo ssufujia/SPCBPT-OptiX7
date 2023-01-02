@@ -97,13 +97,16 @@ struct PayloadRadiance
     int    depth;
     unsigned int seed;
     bool done;
+    bool glossy_bounce;
+    short caustic_bounce_state;
     RT_FUNCTION PayloadRadiance()
     {
         result = make_float3(0); 
         throughput = make_float3(1.0);
         depth = 0;
         done = false;
-
+        glossy_bounce = true;
+        caustic_bounce_state = 0;
     }
 };
 

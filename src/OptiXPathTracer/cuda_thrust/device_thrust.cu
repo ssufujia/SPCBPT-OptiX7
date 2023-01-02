@@ -249,7 +249,7 @@ namespace MyThrustOp
         static thrust_dev_float d_weight(countRange);
         static thrust_host_float h_weight(countRange);
         
-        int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>()); 
+        int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>());
           
         //copy necessary info
         thrust::for_each(
@@ -272,8 +272,9 @@ namespace MyThrustOp
 
         for (int i = 0; i < countRange; i++)
         {
-            if (!h_validState[i] )
+            if (!h_validState[i])
                 continue;
+            //valid_count++;
             int subspace = h_Vsubspace_info[i];
             num_subspace_vertex[subspace] += 1;
             Q_subspace_vertex[subspace] += h_weight[i]; 
@@ -324,12 +325,73 @@ namespace MyThrustOp
         sampler.path_count = thrust::count_if(
             thrust::make_counting_iterator(0), thrust::make_counting_iterator(0) + countRange,
             is_path_begin(thrust::raw_pointer_cast(vertices), thrust::raw_pointer_cast(validState)));
+        //sampler.path_count = 100000;
+        printf("path count %d\n", sampler.path_count);
         sampler.jump_buffer = thrust::raw_pointer_cast(ans_jump.data());
         sampler.cmfs = thrust::raw_pointer_cast(ans_cmf.data());
         sampler.subspace = thrust::raw_pointer_cast(ans_subspace.data());
         sampler.LVC = thrust::raw_pointer_cast(vertices); 
         return sampler;
     }
+
+    struct glossy_index_check
+    {
+        BDPTVertex* v;
+        bool* validState;
+        BufferView<MaterialData::Pbr> mats;
+        glossy_index_check(BDPTVertex* v, bool* validState, BufferView<MaterialData::Pbr> mats) :
+            v(v), validState(validState), mats(mats)
+        {
+        }
+        __device__ __host__ bool operator()(int i)
+        {
+            if (validState[i] && v[i].depth >= 1 )
+            {
+                for (int k = 0; k < v[i].depth; k++)
+                {
+                    const MaterialData::Pbr& mat = mats[v[i - k].materialId];
+                    if (max(mat.metallic,mat.trans) < 0.9 || mat.roughness > 0.1)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                return true; 
+            }
+            return false;
+        }
+    };
+    SubspaceSampler LVC_Process_glossyOnly(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange, BufferView<MaterialData::Pbr> mats)
+    {
+        SubspaceSampler sampler;
+        thrust_dev_bool d_validState(validState, validState + countRange);
+        thrust_host_bool h_validState = d_validState;
+        //thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);  
+        int valid_count = 0;
+         
+        thrust_dev_bool d_valid_glossy(countRange);
+        thrust::transform(thrust::make_counting_iterator(0),
+            thrust::make_counting_iterator(0) + countRange,
+            d_valid_glossy.begin(),
+            glossy_index_check(thrust::raw_pointer_cast(vertices), thrust::raw_pointer_cast(validState), mats));
+        thrust_host_bool h_valid_glossy = d_valid_glossy;
+
+        thrust_host_int h_indexes;
+        for (int i = 0; i < countRange; i++)
+        {
+            if (!h_valid_glossy[i])
+                continue; 
+            
+            h_indexes.push_back(i);
+        }
+        static thrust_dev_int d_indexes;
+        d_indexes = h_indexes;
+        printf("glossy vertices number %d\n", h_indexes.size());
+        sampler.glossy_count = h_indexes.size();
+        sampler.glossy_index = thrust::raw_pointer_cast(d_indexes.data());
+        return sampler;
+    }
+
     static thrust_host_float h_Q_vec(NUM_SUBSPACE);
     static thrust_dev_float Q_vec;
     void Q_zero_handle(thrust::device_ptr<float>& Q)
@@ -550,6 +612,20 @@ namespace MyThrustOp
         thrust::device_vector<classTree::tree_node>& d_v = tree_save.eye_tree;
         d_v = h_v;
         return thrust::raw_pointer_cast(d_v.data());
+    }
+
+    thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size)
+    {
+        thrust::device_vector<uchar4> d_vec(data, data + size);
+        thrust::host_vector<uchar4> h_vec = d_vec;
+        return h_vec;
+    }
+
+    thrust::host_vector<float4> copy_to_host(float4* data, int size)
+    {
+        thrust::device_vector<float4> d_vec(data, data + size);
+        thrust::host_vector<float4> h_vec = d_vec;
+        return h_vec;
     }
     struct tree_label_op
     {

@@ -55,6 +55,8 @@ OPTIX_add_sample_executable( optixPathTracer target_name
   stb_image.cpp
   material_parameters.h
   light_parameters.h
+  frame_estimation.h
+  frame_estimation.cpp
 
   whitted.h
   BDPTVertex.h

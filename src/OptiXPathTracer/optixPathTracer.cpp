@@ -64,8 +64,10 @@
 #include<sutil/Record.h>
 
 #include<thrust/device_vector.h>
+#include<thrust/host_vector.h>
 #include"cuda_thrust/device_thrust.h"
 #include"decisionTree/classTree_host.h"
+#include"frame_estimation.h"
 using namespace std;
  
 
@@ -177,6 +179,35 @@ static void windowIconifyCallback( GLFWwindow* window, int32_t iconified )
 }
 
 
+void img_save()
+{
+    sutil::ImageBuffer outputbuffer;
+
+    auto host_buffer = MyThrustOp::copy_to_host(params.frame_buffer, params.height * params.width);
+    outputbuffer.data = host_buffer.data();
+    outputbuffer.width = params.width;
+    outputbuffer.height = params.height;
+    outputbuffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
+    sutil::saveImage("image.png", outputbuffer, true);
+
+
+    auto p = MyThrustOp::copy_to_host(params.accum_buffer, params.height * params.width);
+    std::ofstream outFile;
+    outFile.open("./standard.txt");
+
+    outFile << params.width << " " << params.height << std::endl;
+    for (int i = 0; i < params.width * params.height; i++)
+    {
+        outFile << p[i].x << " ";
+        outFile << p[i].y << " ";
+        outFile << p[i].z << " ";
+        outFile << p[i].w << std::endl;
+
+    }
+    outFile.close();
+
+}
+
 static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, int32_t action, int32_t /*mods*/ )
 {
     if( action == GLFW_PRESS )
@@ -195,6 +226,10 @@ static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, 
             // toggle UI draw
         }
 
+        else if (key == GLFW_KEY_S)
+        {
+            img_save();
+        }
         else if (key == GLFW_KEY_SPACE)
         {
             render_alg_id++;
@@ -403,6 +438,7 @@ std::vector<int> surroundsIndex(int index, const envInfo& infos)
 }
 thrust::device_ptr<float> envMapCMFBuild(float4* lum, int size, const envInfo& infos)
 { 
+
     std::vector<float> p2(size);
     float uniform_rate = 0.25;
     float uniform_pdf = 1.0 / size;
@@ -430,7 +466,6 @@ thrust::device_ptr<float> envMapCMFBuild(float4* lum, int size, const envInfo& i
 }
 void env_params_setup(const sutil::Scene& scene)
 { 
-    printf("scene aabb is %f %f %f\n", scene.aabb().center().x, scene.aabb().center().y, scene.aabb().center().z);
     if (scene.getEnvFilePath() == std::string(""))
     {
         params.sky.valid = false;
@@ -438,26 +473,35 @@ void env_params_setup(const sutil::Scene& scene)
     }
     printf("load and build sampling cmf from file %s\n",scene.getEnvFilePath());
     HDRLoader hdr_env((string(SAMPLES_DIR) + string("/data/") + scene.getEnvFilePath()));
+
     float3 default_color = make_float3(1.0);
-    auto env_tex = hdr_env.loadTexture(default_color, nullptr);
-    params.sky.tex = env_tex.texture;
     params.sky.height = hdr_env.height();
     params.sky.width = hdr_env.width();
     params.sky.divLevel = sqrt(0.5 * NUM_SUBSPACE_LIGHTSOURCE);
     params.sky.ssBase = 0;
     params.sky.size = hdr_env.height() * hdr_env.width();
 
+
+
     float4* hdr_m_raster = reinterpret_cast<float4*>(hdr_env.raster());
     for (int i = 0; i < scene.dir_lights.size(); i++)
     {
         auto& dir_light = scene.dir_lights[i];
-        auto coord = params.sky.uv2coord(dir2uv(-dir_light.first));
-        hdr_m_raster[params.sky.coord2index(coord)] += make_float4(dir_light.second * params.sky.size / (4 * M_PI), 1.0);
+        float3 dir = dir_light.first;
+        dir.y = -dir.y;
+        auto uv = dir2uv(-dir);
+        auto coord = params.sky.uv2coord(uv);
+        auto index = params.sky.coord2index(coord);
+        hdr_m_raster[index] += make_float4(dir_light.second * params.sky.size / (4 * M_PI), 0.0);
+        printf("Add directional light %f %f %f in index %d\n", dir_light.first.x, dir_light.first.y, dir_light.first.z, index);
     }
+    auto env_tex = hdr_env.loadTexture(default_color, nullptr);
+    params.sky.tex = env_tex.texture;
     params.sky.cmf = thrust::raw_pointer_cast(envMapCMFBuild(hdr_m_raster, hdr_env.height() * hdr_env.width(), params.sky));
     params.sky.center = scene.aabb().center();
     params.sky.r = length(scene.aabb().m_min - scene.aabb().m_max);
     params.sky.valid = true;
+    params.sky.light_id = params.lights.count - 1;
 }
 void lt_params_setup(const sutil::Scene& scene)
 {
@@ -519,6 +563,10 @@ void launchLVCTrace(sutil::Scene& scene)
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
     auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count());
     params.sampler = sampler;
+    sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials);
+    params.sampler.glossy_count = sampler.glossy_count;
+    params.sampler.glossy_index = sampler.glossy_index;
+
 }
 int launchPretrace(sutil::Scene& scene)
 {
@@ -552,7 +600,7 @@ int launchPretrace(sutil::Scene& scene)
 void preprocessing(sutil::Scene& scene)
 {
     printf("BDPTVertex Size %d\n", sizeof(BDPTVertex));
-    const int target_sample_count = 2000000;
+    const int target_sample_count = 20000;
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
     {
@@ -560,10 +608,10 @@ void preprocessing(sutil::Scene& scene)
     }
 
     MyThrustOp::sample_reweight();
-    auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 100000);
+    auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 10000);
     auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE, 0);
 
-    unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 100000);
+    unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
     auto h_light_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE, 0);
 
     auto d_DecisionTree = MyThrustOp::eye_tree_to_device(h_eye_tree.v, h_eye_tree.size);
@@ -608,7 +656,7 @@ void preprocessing(sutil::Scene& scene)
 }
 void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene& scene)
 {
-
+    //printf("subframe id %d\n", params.subframe_index);
     scene.switchRaygen(render_alg[render_alg_id]);
     // Launch
     uchar4* result_buffer_data = output_buffer.map();
@@ -650,7 +698,6 @@ void displaySubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::GLD
             );
 }
 
-
 static void context_log_cb( unsigned int level, const char* tag, const char* message, void* /*cbdata */ )
 {
     std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
@@ -675,8 +722,7 @@ void initCameraState(const sutil::Scene& scene)
 //
 // Main
 //
-//------------------------------------------------------------------------------
-
+//------------------------------------------------------------------------------ 
 int main( int argc, char* argv[] )
 { 
     //Cthrust;
@@ -720,8 +766,10 @@ int main( int argc, char* argv[] )
 
     try
     {
-        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");
-//        string scenePath = string(SAMPLES_DIR) + string("/data/testMirror/testmirror.scene");
+//        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");
+//         string scenePath = string(SAMPLES_DIR) + string("/data/testMirror/testmirror-goodPerformance.scene");
+         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_mirror.scene");
+//         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
 
@@ -737,7 +785,7 @@ int main( int argc, char* argv[] )
 
         LightSource_shift(*myScene, params, TScene);
         Scene_shift(*myScene, TScene);
-
+        
         TScene.finalize();
         
         //initCameraState();
@@ -818,6 +866,16 @@ int main( int argc, char* argv[] )
 
                     glfwSwapBuffers(window);
 
+                    estimation::es.estimation_mode = false;
+                    if (estimation::es.estimation_mode == true)
+                    {
+                        float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
+                        printf("frame %d relMse %f\n", params.subframe_index, error); 
+                    }
+                    else
+                    {
+                        printf("frame %d\n", params.subframe_index);
+                    }
                     ++params.subframe_index;
                 } while (!glfwWindowShouldClose(window));
                 CUDA_SYNC_CHECK();

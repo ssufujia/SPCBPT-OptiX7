@@ -7,7 +7,8 @@
 #include <sutil/vec_math.h> 
 enum LightType
 {
-	SPHERE, QUAD, DIRECTION,ENV,HIT_LIGHT_SOURCE,ENV_MISS, NORMALHIT,LightTypeNum
+	SPHERE, QUAD, DIRECTION,ENV, LightTypeNum
+//	SPHERE, QUAD, DIRECTION,ENV,HIT_LIGHT_SOURCE,ENV_MISS, NORMALHIT,LightTypeNum
 };
 enum MyRayType
 {
