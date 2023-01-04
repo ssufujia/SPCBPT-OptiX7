@@ -2869,8 +2869,8 @@ namespace Shift
                 path_shift_uvRemap_1bounce(originPath, newPath, anchor, Jacobian);
         } 
 
-        bool ans = path_shift_tanScale(originPath, newPath, anchor, Jacobian, reverse);
-        //bool ans = path_shift_universal(originPath, newPath, anchor, Jacobian, reverse);
+        //bool ans = path_shift_tanScale(originPath, newPath, anchor, Jacobian, reverse);
+        bool ans = path_shift_universal(originPath, newPath, anchor, Jacobian, reverse);
  
         return ans;
     }
