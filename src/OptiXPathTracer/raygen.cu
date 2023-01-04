@@ -791,6 +791,7 @@ extern "C" __global__ void __raygen__glossy_shift_only()
     float3 ray_direction = normalize(d.x * U + d.y * V + W);
     float3 ray_origin = eye;
     float3 result = make_float3(0);
+
     bool shift_valid_eye = true;
     Tracer::PayloadBDPTVertex payload;
     payload.clear();
@@ -849,6 +850,7 @@ extern "C" __global__ void __raygen__glossy_shift_only()
             float pmf_firstStage = 1;  
             float pmf_secondStage;
             if (Tracer::params.sampler.glossy_count == 0)continue;
+
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleGlossy(payload.seed, pmf_secondStage);
              
@@ -857,23 +859,16 @@ extern "C" __global__ void __raygen__glossy_shift_only()
             {
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
 
-                int origin_buffer_size = buffer_size;
                 const BDPTVertex* light_ptr = &light_subpath;
-                while (true)
-                {
-                    pathBuffer[buffer_size] = *light_ptr; buffer_size++;
-                    if (light_ptr->depth == 0)break;
-                    light_ptr--;
-                }
-                int n_buffer_size = buffer_size;
-                buffer_size = origin_buffer_size;
+                //int n_buffer_size = buffer_size + light_subpath.depth + 1;
+
                 if (Shift::glossy(light_subpath)  && //light_subpath.depth == 1&&
                     shift_valid_eye &&Shift::glossy(eye_subpath) == false && light_subpath.depth < SHIFT_VALID_SIZE - 1)
                 { 
                     BDPTVertex light_sub_new[SHIFT_VALID_SIZE]; 
                     float shift_pdf; 
                     Shift::PathContainer originPath(const_cast<BDPTVertex*>( &light_subpath), -1, light_subpath.depth + 1); 
-                    Shift::PathContainer finalPath(light_sub_new + originPath.size() - 1, -1);
+                    Shift::PathContainer finalPath(light_sub_new, 1);
 
                     
                     bool shift_good = Shift::path_shift(originPath, finalPath, eye_subpath.position, shift_pdf); 
@@ -882,14 +877,14 @@ extern "C" __global__ void __raygen__glossy_shift_only()
 
                     for (int i = 0; i < finalPath.size(); i++)
                     {
-                        pathBuffer[n_buffer_size - i - 1] = finalPath.get(-i - 1);
+                        pathBuffer[buffer_size + i] = finalPath.get(i);
                     } 
 
                     float pdf = eye_subpath.pdf * light_subpath.pdf * shift_pdf;
                     float3 fractFactor = make_float3(1);
                     //if(finalPath.size() == 2)
                     fractFactor = Shift::evalFract(finalPath, eye_subpath.position, payload.seed);
-                    float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size) * fractFactor;
+                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()) * fractFactor;
                     
 
                     float3 res = contri / pdf / pmf ; 
@@ -899,7 +894,16 @@ extern "C" __global__ void __raygen__glossy_shift_only()
                     } 
                 } 
                 else
-                { 
+                {
+                    int origin_buffer_size = buffer_size;
+                    while (true)
+                    {
+                        pathBuffer[buffer_size] = *light_ptr; buffer_size++;
+                        if (light_ptr->depth == 0)break;
+                        light_ptr--;
+                    }
+                    int n_buffer_size = buffer_size;
+                    buffer_size = origin_buffer_size;
                     //float pdf = Tracer::pdfCompute(pathBuffer, n_buffer_size, origin_buffer_size);
                     //float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size);
                     //float3 res = contri / pdf / pmf; 
@@ -930,7 +934,7 @@ extern "C" __global__ void __raygen__glossy_shift_only()
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
-    //if (subframe_index > 10)return;
+//    if (subframe_index > 1000)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);

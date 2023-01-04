@@ -40,6 +40,7 @@
 
 
 #define ISINVALIDVALUE(ans) (ans.x>100000.0f|| isnan(ans.x)||ans.y>100000.0f|| isnan(ans.y)||ans.z>100000.0f|| isnan(ans.z))
+#define VERTEX_MAT(v) (v.getMat(Tracer::params.materials))
 struct labelUnit
 {
     float3 position;
@@ -60,6 +61,7 @@ struct labelUnit
 
 };
 
+ 
 RT_FUNCTION bool refract(float3& r, float3 i, float3 n, float ior)
 { 
     float eta = ior;
@@ -1684,9 +1686,10 @@ RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample,
 }
 namespace Shift
 {
-
-    RT_FUNCTION float2 sample_reverse_half(float a, const float3& N, float3 half)
-    {
+#define ROUGHNESS_A_LIMIT 0.001f
+    RT_FUNCTION float2 sample_reverse_half(float a, float3 half)
+    {  
+        a = max(ROUGHNESS_A_LIMIT, a);
         float cosTheta = half.z;
         float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
         float sinPhi = half.y / sinTheta;
@@ -1701,8 +1704,17 @@ namespace Shift
         float r2 = (1 - A) / (A * a * a - A + 1);
         return make_float2(r1, r2);
     }
-    RT_FUNCTION float3 sample_half(float a, const float3& N, float2 uv)
+
+    RT_FUNCTION float2 sample_reverse_half(float a, const float3 & N, float3 half)
     {
+        Onb onb(N);
+        onb.transform(half);
+        return sample_reverse_half(a, half);
+    }
+    RT_FUNCTION float3 sample_half(float a, const float2 uv)
+    {
+        a = max(ROUGHNESS_A_LIMIT, a);
+
         float r1 = uv.x;
         float r2 = uv.y;
         float phi = r1 * 2.0 * M_PIf;
@@ -1714,15 +1726,23 @@ namespace Shift
         float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
         return half;
     }
+
+    RT_FUNCTION float3 sample_half(float a, const float3& N, const float2 uv)
+    {
+        Onb onb(N);
+        float3 half = sample_half(a, uv);
+        onb.inverse_transform(half);
+        return half;
+    }
     RT_FUNCTION float dh_dwi_estimate(float a, float3 normal, float3 half, float3 v)
     {
         float3 wo = 2.0f * dot(v, half) * half - v;
-        float2 origin_uv = sample_reverse_half(a, normal, half);
+        float2 origin_uv = sample_reverse_half(a,  half);
         float scale = .0001;
         float2 uv1 = origin_uv + make_float2(scale, 0);
         float2 uv2 = origin_uv + make_float2(0, scale);
-        float3 half2 = sample_half(a, normal, uv2);
-        float3 half1 = sample_half(a, normal, uv1);
+        float3 half2 = sample_half(a,  uv2);
+        float3 half1 = sample_half(a,  uv1);
         float3 v1 = half1;//2.0 * dot(wo, half1) * half1 - wo;
         float3 v2 = half2;//2.0 * dot(wo, half2) * half2 - wo;
         float3 vv = half;//2.0 * dot(wo, half) * half - wo;
@@ -1759,14 +1779,14 @@ namespace Shift
         float o2 = robePdf(b, normal, halfb, v2);// *(4.0 * abs(dot(halfb, v2)));
         float t1 = dh_dwi_estimate(a, normal, halfa, v1);
         float t2 = dh_dwi_estimate(b, normal, halfb, v2);
-        float2 uv1 = sample_reverse_half(a, normal, halfa);
-        float2 uv2 = sample_reverse_half(b, normal, halfb);
+        float2 uv1 = sample_reverse_half(a,  halfa);
+        float2 uv2 = sample_reverse_half(b,  halfb);
         if(uv2.y<.7 &&uv1.y<.7)
             printf("pdf compare %f %f %f %f %f %f uv info %f %f %f %f\n", o1, o2, t1, t2, o1 / o2, t1 / t2, uv1.x, uv2.y, uv2.x, uv2.y );
 
     }
 
-    RT_FUNCTION bool back_trace_robeScale(const BDPTVertex& midVertex, const BDPTVertex& originLast, 
+    RT_FUNCTION bool back_trace_robeScale(const BDPTVertex& midVertex, const BDPTVertex& originLast,
         float3 anchor, float robe_scale, BDPTVertex& new_vertex, float& pdf, bool reverse = false)
     {
         float3 in_dir = normalize(anchor - midVertex.position);
@@ -1774,39 +1794,38 @@ namespace Shift
 
         //float3 reflect = 2.0f * dot(in_dir, normal) * normal - in_dir;
 
-        Onb onb(normal);
 
         float3 origin_out = normalize(originLast.position - midVertex.position);
         float3 half_global_origin = normalize(origin_out + in_dir);
         if (dot(half_global_origin, normal) < 0) normal = -normal;
         float3 half = half_global_origin;
+
+        Onb onb(normal);
         onb.transform(half);
 
-        float a_new = max(0.001f, Tracer::params.materials[midVertex.materialId].roughness); 
-        robe_scale = .5;
+        float a_new = max(0.001f, Tracer::params.materials[midVertex.materialId].roughness);
+        //robe_scale = .5;
         //a_new = .1;// robe_scale;
         if (reverse)
         {
             float t = a_new;
             a_new = robe_scale;
             robe_scale = t;
-            
-        }
-        float2 uv_sample = sample_reverse_half(robe_scale, normal, half);
-        //if (uv_sample.y > 0.8)return false;
-        float3 temp_half = sample_half(robe_scale, normal, uv_sample);
 
-        float3 half_new = sample_half(a_new, normal, uv_sample);        
-         
-        if(false)
+        }
+        float2 uv_sample = sample_reverse_half(robe_scale, half);
+
+        float3 half_new = sample_half(a_new, uv_sample);
+
+        if (false)
         {
-            float2 uv2 = sample_reverse_half(robe_scale, normal, half);
-            float3 half_2 = sample_half(robe_scale, normal, uv2);
-            float2 uv3 = sample_reverse_half(robe_scale, normal, half_2);
-            float3 half_3 = sample_half(robe_scale, normal, uv2);
+            float2 uv2 = sample_reverse_half(robe_scale, half);
+            float3 half_2 = sample_half(robe_scale, uv2);
+            float2 uv3 = sample_reverse_half(robe_scale,  half_2);
+            float3 half_3 = sample_half(robe_scale,  uv2);
             onb.inverse_transform(half_2);
-            onb.inverse_transform(half_3); 
-            printf("%f %f %f %f uv check \n", float3weight(half_2), float3weight(half_3),float3weight(half_global_origin), dot(half_global_origin,normal));
+            onb.inverse_transform(half_3);
+            printf("%f %f %f %f uv check \n", float3weight(half_2), float3weight(half_3), float3weight(half_global_origin), dot(half_global_origin, normal));
             //printf("out_direction check %f %f %f-%f\n", float3weight(half_origin_), float3weight(half_global_origin), uv_sample.x, uv_sample.y);
         }
         float3 half_global = half_new;//
@@ -1815,8 +1834,8 @@ namespace Shift
         //float3 new_out = cosProject + tan_scale * biasVector;
         float3 new_dir = 2.0f * dot(in_dir, half_global) * half_global - in_dir;
         //printf("half compare %f %f\n", float3weight(new_dir), float3weight(origin_out));
-        if (dot(new_dir, normal) < 0) { 
-            pdf = dot(origin_out,normal)<0? 2: .5;
+        if (dot(new_dir, normal) < 0) {
+            pdf = dot(origin_out, normal) < 0 ? 2 : .5;
             return false;
         }
 
@@ -1826,23 +1845,25 @@ namespace Shift
         //mat.base_color = make_float4(midVertex.color, 1.0);
         //float3 new_dir; //Tracer::Sample_shift_metallic(mat, midVertex.normal, in_dir, uv.x, uv.y);
         Tracer::PayloadBDPTVertex payload;
-        payload.clear();
-        payload.seed = 0;
-        payload.ray_direction = new_dir;
-        payload.origin = midVertex.position;
-        init_EyeSubpath(payload.path, payload.origin, payload.ray_direction);
-
-
-        float3 ray_direction = payload.ray_direction;
-        float3 ray_origin = payload.origin;
-        int begin_depth = payload.path.size;
-        Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
-            SCENE_EPSILON,  // tmin
-            1e16f,  // tmax
-            &payload);
-        if (payload.path.size == begin_depth)
         {
-            return false;
+            payload.clear();
+            payload.seed = 0;
+            payload.ray_direction = new_dir;
+            payload.origin = midVertex.position;
+            init_EyeSubpath(payload.path, payload.origin, payload.ray_direction);
+
+
+            float3 ray_direction = payload.ray_direction;
+            float3 ray_origin = payload.origin;
+            int begin_depth = payload.path.size;
+            Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+                SCENE_EPSILON,  // tmin
+                1e16f,  // tmax
+                &payload);
+            if (payload.path.size == begin_depth)
+            {
+                return false;
+            }
         }
         new_vertex = payload.path.currentVertex();
         float3 dirVec = new_vertex.position - midVertex.position;
@@ -1850,13 +1871,9 @@ namespace Shift
 
         pdf = 1.0;
         //return true;
-        //pdf /= robePdf(robe_scale, normal, half_global_origin, origin_out);
-        //pdf *= robePdf(a_new, normal, half_global, new_dir);
-        MaterialData::Pbr mat = midVertex.getMat(Tracer::params.materials);
-        mat.roughness = robe_scale;
-        pdf /= Tracer::Pdf(mat, normal, in_dir, origin_out);
-        mat.roughness = a_new;
-        pdf *= Tracer::Pdf(mat, normal, in_dir, new_dir);
+        pdf /= robePdf(robe_scale, normal, half_global_origin, origin_out);
+        pdf *= robePdf(a_new, normal, half_global, new_dir);
+
         
         pdf /= 1.0 / dot(originVec, originVec) * abs(dot(normalize(originVec), originLast.normal));
         pdf *= 1.0 / dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
@@ -2366,9 +2383,250 @@ namespace Shift
 
         return true;
     }
+    RT_FUNCTION float3 refract_half(float3 in_dir, float3 out_dir, float3 normal, float eta)
+    {
+        eta = max(eta, 1 / eta);
+        float3 ans;
+        if(abs(dot(in_dir, normal)) > abs(dot(out_dir, normal)))
+        {
+            ans = eta * in_dir + out_dir;
+        }
+        else
+        {
+            ans = in_dir + eta * out_dir;
+        }
+        ans = normalize(ans);
+        return dot(ans, normal) > 0 ? ans : -ans;
+    }
+
+
+    // Jacobian = dy / duv   
+    // write uv, refract_state, jacobian
+    RT_FUNCTION void uv_encoding(PathContainer& path, float2* uv, bool* refract_state, float* Jacobian, int g, bool reverse, float3 anchor)
+    {
+        for (int i = 0; i < g; i++)
+        {
+            float3 in_dir = (i == 0 ? anchor : path.get(i - 1).position) - path.get(i).position;
+            float3 out_dir = path.get(i + 1).position - path.get(i).position;
+            refract_state[i] = isRefract(path.get(i).normal, in_dir, out_dir);
+        }
+
+        //////////////////////////////////////////////
+        ////////// mapping for y_{s - 2} /////////////
+        //////////////////////////////////////////////
+        {
+
+            float3 in_dir = normalize(anchor - path.get(0).position);
+            float3 out_dir = normalize(path.get(1).position - path.get(0).position);
+
+            float3 normal = path.get(0).normal;
+
+            MaterialData::Pbr mat = VERTEX_MAT(path.get(0));
+            float eta = mat.eta;
+#define LOBE_SCALE_ROUGH_A 0.4f 
+            float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
+            a = reverse ? a : LOBE_SCALE_ROUGH_A;
+
+
+            /// same as the code below
+            /// but we should change it when we use a different coding method
+            float3 half = refract_state[0] ?
+                refract_half(in_dir, out_dir, normal, eta) :
+                normalize(in_dir + out_dir);
+            half = dot(half, normal) > 0 ? half : -half;
+
+
+            uv[0] = sample_reverse_half(a, normal, half);
+
+            float cosTheta = dot(normal, half);
+            float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
+            float dwi_dwh = refract_state[0] ? dwh_dwi_refract(half, in_dir, out_dir, eta) : 4 * dot(half, in_dir);
+            Jacobian[0] = dwi_dwh / duv_dwh;// dwi / duv 
+        } 
+
+        //////////////////////////////////////////////
+        /////////// half vector to uv ////////////////
+        //////////////////////////////////////////////
+        for (int i = 1; i < g; i++)
+        {
+            float3 in_dir = normalize(path.get(i - 1).position - path.get(i).position);
+            float3 out_dir = normalize(path.get(i + 1).position - path.get(i).position);
+
+            float3 normal = path.get(i).normal;
+            MaterialData::Pbr mat = VERTEX_MAT(path.get(i));
+            float eta = mat.eta;
+            float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
+
+            float3 half = refract_state[i] ?
+                refract_half(in_dir, out_dir, normal, eta) :
+                normalize(in_dir + out_dir);
+            half = dot(half, normal) > 0 ? half : -half;
+             
+
+            uv[i] = sample_reverse_half(a, normal, half);
+            
+            float cosTheta = dot(normal, half);
+            float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
+            float dwi_dwh = refract_state[i] ? dwh_dwi_refract(half, in_dir, out_dir, eta) : 4 * abs(dot(half, in_dir));
+            Jacobian[i] = dwi_dwh / duv_dwh;// dwi / duv
+        }
+
+
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////// Jacobian update: from dwi / duv to dy / duv ////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        for (int i = 0; i < g; i++)
+        {
+            float3 diff = path.get(i + 1).position - path.get(i).position;
+            float3 hit_normal = path.get(i + 1).normal;
+            float dy_dwi = dot(diff, diff) / abs(dot(normalize(diff), hit_normal));
+            Jacobian[i] *= dy_dwi;// dy / dwi * dwi / duv = dy / duv
+        }
+
+        return;
+    }
+
+
+    // Jacobian = duv / dy
+    // write path.get(1) ~ path.get(g) and jacobian
+    RT_FUNCTION bool uv_decoding(PathContainer& path, float2* uv, bool* refract_state, float* Jacobian, int g, bool reverse, float3 anchor, PathContainer & originPath)
+    {
+        for (int i = 0; i < g; i++)
+        {
+            float3 ray_direction;
+            {
+                float3 in_dir = normalize((i == 0 ? anchor : path.get(i - 1).position) - path.get(i).position);
+
+                float3 normal = path.get(i).normal;
+                MaterialData::Pbr mat = VERTEX_MAT(path.get(i));
+                float eta = mat.eta;
+                float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
+
+                if (i == 0)
+                {
+                    a = reverse ? LOBE_SCALE_ROUGH_A : a;
+                }
+
+                float3 half = sample_half(a, normal, uv[i]); 
+
+                if(false && i == 0)
+                {
+                    float3 in_dir = normalize(anchor - path.get(0).position);
+                    float3 out_dir = normalize(originPath.get(1).position - path.get(0).position);
+                    float3 old_half = normalize(in_dir+ out_dir);
+                    if (dot(old_half,normal) < 0) old_half = -old_half;
+                    float2 old_uv = sample_reverse_half(a, normal, old_half);
+                    printf("normal compare %f %f %f %f\n", uv[0].x, uv[0].y, old_uv.x, old_uv.y);
+                }
+                if (refract_state[i] == true)
+                {
+                    bool refract_good = refract(ray_direction, in_dir, half, eta);
+                    if (refract_good == false)return false;
+                }
+                else
+                {
+                    ray_direction = reflect(-in_dir, half);
+                    //printf("direction compare %f %f\n", float3weight(ray_direction), float3weight(normalize(originPath.get(i  + 1).position - originPath.get(i).position)));
+                    //ray_direction = normalize(originPath.get(i + 1).position - originPath.get(i).position);
+                } 
+                if (isRefract(normal, in_dir, ray_direction) != refract_state[i]) return false;
+
+                float cosTheta = dot(half, normal);
+                float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
+                float dwi_dwh = refract_state[i] ? dwh_dwi_refract(half, in_dir, ray_direction, eta) : 4 * abs(dot(half, in_dir));
+                Jacobian[i] = duv_dwh / dwi_dwh;
+            }
+
+            //retracing
+            BDPTVertex& new_vertex = path.get(i + 1);
+            { 
+                Tracer::PayloadBDPTVertex payload;
+                payload.clear();
+                payload.seed = 0;
+                payload.ray_direction = ray_direction;
+                payload.origin = path.get(i).position;
+                init_EyeSubpath(payload.path, payload.origin, payload.ray_direction);
+
+
+                float3 ray_direction = payload.ray_direction;
+                float3 ray_origin = payload.origin;
+                int begin_depth = payload.path.size;
+                Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+                    SCENE_EPSILON,  // tmin
+                    1e16f,  // tmax
+                    &payload);
+                if (payload.path.size == begin_depth)
+                {
+                    return false;
+                }
+                new_vertex = payload.path.currentVertex();
+            }
+
+            float3 diff = path.get(i + 1).position - path.get(i).position;
+            float3 hit_normal = path.get(i + 1).normal;
+            float dy_dwi = dot(diff, diff) / abs(dot(normalize(diff), hit_normal));
+            Jacobian[i] /= dy_dwi;//  duv / dwi / (dy / dwi) = duv / dy
+            
+
+            if (i + 1 == g)// if we are tracing the the last decode vertex
+            {
+                if (glossy(new_vertex))return false;// it can't be a vertex on glossy material
+                if (g + 1 == path.size()) // tracing to light source
+                {
+                    if (new_vertex.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)return false;
+
+                    // regenerate the information of lightsource vertex
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(Tracer::params.lights[new_vertex.materialId], new_vertex.uv); 
+                    init_vertex_from_lightSample(light_sample, new_vertex);
+                    return true;
+                }
+                else
+                {
+                    return Tracer::visibilityTest(Tracer::params.handle, new_vertex.position, path.get(g + 1).position);
+                }
+            }
+            else
+            {
+                if (glossy(new_vertex) == false)return false;
+            }
+        }
+        printf("running the code in undesigned cases, this should be a dead code, it should return we all the vertices are regenerated, check it!!!\n");
+        return true;
+    }
+
+    RT_FUNCTION bool path_shift_universal(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian, bool reverse = false) 
+    {
+        float2 uv[SHIFT_VALID_SIZE];
+        float Jacobians_encode[SHIFT_VALID_SIZE];
+        float Jacobians_decode[SHIFT_VALID_SIZE];
+        bool refract_state[SHIFT_VALID_SIZE];
+
+
+        int glossy_count = 0;  
+        while (glossy(originPath.get(glossy_count)))
+        {
+            glossy_count++;
+        }
+        
+        newPath.setSize(originPath.size());
+        newPath.get(0) = originPath.get(0);
+        for (int i = glossy_count + 1; i < originPath.size(); i++)
+        {
+            newPath.get(i) = originPath.get(i);
+        }
 
 
 
+        uv_encoding(originPath, uv, refract_state, Jacobians_encode, glossy_count, reverse, anchor);
+        bool map_good = uv_decoding(newPath, uv, refract_state, Jacobians_decode, glossy_count, reverse, anchor, originPath);        
+         
+
+        Jacobian = 1;
+        for (int i = 0; i < glossy_count; i++)Jacobian *= abs(Jacobians_encode[i] * Jacobians_decode[i]);
+ 
+        return map_good;
+    }
     RT_FUNCTION bool path_shift_tanScale(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian, bool reverse = false)
     { 
         float scale_rate = .02;
@@ -2540,6 +2798,7 @@ namespace Shift
         //如果前后类型不同则也是映射失败
         if (newPath.get(1).type != BDPTVertex::Type::HIT_LIGHT_SOURCE) return false;
         Jacobian *= local_jacobian;
+
         int light_id = newPath.get(1).materialId;
         float2 new_uv = newPath.get(1).uv;
         //}
@@ -2611,10 +2870,8 @@ namespace Shift
         } 
 
         bool ans = path_shift_tanScale(originPath, newPath, anchor, Jacobian, reverse);
-        if (originPath.size() == 2)
-        {
-           // printf("pos compare %f %f, jacobian %f\n", float3weight(originPath.get(1).position), float3weight(newPath.get(1).position), Jacobian);
-        }
+        //bool ans = path_shift_universal(originPath, newPath, anchor, Jacobian, reverse);
+ 
         return ans;
     }
 
