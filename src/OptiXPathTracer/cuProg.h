@@ -768,7 +768,7 @@ namespace Tracer {
 		float NDotL = dot(N, L);
 		float NDotV = dot(N, V);
 
-#define ETA_DEFAULT 1.5
+#define ETA_DEFAULT 0.8
 
 		float mateta = ETA_DEFAULT;
 		float eta = 1 / mateta;
@@ -923,23 +923,24 @@ namespace Tracer {
 		//float3 N = normal;
 		//float3 V = in_dir;
 		//prd.origin = state.fhp;
-		float transRatio = mat.trans;
-		float transprob = rnd(seed);
-		float refractRatio = 1 - SchlickFresnel(abs(dot(V, N)));
-		float refractprob = rnd(seed);
 		float r1 = rnd(seed);
 		float r2 = rnd(seed);
 		float3 dir;
 		float3 normal = N;
+		float mateta = ETA_DEFAULT;
+		float eta = 1 / mateta;
+		if (dot(normal, V) < 0)
+		{
+			eta = 1 / eta;
+			normal = -N;
+		}
+		float NdotV = abs(dot(normal, V));
+		float transRatio = mat.trans;
+		float transprob = rnd(seed);
+		float refractRatio = 1 - fresnel(NdotV, NdotV, eta);
+		float refractprob = rnd(seed);
 		if (transprob < transRatio && refractprob < refractRatio) // sample transmit
 		{
-			float mateta = ETA_DEFAULT;
-			float eta = 1 / mateta;
-			if (dot(N, V) < 0)
-			{
-				eta = 1 / eta;
-				normal = -N;
-			}
 			Onb onb(normal); // basis
 			float a = mat.roughness;
 
@@ -1003,12 +1004,21 @@ namespace Tracer {
 		if (mat.brdf)
 			return 1.0f;// return abs(dot(L, normal));
 #endif
+
 		float transRatio = mat.trans;
 		float3 n = normal;
+		float mateta = ETA_DEFAULT;
+		//        float eta = dot(L, n) > 0 ? (mateta) : (1/mateta);     
+		float eta = 1 / mateta;
+		if (dot(n, V) < 0)
+		{
+			eta = 1 / eta;
+			n = -normal;
+		}
 		float pdf;
-		float refractRatio = 1 - SchlickFresnel(abs(dot(V, n)));
-
-
+		float NdotV = abs(dot(V, n));
+		float refractRatio = 1 - fresnel(NdotV, NdotV, eta);
+		
 		float specularAlpha = mat.roughness;
 		float clearcoatAlpha = lerp(0.1f, 0.001f, mat.clearcoatGloss);
 
@@ -1028,15 +1038,6 @@ namespace Tracer {
 
 		pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec);
 
-
-		float mateta = ETA_DEFAULT;
-		//        float eta = dot(L, n) > 0 ? (mateta) : (1/mateta);     
-		float eta = 1 / mateta;
-		if (dot(n, V) < 0)
-		{
-			eta = 1 / eta;
-			n = -normal;
-		}
 		float3 wh = normalize(L + V * eta);
 		//if (dot(V, wh) * dot(L, wh) > 0) return 0;
 
