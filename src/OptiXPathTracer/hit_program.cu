@@ -162,7 +162,7 @@ extern "C" __global__ void __closesthit__lightsource()
     float t_hit = optixGetRayTmax();
     float3 ray_direction = optixGetWorldRayDirection();
 
-    if (dot(prd->ray_direction, light_sample.normal()) <= 0 && (prd->depth ==0 || prd->depth <= 3)
+    if (dot(prd->ray_direction, light_sample.normal()) <= 0 && (prd->depth ==0 || prd->depth <= 5)
         && ((prd->caustic_bounce_state == 0 &&prd->depth == 0) || prd->caustic_bounce_state == 2)
         )
     {

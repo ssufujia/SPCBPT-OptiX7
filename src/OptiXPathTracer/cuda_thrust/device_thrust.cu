@@ -366,15 +366,32 @@ namespace MyThrustOp
         SubspaceSampler sampler;
         thrust_dev_bool d_validState(validState, validState + countRange);
         thrust_host_bool h_validState = d_validState;
-        //thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);  
-        int valid_count = 0;
-         
+        //thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);   
+
         thrust_dev_bool d_valid_glossy(countRange);
         thrust::transform(thrust::make_counting_iterator(0),
             thrust::make_counting_iterator(0) + countRange,
             d_valid_glossy.begin(),
             glossy_index_check(thrust::raw_pointer_cast(vertices), thrust::raw_pointer_cast(validState), mats));
         thrust_host_bool h_valid_glossy = d_valid_glossy;
+
+
+        static thrust_dev_int d_Vsubspace_info(countRange);
+        static thrust_host_int h_Vsubspace_info(countRange);
+        static thrust_dev_float d_weight(countRange); 
+        int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>());
+        //copy necessary info------subspace info 
+        {
+            thrust::for_each(
+            thrust::make_counting_iterator(0),
+            thrust::make_counting_iterator(0) + countRange,
+            LVCSubspaceInfoCopy(
+                thrust::raw_pointer_cast(vertices),
+                thrust::raw_pointer_cast(d_Vsubspace_info.data()),
+                thrust::raw_pointer_cast(d_weight.data())
+            ));
+            h_Vsubspace_info = d_Vsubspace_info;
+        }
 
         thrust_host_int h_indexes;
         for (int i = 0; i < countRange; i++)
@@ -384,11 +401,41 @@ namespace MyThrustOp
             
             h_indexes.push_back(i);
         }
+        thrust_host_int h_subspace_vertex_count(NUM_SUBSPACE);
+        thrust::fill(h_subspace_vertex_count.begin(), h_subspace_vertex_count.end(), 0);
+        for (int i = 0; i < h_indexes.size(); i++)
+        {
+            int index = h_indexes[i];
+            h_subspace_vertex_count[h_Vsubspace_info[index]] += 1;
+        }
+        thrust_host_int h_indexes_rearrange(h_indexes.size());
+        thrust_host_int h_vertex_bias;
+        {
+            thrust_host_int h_subspace_vertex_count_bias(NUM_SUBSPACE);
+            thrust::exclusive_scan(h_subspace_vertex_count.begin(), h_subspace_vertex_count.end(), h_subspace_vertex_count_bias.begin());
+            h_vertex_bias = h_subspace_vertex_count_bias;
+            for (int i = 0; i < h_indexes.size(); i++)
+            {
+                int index_o = h_indexes[i];
+                int subspace =  h_Vsubspace_info[index_o];
+                int index_n = h_subspace_vertex_count_bias[subspace];
+                h_indexes_rearrange[index_n] = index_o;
+                h_subspace_vertex_count_bias[subspace]++;
+            }
+        }
+
         static thrust_dev_int d_indexes;
-        d_indexes = h_indexes;
-        printf("glossy vertices number %d\n", h_indexes.size());
-        sampler.glossy_count = h_indexes.size();
+        d_indexes = h_indexes_rearrange;
+        printf("glossy vertices number %d\n", h_indexes_rearrange.size());
+        sampler.glossy_count = h_indexes_rearrange.size();
         sampler.glossy_index = thrust::raw_pointer_cast(d_indexes.data());
+
+        static thrust_dev_int d_glossy_subspace_bias;
+        static thrust_dev_int d_glossy_subsapce_number_vertex;
+        d_glossy_subspace_bias = h_vertex_bias;
+        d_glossy_subsapce_number_vertex = h_subspace_vertex_count;
+        sampler.glossy_subspace_num = thrust::raw_pointer_cast(d_glossy_subsapce_number_vertex.data());
+        sampler.glossy_subspace_bias = thrust::raw_pointer_cast(d_glossy_subspace_bias.data());
         return sampler;
     }
 
@@ -698,18 +745,37 @@ namespace MyThrustOp
         neat_paths = h_samples;
     }
     static thrust_dev_float Gamma_vec;
+    static thrust_dev_float Gamma_vec_caustic;
     static thrust_host_float h_Gamma(NUM_SUBSPACE* NUM_SUBSPACE);
 
-    void preprocess_getGamma(thrust::device_ptr<float>& Gamma)
+    void preprocess_getGamma(thrust::device_ptr<float>& Gamma, bool caustic_case)
     {
+        thrust_dev_float& d_gamma = caustic_case ? Gamma_vec_caustic : Gamma_vec;
         thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
         thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+        int caustic_filter_count = 0;
         for (int i = 0; i < NUM_SUBSPACE * NUM_SUBSPACE; i++) h_Gamma[i] = 0;
         for (int i = 0; i < h_neat_paths.size(); i++)
         {
+            //ignore the caustic paths
+            if (caustic_case != h_neat_paths[i].is_caustic)
+            {
+                caustic_filter_count++;
+                continue;
+            } 
+
             float weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;  
             for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
             {
+                if (caustic_case)
+                {
+                    if (j - h_neat_paths[i].begin_ind != h_neat_paths[i].caustic_id)
+                    {
+                        continue;
+                    }
+                }
+
+
                 int eye_id = h_neat_conns[j].label_A;
                 int light_id = h_neat_conns[j].label_B; 
                 int GammaId = eye_id * NUM_SUBSPACE + light_id; 
@@ -720,6 +786,16 @@ namespace MyThrustOp
                 h_Gamma[GammaId] += weight2;
             }
         }
+        
+        if (caustic_case == false)
+        {
+            printf("%d / %d paths are caustic paths and deleted from the training of ordinaryGamma.\n", caustic_filter_count, h_neat_paths.size()); 
+        }
+        else
+        {
+            printf("%d / %d paths are ordinary paths and deleted from the training of causticGamma.\n", caustic_filter_count, h_neat_paths.size());
+        }
+
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
             float weightS = 0;
@@ -738,8 +814,8 @@ namespace MyThrustOp
                 }
             } 
         }
-        Gamma_vec = h_Gamma;
-        Gamma = Gamma_vec.data();
+        d_gamma = h_Gamma;
+        Gamma = d_gamma.data();
     }
 
     //optimization
@@ -3479,10 +3555,12 @@ namespace MyThrustOp
         Q = Q_dev.data();
     }
 
-    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma)
+    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma, bool caustic_case)
     {
         thrust_host_float p(Gamma, Gamma + NUM_SUBSPACE * NUM_SUBSPACE);
         static thrust_dev_float d_CMFGamma;
+        static thrust_dev_float d_CMFGamma_caustic;
+        thrust_dev_float& d_cmf_gamma = caustic_case ? d_CMFGamma_caustic : d_CMFGamma;
 
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
@@ -3504,7 +3582,8 @@ namespace MyThrustOp
             }
             p[(i + 1) * NUM_SUBSPACE - 1] = 1;
         }
-        d_CMFGamma = p;
-        return d_CMFGamma.data();
+        
+        d_cmf_gamma = p;
+        return d_cmf_gamma.data();
     }
 }

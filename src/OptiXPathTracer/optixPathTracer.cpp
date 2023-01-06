@@ -566,6 +566,8 @@ void launchLVCTrace(sutil::Scene& scene)
     sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials);
     params.sampler.glossy_count = sampler.glossy_count;
     params.sampler.glossy_index = sampler.glossy_index;
+    params.sampler.glossy_subspace_bias = sampler.glossy_subspace_bias;
+    params.sampler.glossy_subspace_num = sampler.glossy_subspace_num;
 
 }
 int launchPretrace(sutil::Scene& scene)
@@ -600,7 +602,7 @@ int launchPretrace(sutil::Scene& scene)
 void preprocessing(sutil::Scene& scene)
 {
     printf("BDPTVertex Size %d\n", sizeof(BDPTVertex));
-    const int target_sample_count = 20000;
+    const int target_sample_count = 500000;
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
     {
@@ -646,13 +648,16 @@ void preprocessing(sutil::Scene& scene)
     MyThrustOp::build_optimal_E_train_data(target_sample_count);
     MyThrustOp::preprocess_getGamma(Gamma);
     MyThrustOp::train_optimal_E(Gamma);
-     
 
     //MyThrustOp::load_Gamma_file(Gamma); 
     //MyThrustOp::train_optimal_E(Gamma);
 
     subspaceInfo.Q = thrust::raw_pointer_cast(Q_star);
     subspaceInfo.CMFGamma = thrust::raw_pointer_cast(MyThrustOp::Gamma2CMFGamma(Gamma));
+
+    thrust::device_ptr<float> CausticGamma;
+    MyThrustOp::preprocess_getGamma(CausticGamma, true);
+    subspaceInfo.CMFCausticGamma = thrust::raw_pointer_cast(MyThrustOp::Gamma2CMFGamma(CausticGamma, true));
 }
 void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene& scene)
 {
@@ -768,7 +773,7 @@ int main( int argc, char* argv[] )
     {
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/testMirror/testmirror-goodPerformance.scene");
-         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_mirror.scene");
+         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_iconBallOnly.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");

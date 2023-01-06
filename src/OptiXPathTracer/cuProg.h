@@ -378,6 +378,17 @@ struct SubspaceSampler_device:public SubspaceSampler
 
         return LVC[glossy_index[index]];
     }
+
+    RT_FUNCTION const BDPTVertex& SampleGlossySecondStage(int subspaceId, unsigned int& seed, float& sample_pmf)
+    {
+        int begin_index = glossy_subspace_bias[subspaceId];
+        int end_index = begin_index + glossy_subspace_num[subspaceId];
+
+        sample_pmf = 1.0 / (end_index - begin_index);
+        int index = rnd(seed) * (end_index - begin_index) + begin_index;
+
+        return LVC[glossy_index[index]];
+    }
     RT_FUNCTION const BDPTVertex& uniformSample(unsigned int& seed, float& sample_pmf)
     { 
         sample_pmf = 1.0 / vertex_count;
@@ -395,6 +406,14 @@ struct SubspaceSampler_device:public SubspaceSampler
                 //printf("index get %d %d\n",index, jump_buffer[index]); 
         //int index = int(rnd(seed) * NUM_SUBSPACE);
         //sample_pmf = 1.0 / NUM_SUBSPACE;
+        return index;
+    }
+
+    RT_FUNCTION int SampleGlossyFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
+    {
+        int begin_index = eye_subsapce * NUM_SUBSPACE;
+        int end_index = begin_index + NUM_SUBSPACE;
+        int index = binary_sample(Tracer::params.subspace_info.CMFCausticGamma + begin_index, NUM_SUBSPACE, seed, sample_pmf); 
         return index;
     }
 };
@@ -2423,7 +2442,7 @@ namespace Shift
 
             MaterialData::Pbr mat = VERTEX_MAT(path.get(0));
             float eta = mat.eta;
-#define LOBE_SCALE_ROUGH_A 0.4f 
+#define LOBE_SCALE_ROUGH_A 0.2f 
             float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
             a = reverse ? a : LOBE_SCALE_ROUGH_A;
 

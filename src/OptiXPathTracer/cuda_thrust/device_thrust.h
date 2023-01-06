@@ -124,13 +124,13 @@ namespace MyThrustOp
     classTree::tree_node* eye_tree_to_device(classTree::tree_node* a, int size);
     int preprocess_getQ(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange, thrust::device_ptr<float>& Q);
 
-    void preprocess_getGamma(thrust::device_ptr<float>& Gamma);
+    void preprocess_getGamma(thrust::device_ptr<float>& Gamma, bool caustic_case = false);
     void node_label(classTree::tree_node* eye_tree, classTree::tree_node* light_tree);
     void sample_reweight();
     void build_optimal_E_train_data(int N_samples);
     void Q_zero_handle(thrust::device_ptr<float>& Q);
     void train_optimal_E(thrust::device_ptr<float>& E_ptr);
-    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma);
+    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma, bool caustic_case = false);
 
 
     void load_Q_file(thrust::device_ptr<float>& Q);

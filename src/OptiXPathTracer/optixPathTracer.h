@@ -37,6 +37,7 @@
 #define CONNECTION_N 3
 
 #define DIR_JUDGE 0
+#define TRAIN_CAUSTIC_WEIGHT 10.0f
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
@@ -92,7 +93,11 @@ struct SubspaceSampler
     Subspace* subspace;
     float* cmfs;
     int* jump_buffer;
+    
     int* glossy_index;
+    int* glossy_subspace_num;
+    int* glossy_subspace_bias;
+
     int vertex_count;
     int path_count;
     int glossy_count;
@@ -174,6 +179,7 @@ struct subspaceMacroInfo
     classTree::tree_node* light_tree;
     float* Q;
     float* CMFGamma;
+    float* CMFCausticGamma;
     RT_FUNCTION float Gamma(int eye_id, int light_id)
     {
         if (CMFGamma && Q)
@@ -351,6 +357,9 @@ namespace TrainData
             B_normal_d = b.normal;
             A_dir_d = a.dir;
             B_dir_d = b.dir;
+            //if (dot(A_normal_d, A_dir_d) < 0)A_normal_d = - A_normal_d;
+            //if (dot(B_normal_d, B_dir_d) < 0)B_normal_d = - B_normal_d;
+
             peak_pdf = a.weight.x * float3weight(b.weight) * b.brdf_weight() * a.brdf_weight();
             set_eye_depth(a.depth);
         }
@@ -382,8 +391,10 @@ namespace TrainData
         int begin_ind;
         int end_ind;
         int choice_id;
+        int caustic_id;
         int2 pixel_id;
         bool valid;
+        bool is_caustic; 
     };
 
 }

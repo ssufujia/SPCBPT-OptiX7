@@ -828,6 +828,12 @@ extern "C" __global__ void __raygen__glossy_shift_only()
 
 
         pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
+        //labelUnit tempLabel(payload.path.currentVertex().position, payload.path.currentVertex().normal, payload.path.currentVertex().normal, true);
+        //int subspaceId = tempLabel.getLabel();
+        //unsigned tseed = subspaceId;
+        //result = make_float3(rnd(tseed), rnd(tseed), rnd(tseed));
+        //break;
+
         if (payload.path.hit_lightSource())
         {
             float3 res = make_float3(0.0);
@@ -847,13 +853,28 @@ extern "C" __global__ void __raygen__glossy_shift_only()
         BDPTVertex& eye_subpath = payload.path.currentVertex();
         for (int it = 0; it < CONNECTION_N; it++)
         { 
+            /// <summary>
+            /// old version of uniform sampling glossy vertex
+            /// </summary>
+            /// <returns></returns>
+            /// 
             float pmf_firstStage = 1;  
             float pmf_secondStage;
-            if (Tracer::params.sampler.glossy_count == 0)continue;
-
+            if (Tracer::params.sampler.glossy_count == 0)continue; 
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleGlossy(payload.seed, pmf_secondStage);
              
+
+
+            //float pmf_firstStage = 1;
+            //int light_subspaceId = 
+            //    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossyFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);  
+            //if (Tracer::params.sampler.glossy_subspace_num[light_subspaceId] == 0)continue;
+            //float pmf_secondStage; 
+            //const BDPTVertex& light_subpath =
+            //    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_subspaceId, payload.seed, pmf_secondStage);
+
+
             if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                 (Tracer::visibilityTest(Tracer::params.handle, eye_subpath.position, light_subpath.position)))
             {
@@ -888,6 +909,7 @@ extern "C" __global__ void __raygen__glossy_shift_only()
                     
 
                     float3 res = contri / pdf / pmf ; 
+                    //if (float3weight(res) > 1)printf("evalFactor ratio rate %f\n", float3weight(fractFactor));
                     if (!ISINVALIDVALUE(res))
                     {
                         result += res / CONNECTION_N;
@@ -934,7 +956,7 @@ extern "C" __global__ void __raygen__glossy_shift_only()
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
-//    if (subframe_index > 1000)return;
+    //if (subframe_index > 30)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -1108,6 +1130,27 @@ extern "C" __global__ void __miss__BDPTVertex()
 
 RT_FUNCTION void PreTrace_buildPathInfo(BDPTVertex* eye, TrainData::nVertex_device light, preTracePath* path, preTraceConnection* conn, int pathSize)
 { 
+    //check if the path is caustic path
+    {
+        path->is_caustic = false;
+        BDPTVertex* eye_subpath_it = eye - eye->depth + 1;
+        for (int i = 1; i < eye->depth; i++, eye_subpath_it++)
+        {
+            if (Shift::glossy(*eye_subpath_it))continue;
+            else if (Shift::glossy(*(eye_subpath_it + 1)))
+            {
+                path->is_caustic = true;
+                path->caustic_id = i - 1;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+
+
     path->valid = true;
     
     path->begin_ind = 0;
@@ -1137,6 +1180,7 @@ RT_FUNCTION void PreTrace_buildPathInfo(BDPTVertex* eye, TrainData::nVertex_devi
     float weight = (float3weight(path->contri) / path-> sample_pdf);
     if (isnan(weight))path->contri = make_float3(0);
     if (isinf(weight))path->contri = make_float3(0);
+//    if (path->is_caustic == false) path->valid = false;// *= 100;
     //printf("pretrace path info%f %f %f\n", float3weight(path->contri), path->fix_pdf, weight);
 }
 RT_FUNCTION bool rr_acc_accept(int acc_num, unsigned int& seed)
@@ -1229,10 +1273,10 @@ extern "C" __global__ void __raygen__TrainData()
         if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, light_vertex)
             && rr_acc_accept(resample_number, payload.seed)) 
         {
-            if ((light_vertex.is_DIRECTION() && dot(light_vertex.normal, eye_subpath.normal) < 0)||
-                (!light_vertex.is_DIRECTION() && dot(vis_vec,light_sample.normal())<0))
+            if ((light_vertex.is_DIRECTION() && dot(light_vertex.normal, eye_subpath.normal) < 0) ||
+                (!light_vertex.is_DIRECTION() && dot(vis_vec, light_sample.normal()) < 0))
             {
-                PreTrace_buildPathInfo(buffer + buffer_size - 1, TrainData::nVertex_device(light_vertex, false), currentPath, currentConn, buffer_size);
+                PreTrace_buildPathInfo(buffer + buffer_size - 1, TrainData::nVertex_device(light_vertex, false), currentPath, currentConn, buffer_size); 
                 resample_number++; 
             }
              
@@ -1265,6 +1309,11 @@ extern "C" __global__ void __raygen__TrainData()
     if (currentPath->begin_ind == currentPath->end_ind && currentPath->valid == true)
     {
         currentPath->valid = false;
+    }
+
+    if (currentPath->is_caustic == false)
+    {
+        //if (rnd(seed) > 1.0 / 2.0)currentPath->valid = false;
     }
 }
 
