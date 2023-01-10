@@ -138,19 +138,19 @@ mesh
 light
 {
     position 0.3 1.98 -0.2
-    v1 0.7 1.98 -0.2
-    v2 0.3 1.98 0.2
-    emission 1.27 3.82 5.41
+    v1 0.8 1.98 -0.2
+    v2 0.3 1.98  0.3
+    emission 12.7 38.2 54.1
     type Quad
 	divLevel 1
 }
 
 light
 {
-    position -0.7 1.98 -0.2
-    v1 -0.3 1.98 -0.2
-    v2 -0.7 1.98 0.2
-    emission 5.41 3.82 1.27
+   position -0.7 1.98 -0.2
+    v1 -0.2 1.98 -0.2
+    v2 -0.7 1.98  0.3
+    emission 54.1 38.2 12.7
     type Quad
 	divLevel 1
 }

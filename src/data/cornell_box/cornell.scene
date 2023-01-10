@@ -31,9 +31,9 @@ material Mirror
 }
 material transmit
 {
-	color 0.725 0.71 0.68
+	color 1. 1. 1.
 	roughness 0.01
-    metallic 0.0
+    metallic 1.0
 	trans 1.0
 }
 mesh
@@ -57,7 +57,8 @@ mesh
 mesh
 {
 #	file cornell_box/cbox_smallbox.obj
-	file cornell_box/cbox_small_sphere.obj
+#	file cornell_box/cbox_small_sphere.obj
+	file cornell_box/teapot.obj
 	material transmit
 }
 

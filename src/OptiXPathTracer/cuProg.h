@@ -768,7 +768,7 @@ namespace Tracer {
 		float NDotL = dot(N, L);
 		float NDotV = dot(N, V);
 
-#define ETA_DEFAULT 0.8
+#define ETA_DEFAULT 1.4
 
 		float mateta = ETA_DEFAULT;
 		float eta = 1 / mateta;
@@ -779,7 +779,11 @@ namespace Tracer {
 		}
 
 		if (NDotL == 0 || NDotV == 0) return make_float3(0);
-
+		float refract;
+		if ((1 - NDotV * NDotV) * eta * eta >= 1)// 全反射
+			refract = 1;
+		else
+			refract = 0;
 		float3 Cdlin = make_float3(mat.base_color);
 		float Cdlum = 0.3f * Cdlin.x + 0.6f * Cdlin.y + 0.1f * Cdlin.z; // luminance approx.
 		float3 Ctint = Cdlum > 0.0f ? Cdlin / Cdlum : make_float3(1.0f); // normalize lum. to isolate hue+sat
@@ -805,7 +809,7 @@ namespace Tracer {
 		float3 Fs = lerp(Cspec0, make_float3(1.0f), FH);
 		float F = fresnel(abs(dot(L, wh)), abs(dot(V, wh)), eta);
 		//printf("Fresnel: %f\n", F);
-		float3 out = (1.f - F) * T *
+		float3 out = (1.f - refract)*(1.f - F) * T *
 			std::abs(Ds * Gs * eta * eta *
 				abs(dot(L, wh)) * abs(dot(V, wh)) * factor * factor /
 				(NDotL * NDotL * sqrtDenom * sqrtDenom));
@@ -829,7 +833,7 @@ namespace Tracer {
 		float mateta = ETA_DEFAULT;
 		float NDotL = dot(N, L);
 		float NDotV = dot(N, V);
-
+		float eta = 1 / mateta;
 		if (NDotL * NDotV <= 0.0f)
 			return Eval_Transmit(mat, normal, V, L);
 		//return make_float3(0);
@@ -837,9 +841,15 @@ namespace Tracer {
 		if (NDotL < 0.0f && NDotV < 0.0f)
 		{
 			N = -normal;
+			eta = 1/eta;
 			NDotL *= -1;
 			NDotV *= -1;
 		}
+		float refract;
+		if ((1 - NDotV * NDotV) * eta * eta >= 1)// 全反射
+			refract = 1;
+		else
+			refract = 0;
 		float3 H = normalize(L + V);
 		float NDotH = dot(N, H);
 		float LDotH = dot(L, H);
@@ -888,7 +898,7 @@ namespace Tracer {
 		float trans = mat.trans;
 		float F = fresnel(abs(LDotH), abs(NDotH), mateta);
 		float3 out = ((1.0f / M_PIf) * lerp(Fd, ss, mat.subsurface) * Cdlin + Fsheen)
-			* (1.0f - mat.metallic) * (1 - trans * (1 - F))
+			* (1.0f - mat.metallic) * (1 - trans * (1 - F) * (1 - refract))
 			+ Gs * Fs * Ds + 0.25f * mat.clearcoat * Gr * Fr * Dr;
 		//printf("eval: %f,%f,%f\n", out.x, out.y, out.z);
 		return out;
@@ -971,7 +981,7 @@ namespace Tracer {
 		}
 		Onb onb(normal); // basis
 		float probability = rnd(seed);
-		float diffuseRatio = 0.5f * (1.0f - mat.metallic) * (1 - transRatio);
+		float diffuseRatio = 0.5f * (1.0f - mat.metallic);// * (1 - transRatio);
 
 		if (probability < diffuseRatio) // sample diffuse
 		{
@@ -1022,7 +1032,7 @@ namespace Tracer {
 		float specularAlpha = mat.roughness;
 		float clearcoatAlpha = lerp(0.1f, 0.001f, mat.clearcoatGloss);
 
-		float diffuseRatio = 0.5f * (1.f - mat.metallic) * (1 - transRatio);
+		float diffuseRatio = 0.5f * (1.f - mat.metallic);// *(1 - transRatio);
 		float specularRatio = 1.f - diffuseRatio;
 
 		float3 half = normalize(L + V);
