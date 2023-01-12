@@ -162,18 +162,22 @@ extern "C" __global__ void __closesthit__lightsource()
     float t_hit = optixGetRayTmax();
     float3 ray_direction = optixGetWorldRayDirection();
 
-    if (dot(prd->ray_direction, light_sample.normal()) <= 0 && (prd->depth ==0 || prd->depth <= 5)
-        && ((prd->caustic_bounce_state == 0 &&prd->depth == 0) || prd->caustic_bounce_state == 2)
+    if (dot(prd->ray_direction, light_sample.normal()) <= 0 
+#ifdef CAUSTIC_SPECIAL
+        && (prd->depth == 0 || prd->depth <= 5)
+        && ((prd->caustic_bounce_state == 0 && prd->depth == 0) || prd->caustic_bounce_state == 2)
+#endif // CAUSTIC_SPECIAL 
         )
     {
         float MIS_weight = 1;
-        if (prd->depth != 0 && false)
+        if (prd->depth != 0 )
         {
             float pdf_hit = prd->pdf * abs(dot(ray_direction,light_sample.normal())) / (t_hit * t_hit);
 
             float pdf_area = light_sample.pdf;
             MIS_weight = pdf_hit / (pdf_area + pdf_hit);
         }
+        MIS_weight = 1;
         prd->result += prd->throughput * light_sample.emission * MIS_weight;
     }
     //printf("hit light source %d %f %f %f\n", hit_group_data->material_data.light_id,
@@ -574,8 +578,9 @@ extern "C" __global__ void __closesthit__radiance()
                     float pdf_hit = Tracer::Pdf(currentPbr, N, V, L) * abs(L_dot_LN) / (L_dist * L_dist) * rr_rate;
                     MIS_weight = pdf_area / (pdf_hit + pdf_area);
                 } 
+                MIS_weight = 0;
                 result += prd->throughput * light_sample.emission * attenuation / light_sample.pdf 
-                    * N_dot_L * L_dot_LN / L_dist / L_dist * eval * MIS_weight *0;// *make_float3(1.0, 0.0, 1.0);
+                    * N_dot_L * L_dot_LN / L_dist / L_dist * eval * MIS_weight ;// *make_float3(1.0, 0.0, 1.0);
             }
         }
     }

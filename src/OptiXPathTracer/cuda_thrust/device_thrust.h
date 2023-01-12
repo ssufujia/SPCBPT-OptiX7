@@ -135,6 +135,7 @@ namespace MyThrustOp
 
     void load_Q_file(thrust::device_ptr<float>& Q);
     void load_Gamma_file(thrust::device_ptr<float>& Gamma);
+    void get_caustic_frac(thrust::device_ptr<float>& frac);
 
     thrust::device_ptr<float> envMapCMFBuild(float* pmf, int size);
     thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size); 

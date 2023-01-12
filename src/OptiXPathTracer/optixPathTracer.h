@@ -38,6 +38,8 @@
 
 #define DIR_JUDGE 0
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
+
+//#define CAUSTIC_SPECIAL
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
@@ -180,6 +182,7 @@ struct subspaceMacroInfo
     float* Q;
     float* CMFGamma;
     float* CMFCausticGamma;
+    float* caustic_ratio;
     RT_FUNCTION float Gamma(int eye_id, int light_id)
     {
         if (CMFGamma && Q)

@@ -238,6 +238,34 @@ namespace MyThrustOp
             return a;
         }
     };
+
+    struct glossy_index_check
+    {
+        BDPTVertex* v;
+        bool* validState;
+        BufferView<MaterialData::Pbr> mats;
+        glossy_index_check(BDPTVertex* v, bool* validState, BufferView<MaterialData::Pbr> mats) :
+            v(v), validState(validState), mats(mats)
+        {
+        }
+        __device__ __host__ bool operator()(int i)
+        {
+            if (validState[i] && v[i].depth >= 1)
+            {
+                for (int k = 0; k < v[i].depth; k++)
+                {
+                    const MaterialData::Pbr& mat = mats[v[i - k].materialId];
+                    if (max(mat.metallic, mat.trans) < 0.9 || mat.roughness > 0.1)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                return true;
+            }
+            return false;
+        }
+    };
     SubspaceSampler LVC_Process(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange)
     {
         SubspaceSampler sampler;
@@ -261,8 +289,7 @@ namespace MyThrustOp
                 thrust::raw_pointer_cast(d_weight.data())
             ));
         h_Vsubspace_info = d_Vsubspace_info;
-        h_weight = d_weight;
-         
+        h_weight = d_weight; 
 
         thrust_host_int num_subspace_vertex(NUM_SUBSPACE);
         thrust_host_float Q_subspace_vertex(NUM_SUBSPACE);
@@ -274,6 +301,8 @@ namespace MyThrustOp
         {
             if (!h_validState[i])
                 continue;
+             
+
             //valid_count++;
             int subspace = h_Vsubspace_info[i];
             num_subspace_vertex[subspace] += 1;
@@ -334,33 +363,6 @@ namespace MyThrustOp
         return sampler;
     }
 
-    struct glossy_index_check
-    {
-        BDPTVertex* v;
-        bool* validState;
-        BufferView<MaterialData::Pbr> mats;
-        glossy_index_check(BDPTVertex* v, bool* validState, BufferView<MaterialData::Pbr> mats) :
-            v(v), validState(validState), mats(mats)
-        {
-        }
-        __device__ __host__ bool operator()(int i)
-        {
-            if (validState[i] && v[i].depth >= 1 )
-            {
-                for (int k = 0; k < v[i].depth; k++)
-                {
-                    const MaterialData::Pbr& mat = mats[v[i - k].materialId];
-                    if (max(mat.metallic,mat.trans) < 0.9 || mat.roughness > 0.1)
-                    {
-                        return false;
-                    }
-                    break;
-                }
-                return true; 
-            }
-            return false;
-        }
-    };
     SubspaceSampler LVC_Process_glossyOnly(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange, BufferView<MaterialData::Pbr> mats)
     {
         SubspaceSampler sampler;
@@ -748,6 +750,44 @@ namespace MyThrustOp
     static thrust_dev_float Gamma_vec_caustic;
     static thrust_host_float h_Gamma(NUM_SUBSPACE* NUM_SUBSPACE);
 
+    void get_caustic_frac(thrust::device_ptr<float>& frac)
+    {
+        thrust_host_float h_frac(NUM_SUBSPACE);
+        static thrust_dev_float d_frac;
+        thrust::fill(h_frac.begin(), h_frac.end(), 0);
+
+        thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
+        thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+
+        thrust_host_float non_normalized_sum(NUM_SUBSPACE);
+        thrust_host_float non_normalized_caustic(NUM_SUBSPACE);
+        thrust::fill(non_normalized_caustic.begin(), non_normalized_caustic.end(), 0);
+        thrust::fill(non_normalized_sum.begin(), non_normalized_sum.end(), 0);
+
+        for (int i = 0; i < h_neat_paths.size(); i++)
+        {
+            float weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+
+            for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
+            { 
+                int eye_id = h_neat_conns[j].label_A;
+                int light_id = h_neat_conns[j].label_B; 
+
+                float weight2 = min(weight, 10.0);
+                if (h_neat_paths[i].is_caustic && j - h_neat_paths[i].begin_ind == h_neat_paths[i].caustic_id)
+                { 
+                    non_normalized_caustic[eye_id] += weight2;
+                }
+                non_normalized_sum[eye_id] += weight2;
+            }
+        }
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            h_frac[i] = non_normalized_caustic[i] / non_normalized_sum[i];
+        }
+        d_frac = h_frac;
+        frac = d_frac.data();
+    }
     void preprocess_getGamma(thrust::device_ptr<float>& Gamma, bool caustic_case)
     {
         thrust_dev_float& d_gamma = caustic_case ? Gamma_vec_caustic : Gamma_vec;
@@ -757,11 +797,13 @@ namespace MyThrustOp
         for (int i = 0; i < NUM_SUBSPACE * NUM_SUBSPACE; i++) h_Gamma[i] = 0;
         for (int i = 0; i < h_neat_paths.size(); i++)
         {
-            //ignore the caustic paths
+            //in the case of caustic Gamma, ignore the ordinary path
+            //but in the case of normal Gamma, most of the connections of caustic path are valid still.
             if (caustic_case != h_neat_paths[i].is_caustic)
             {
                 caustic_filter_count++;
-                continue;
+                if(caustic_case) continue;
+                
             } 
 
             float weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;  

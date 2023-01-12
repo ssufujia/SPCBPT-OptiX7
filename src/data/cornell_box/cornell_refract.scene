@@ -33,7 +33,7 @@ material transmit
 {
 	color 0.725 0.71 0.68
 	roughness .01
-      #metallic 1.0
+      metallic 1.0
 	trans 1.0
       eta 1.4
 }

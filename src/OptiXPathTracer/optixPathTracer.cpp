@@ -91,7 +91,7 @@ int32_t mouse_button = -1;
 int32_t samples_per_launch = 1; 
 
 std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye")};
-int render_alg_id = 1;
+int render_alg_id = 0;
 bool one_frame_render_only = false;
 float render_fps = 60;
 //------------------------------------------------------------------------------
@@ -658,6 +658,10 @@ void preprocessing(sutil::Scene& scene)
     thrust::device_ptr<float> CausticGamma;
     MyThrustOp::preprocess_getGamma(CausticGamma, true);
     subspaceInfo.CMFCausticGamma = thrust::raw_pointer_cast(MyThrustOp::Gamma2CMFGamma(CausticGamma, true));
+
+    thrust::device_ptr<float> CausticRatio;
+    MyThrustOp::get_caustic_frac(CausticRatio);
+    subspaceInfo.caustic_ratio = thrust::raw_pointer_cast(CausticRatio);
 }
 void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene& scene)
 {
@@ -771,9 +775,9 @@ int main( int argc, char* argv[] )
 
     try
     {
-//        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");
-//         string scenePath = string(SAMPLES_DIR) + string("/data/testMirror/testmirror-goodPerformance.scene");
-         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_iconBallOnly.scene");
+//        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
+//         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_icoBall.scene");
+         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
