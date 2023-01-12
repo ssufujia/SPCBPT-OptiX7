@@ -35,6 +35,7 @@ material transmit
 	roughness .01
       #metallic 1.0
 	trans 1.0
+      eta 1.4
 }
 mesh
 {
@@ -56,9 +57,9 @@ mesh
 
 mesh
 {
-#	file cornell_box/cbox_small_sphere.obj
-	file cornell_box/brokenBall.obj
-	material Mirror
+	file cornell_box/cbox_small_sphere.obj
+#	file cornell_box/brokenBall.obj
+	material transmit
 }
 
 mesh

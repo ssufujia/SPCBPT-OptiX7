@@ -602,7 +602,7 @@ int launchPretrace(sutil::Scene& scene)
 void preprocessing(sutil::Scene& scene)
 {
     printf("BDPTVertex Size %d\n", sizeof(BDPTVertex));
-    const int target_sample_count = 500000;
+    const int target_sample_count = 1000000;
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
     {
@@ -611,10 +611,10 @@ void preprocessing(sutil::Scene& scene)
 
     MyThrustOp::sample_reweight();
     auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 10000);
-    auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE, 0);
+    auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, min(300, NUM_SUBSPACE), 0);
 
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
-    auto h_light_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE, 0);
+    auto h_light_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, min(500, NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE), 0);
 
     auto d_DecisionTree = MyThrustOp::eye_tree_to_device(h_eye_tree.v, h_eye_tree.size);
     subspaceInfo.eye_tree = d_DecisionTree;

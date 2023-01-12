@@ -3566,7 +3566,7 @@ namespace MyThrustOp
         {
             for (int j = 0; j < NUM_SUBSPACE; j++)
             {
-                float t = CONSERVATIVE_RATE;
+                float t = caustic_case ? 0.01 : CONSERVATIVE_RATE;
                 p[i * NUM_SUBSPACE + j] = p[i * NUM_SUBSPACE + j] * (1 - t) + (1.0 / NUM_SUBSPACE) * t;
             }
         }

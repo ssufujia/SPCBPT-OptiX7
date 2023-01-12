@@ -338,6 +338,76 @@ extern "C" __global__ void __closesthit__eyeSubpath()
         return;
     }
 }
+
+
+extern "C" __global__ void __closesthit__eyeSubpath_LightSource_simple()
+{
+    Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
+    const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
+    prd->done = true;
+    const Light& light = Tracer::params.lights[hit_group_data->material_data.light_id];
+    if (dot(prd->ray_direction, light.quad.normal) > 0)
+    {
+        return;
+    }
+
+
+    const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
+
+    prd->path.push();
+    BDPTVertex& MidVertex = prd->path.currentVertex();// prd.stackP->v[(prd.stackP->size) % STACKSIZE];
+    BDPTVertex& LastVertex = prd->path.lastVertex();// prd.stackP->v[(prd.stackP->size - 1) % STACKSIZE];
+
+    MidVertex.position = geom.P;
+    MidVertex.normal = light.quad.normal;
+    MidVertex.type = BDPTVertex::Type::HIT_LIGHT_SOURCE;
+    MidVertex.uv = geom.texcoord->UV;
+
+
+    MidVertex.materialId = hit_group_data->material_data.light_id;
+
+    MidVertex.depth = LastVertex.depth + 1;
+
+}
+extern "C" __global__ void __closesthit__eyeSubpath_simple()
+{ 
+    const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
+    const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
+    Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
+    float t_hit = optixGetRayTmax();
+    float3 ray_direction = optixGetWorldRayDirection();
+    float3 inver_ray_direction = -ray_direction;
+    MaterialData::Pbr currentPbr = hit_group_data->material_data.pbr;
+    ColorTexSample(geom, currentPbr);
+    RoughnessAndMetallicTexSample(geom, currentPbr);
+    float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
+//    if (dot(N, ray_direction) > 0.f)
+//        N = -N;
+    prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
+    prd->origin = geom.P;
+    if (!(prd->pdf > 0.0f))
+        prd->done = true;
+
+
+
+    //    prd->path.size += 1;
+    prd->path.push();
+    BDPTVertex& MidVertex = prd->path.currentVertex();
+    BDPTVertex& NextVertex = prd->path.nextVertex();
+    BDPTVertex& LastVertex = prd->path.lastVertex();
+    MidVertex.position = geom.P;
+    MidVertex.normal = N;//这个在折射场景里需要进一步讨论
+    MidVertex.type = BDPTVertex::Type::NORMALHIT; 
+    MidVertex.color = make_float3(currentPbr.base_color); 
+
+    MidVertex.materialId = hit_group_data->material_data.id;
+      
+    MidVertex.depth = LastVertex.depth + 1;
+    MidVertex.uv = geom.texcoord[0].UV;
+     
+    //MidVertex.last_lum = Tracer::float3sum(LastVertex.flux / LastVertex.pdf);
+     
+}
 extern "C" __global__ void __closesthit__lightSubpath()
 {
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());

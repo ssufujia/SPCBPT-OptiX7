@@ -34,7 +34,7 @@
 #define RR_MIN_LIMIT
 #define MIN_RR_RATE 0.3
 #define CONSERVATIVE_RATE 0.2
-#define CONNECTION_N 3
+#define CONNECTION_N 1
 
 #define DIR_JUDGE 0
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
@@ -215,7 +215,8 @@ enum RayType
     RAY_TYPE_OCCLUSION = 1,
     RAY_TYPE_LIGHTSUBPATH = 0,
     RAY_TYPE_EYESUBPATH = 0,
-    RAY_TYPE_COUNT = 2
+    RAY_TYPE_EYESUBPATH_SIMPLE = 2,
+    RAY_TYPE_COUNT = 3
 }; 
 
 enum RayHitType

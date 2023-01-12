@@ -857,28 +857,45 @@ extern "C" __global__ void __raygen__glossy_shift_only()
             /// old version of uniform sampling glossy vertex
             /// </summary>
             /// <returns></returns>
+            ///
             /// 
-            float pmf_firstStage = 1;  
+            float pmf_firstStage = 1;
             float pmf_secondStage;
-            if (Tracer::params.sampler.glossy_count == 0)continue; 
-            const BDPTVertex& light_subpath =
-                reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleGlossy(payload.seed, pmf_secondStage);
-             
+            float pmf_uniform;
+            float guide_ratio = 1 - CONSERVATIVE_RATE;
+            const BDPTVertex* light_subpath_p;
+            if (rnd(payload.seed) > guide_ratio)
+            {
+                if (Tracer::params.sampler.glossy_count == 0)continue;
+                const BDPTVertex& light_subpath =
+                    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleGlossy(payload.seed, pmf_uniform);
+                light_subpath_p = &light_subpath;
 
+                pmf_firstStage = Tracer::params.subspace_info.CMFCausticGamma[eye_subpath.subspaceId * NUM_SUBSPACE + light_subpath.subspaceId];
+                if(light_subpath.subspaceId!=0)
+                    pmf_firstStage -= Tracer::params.subspace_info.CMFCausticGamma[eye_subpath.subspaceId * NUM_SUBSPACE + light_subpath.subspaceId - 1];
+                pmf_secondStage = 1.0 / Tracer::params.sampler.glossy_subspace_num[light_subpath.subspaceId];
+                
+            }
+            else
+            { 
+                int light_subspaceId =
+                    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossyFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);
+                if (Tracer::params.sampler.glossy_subspace_num[light_subspaceId] == 0)continue;
+                const BDPTVertex& light_subpath =
+                    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_subspaceId, payload.seed, pmf_secondStage);
+                light_subpath_p = &light_subpath;
 
-            //float pmf_firstStage = 1;
-            //int light_subspaceId = 
-            //    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossyFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);  
-            //if (Tracer::params.sampler.glossy_subspace_num[light_subspaceId] == 0)continue;
-            //float pmf_secondStage; 
-            //const BDPTVertex& light_subpath =
-            //    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_subspaceId, payload.seed, pmf_secondStage);
+                pmf_uniform = 1.0 / Tracer::params.sampler.glossy_count;
+            }
+            const BDPTVertex& light_subpath = *light_subpath_p;
 
+            float final_pmf = guide_ratio * (pmf_firstStage * pmf_secondStage) + (1 - guide_ratio) * pmf_uniform;
 
             if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                 (Tracer::visibilityTest(Tracer::params.handle, eye_subpath.position, light_subpath.position)))
             {
-                float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
+                float pmf = Tracer::params.sampler.path_count * final_pmf;
 
                 const BDPTVertex* light_ptr = &light_subpath;
                 //int n_buffer_size = buffer_size + light_subpath.depth + 1;
@@ -956,7 +973,7 @@ extern "C" __global__ void __raygen__glossy_shift_only()
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
-    //if (subframe_index > 30)return;
+    if (subframe_index > 100)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -1313,7 +1330,7 @@ extern "C" __global__ void __raygen__TrainData()
 
     if (currentPath->is_caustic == false)
     {
-        //if (rnd(seed) > 1.0 / 2.0)currentPath->valid = false;
+        if (rnd(seed) > 1.0 / 8.0)currentPath->valid = false;
     }
 }
 

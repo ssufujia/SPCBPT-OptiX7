@@ -101,6 +101,7 @@ namespace estimation
                 float3 r_bias = (a - b) / (b + make_float3(minLimit));
                 float3 sqaure_rbias = r_bias * r_bias; 
                 float error = (abs(sqaure_rbias.x) + abs(sqaure_rbias.y) + abs(sqaure_rbias.z)) / 3; 
+                error = min(error, 100);
                 relmse += error;
             }
             return relmse / valid_pixels;

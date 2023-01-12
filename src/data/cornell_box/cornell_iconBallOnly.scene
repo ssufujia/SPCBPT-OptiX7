@@ -29,7 +29,7 @@ material green
 }
 material Mirror
 {
-   color 0.9 0.9 0.9
+   color 1 1 1
    roughness 0.001
    metallic 1.0
 

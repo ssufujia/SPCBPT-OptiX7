@@ -577,6 +577,35 @@ static __forceinline__ __device__ void traceEyeSubPath(
 
 }
 
+static __forceinline__ __device__ void traceEyeSubPath_simple(
+    OptixTraversableHandle      handle,
+    float3                      ray_origin,
+    float3                      ray_direction,
+    float                       tmin,
+    float                       tmax,
+    PayloadBDPTVertex* payload
+)
+{
+    unsigned int u0, u1;
+    packPointer(payload, u0, u1);
+    optixTrace(
+        handle,
+        ray_origin, ray_direction,
+        tmin,
+        tmax,
+        0.0f,                     // rayTime
+        OptixVisibilityMask(1),
+        OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
+        RayType::RAY_TYPE_EYESUBPATH_SIMPLE,        // SBT offset
+        RayType::RAY_TYPE_COUNT,           // SBT stride
+        RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
+        //RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
+        //RayType::RAY_TYPE_COUNT,           // SBT stride
+        //RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
+        u0, u1);
+
+}
+
 RT_FUNCTION bool visibilityTest(
     OptixTraversableHandle handle, float3 pos_A, float3 pos_B)
 {
@@ -885,8 +914,7 @@ RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& nor
     float3 L = L_vec;
     float NDotL = dot(N, L);
     float NDotV = dot(N, V);
-
-#define ETA_DEFAULT 1.5
+     
 
     float mateta = mat.eta;
     float eta = 1 / mateta;
@@ -1013,109 +1041,6 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
 
 
 
-RT_FUNCTION float3 Sample_shift_refract(const MaterialData::Pbr& mat, const float3& N, const float3& V, float r1, float r2, bool &refract_good)
-{
-
-    float3 dir;
-    Onb onb(N); // basis
-
-    {
-        float a = max(0.001f, mat.roughness);
-
-        float phi = r1 * 2.0f * M_PIf;
-
-        float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
-        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
-        float sinPhi = sinf(phi);
-        float cosPhi = cosf(phi);
-
-        float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-        onb.inverse_transform(half);
-
-
-        refract_good = refract(dir, half, V, dot(N, V) > 0 ? mat.eta : 1 / mat.eta); //reflection vector 
-
-    }
-    return dir;
-}
-
-RT_FUNCTION float2 sample_reverse_refract(const MaterialData::Pbr& mat, const float3& N, const float3& V, float3 dir)
-{
-    Onb onb(N); // basis
-
-    float a = max(0.001f, mat.roughness);
-    float eta = dot(N, V) > 0 ? mat.eta : 1.0 / mat.eta;
-    float3 half = normalize(V + eta * dir);
-    if (dot(half, N) < 0) half = -half;
-    onb.transform(half);
-
-    float cosTheta = half.z;
-    float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
-    float sinPhi = half.y / sinTheta;
-    float cosPhi = half.x / sinTheta;
-    float phiA = acos(cosPhi);
-    float phiB = asin(sinPhi);
-    float phi = phiB > 0 ? phiA : 2 * M_PI - phiA;
-
-    float r1 = phi / 2.0f / M_PIf;
-    float A = cosTheta * cosTheta;
-
-    float r2 = (1 - A) / (A * a * a - A + 1);
-    return make_float2(r1, r2);
-    //dir = 2.0f * dot(V, half) * half - V; //reflection vector
-
-}
-
-RT_FUNCTION float3 Sample_shift_metallic(const MaterialData::Pbr& mat, const float3& N, const float3& V, float r1, float r2)
-{
-  
-    float3 dir; 
-    Onb onb(N); // basis
-     
-    {
-        float a = max(0.001f, mat.roughness);
-
-        float phi = r1 * 2.0f * M_PIf;
-
-        float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
-        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
-        float sinPhi = sinf(phi);
-        float cosPhi = cosf(phi);
-
-        float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-        onb.inverse_transform(half);
-
-        dir = 2.0f * dot(V, half) * half - V; //reflection vector
-
-    }
-    return dir;
-} 
-RT_FUNCTION float2 sample_reverse_metallic(const MaterialData::Pbr& mat, const float3& N, const float3& V, float3 dir)
-{
-    Onb onb(N); // basis
-
-    float a = max(0.001f, mat.roughness);
-    float3 half;
-     
-    half = normalize(V + dir);
-
-    onb.transform(half);
-    float cosTheta = half.z;
-    float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
-    float sinPhi = half.y / sinTheta;
-    float cosPhi = half.x / sinTheta;
-    float phiA = acos(cosPhi);
-    float phiB = asin(sinPhi);
-    float phi = phiB > 0 ? phiA : 2 * M_PI - phiA;
-
-    float r1 = phi / 2.0f / M_PIf;
-    float A = cosTheta * cosTheta;
-
-    float r2 = (1- A) / (A * a * a - A + 1);
-    return make_float2(r1, r2);
-    //dir = 2.0f * dot(V, half) * half - V; //reflection vector
-
-}
 RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed)
 {
 
@@ -1253,6 +1178,109 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
     return pdf;
 }
 
+RT_FUNCTION float3 Sample_shift_refract(const MaterialData::Pbr& mat, const float3& N, const float3& V, float r1, float r2, bool& refract_good)
+{
+
+    float3 dir;
+    Onb onb(N); // basis
+
+    {
+        float a = max(0.001f, mat.roughness);
+
+        float phi = r1 * 2.0f * M_PIf;
+
+        float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
+        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+        float sinPhi = sinf(phi);
+        float cosPhi = cosf(phi);
+
+        float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+        onb.inverse_transform(half);
+
+
+        refract_good = refract(dir, half, V, dot(N, V) > 0 ? mat.eta : 1 / mat.eta); //reflection vector 
+
+    }
+    return dir;
+}
+
+RT_FUNCTION float2 sample_reverse_refract(const MaterialData::Pbr& mat, const float3& N, const float3& V, float3 dir)
+{
+    Onb onb(N); // basis
+
+    float a = max(0.001f, mat.roughness);
+    float eta = dot(N, V) > 0 ? mat.eta : 1.0 / mat.eta;
+    float3 half = normalize(V + eta * dir);
+    if (dot(half, N) < 0) half = -half;
+    onb.transform(half);
+
+    float cosTheta = half.z;
+    float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+    float sinPhi = half.y / sinTheta;
+    float cosPhi = half.x / sinTheta;
+    float phiA = acos(cosPhi);
+    float phiB = asin(sinPhi);
+    float phi = phiB > 0 ? phiA : 2 * M_PI - phiA;
+
+    float r1 = phi / 2.0f / M_PIf;
+    float A = cosTheta * cosTheta;
+
+    float r2 = (1 - A) / (A * a * a - A + 1);
+    return make_float2(r1, r2);
+    //dir = 2.0f * dot(V, half) * half - V; //reflection vector
+
+}
+
+RT_FUNCTION float3 Sample_shift_metallic(const MaterialData::Pbr& mat, const float3& N, const float3& V, float r1, float r2)
+{
+
+    float3 dir;
+    Onb onb(N); // basis
+
+    {
+        float a = max(0.001f, mat.roughness);
+
+        float phi = r1 * 2.0f * M_PIf;
+
+        float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
+        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+        float sinPhi = sinf(phi);
+        float cosPhi = cosf(phi);
+
+        float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+        onb.inverse_transform(half);
+
+        dir = 2.0f * dot(V, half) * half - V; //reflection vector
+
+    }
+    return dir;
+}
+RT_FUNCTION float2 sample_reverse_metallic(const MaterialData::Pbr& mat, const float3& N, const float3& V, float3 dir)
+{
+    Onb onb(N); // basis
+
+    float a = max(0.001f, mat.roughness);
+    float3 half;
+
+    half = normalize(V + dir);
+
+    onb.transform(half);
+    float cosTheta = half.z;
+    float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+    float sinPhi = half.y / sinTheta;
+    float cosPhi = half.x / sinTheta;
+    float phiA = acos(cosPhi);
+    float phiB = asin(sinPhi);
+    float phi = phiB > 0 ? phiA : 2 * M_PI - phiA;
+
+    float r1 = phi / 2.0f / M_PIf;
+    float A = cosTheta * cosTheta;
+
+    float r2 = (1 - A) / (A * a * a - A + 1);
+    return make_float2(r1, r2);
+    //dir = 2.0f * dot(V, half) * half - V; //reflection vector
+
+}
 
 RT_FUNCTION float3 contriCompute(const BDPTVertex* path, int path_size)
 {
@@ -1991,7 +2019,7 @@ namespace Shift
         float3 ray_direction = payload.ray_direction;
         float3 ray_origin = payload.origin;
         int begin_depth = payload.path.size;
-        Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+        Tracer::traceEyeSubPath_simple(Tracer::params.handle, ray_origin, ray_direction,
             SCENE_EPSILON,  // tmin
             1e16f,  // tmax
             &payload);
@@ -2570,7 +2598,7 @@ namespace Shift
                 float3 ray_direction = payload.ray_direction;
                 float3 ray_origin = payload.origin;
                 int begin_depth = payload.path.size;
-                Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+                Tracer::traceEyeSubPath_simple(Tracer::params.handle, ray_origin, ray_direction,
                     SCENE_EPSILON,  // tmin
                     1e16f,  // tmax
                     &payload);
@@ -3541,7 +3569,7 @@ namespace Shift
     }
     RT_FUNCTION float GeometryTerm(const BDPTVertex& a, const BDPTVertex& b)
     {
-        if (a.type == ENV || b.type == ENV)
+        if (a.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::ENV || a.type == BDPTVertex::Type::ENV_MISS || b.type == BDPTVertex::Type::ENV_MISS)
         {
             printf("Geometry Term call in Env light but we haven't implement it");
         }
@@ -3575,7 +3603,7 @@ namespace Shift
             ray_origin = payload.origin;
 
             int begin_depth = payload.path.size;
-            Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+            Tracer::traceEyeSubPath_simple(Tracer::params.handle, ray_origin, ray_direction,
                 SCENE_EPSILON,  // tmin
                 1e16f,  // tmax
                 &payload);
@@ -3682,12 +3710,11 @@ namespace Shift
         //        fractChannelsFlag fcf;
         int it = 0;
         int s_it = 0;
-        int b_it = 0;
-        float records[4];
+        int b_it = 0; 
         while (true)
         {
             it++;
-            if (it > 20) {
+            if (it > 10) {
                 //printf("trace rays more than expectation\n");
                 break;
             }
