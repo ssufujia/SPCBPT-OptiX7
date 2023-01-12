@@ -10,6 +10,9 @@
 #include "cuProg.h"
 #include "rmis.h"
 
+#define PT_BRDF_STRATEGY_ONLY
+//#define PT_NEE_STRATEGY_ONLY
+
 extern "C" __global__ void __anyhit__radiance()
 {
     //optixIgnoreIntersection();
@@ -177,7 +180,14 @@ extern "C" __global__ void __closesthit__lightsource()
             float pdf_area = light_sample.pdf;
             MIS_weight = pdf_hit / (pdf_area + pdf_hit);
         }
+#ifdef PT_BRDF_STRATEGY_ONLY 
         MIS_weight = 1;
+#endif // PT_BRDF_STRATEGY_ONLY 
+
+#ifdef PT_NEE_STRATEGY_ONLY 
+        MIS_weight = 0;
+#endif // PT_BRDF_STRATEGY_ONLY 
+
         prd->result += prd->throughput * light_sample.emission * MIS_weight;
     }
     //printf("hit light source %d %f %f %f\n", hit_group_data->material_data.light_id,
@@ -577,8 +587,14 @@ extern "C" __global__ void __closesthit__radiance()
                     float pdf_area = light_sample.pdf;
                     float pdf_hit = Tracer::Pdf(currentPbr, N, V, L) * abs(L_dot_LN) / (L_dist * L_dist) * rr_rate;
                     MIS_weight = pdf_area / (pdf_hit + pdf_area);
-                } 
+                }
+#ifdef PT_BRDF_STRATEGY_ONLY 
                 MIS_weight = 0;
+#endif // PT_BRDF_STRATEGY_ONLY 
+
+#ifdef PT_NEE_STRATEGY_ONLY 
+                MIS_weight = 1;
+#endif // PT_BRDF_STRATEGY_ONLY 
                 result += prd->throughput * light_sample.emission * attenuation / light_sample.pdf 
                     * N_dot_L * L_dot_LN / L_dist / L_dist * eval * MIS_weight ;// *make_float3(1.0, 0.0, 1.0);
             }
