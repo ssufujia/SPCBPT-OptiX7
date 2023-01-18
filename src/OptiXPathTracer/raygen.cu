@@ -911,6 +911,8 @@ extern "C" __global__ void __raygen__shift_combine()
                     pmf_uniform = 1.0 / Tracer::params.sampler.glossy_count;
                 }
                 const BDPTVertex& light_subpath = *light_subpath_p;
+                
+                //if (light_subpath.depth != 1)continue;
 
                 float final_pmf = guide_ratio * (pmf_firstStage * pmf_secondStage) + (1 - guide_ratio) * pmf_uniform;
 

@@ -1,0 +1,159 @@
+cameraSetting
+{
+	up      0.000000 1.000000 0.000000
+	eye     -0.309680 1.189867 -7.197319
+	lookat  0.000000 1.000000 0.000000 
+//    geo_normal 1
+    fov 20
+}
+
+material LeftWall
+{
+	color 0.63 0.065 0.05
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material RightWall
+{
+	color 0.14 0.45 0.091
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material Floor
+{
+	color 0.725 0.71 0.68
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material Ceiling
+{
+	color 0.725 0.71 0.68
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material BackWall
+{
+	color 0.725 0.71 0.68
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material ShortBox
+{
+	color 0.725 0.71 0.68
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material TallBox
+{
+	color 0.725 0.71 0.68
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material Light
+{
+	color 0 0 0
+	roughness 0.1
+	metallic 0.5
+	specular 0.5
+}
+
+material Water
+{
+	color 1 1 1
+	roughness 0.001
+	metallic 0.0
+	trans 1.0
+	eta 1.33
+}
+
+mesh
+{
+	file water/Floor.obj
+	material Floor
+}
+
+mesh
+{
+	file water/Ceiling.obj
+
+	material Ceiling
+}
+
+mesh
+{
+	file water/BackWall.obj
+
+	material BackWall
+}
+
+mesh
+{
+	file water/RightWall.obj
+	material RightWall
+}
+
+mesh
+{
+	file water/LeftWall.obj
+	material LeftWall
+}
+
+mesh
+{
+	file water/ShortBox.obj
+	material ShortBox
+}
+
+mesh
+{
+	file water/TallBox.obj
+	material TallBox
+}
+
+mesh
+{
+	file water/Mesh001.obj
+	material Water
+}
+
+//mesh
+//{
+//	file water/Mesh000.obj
+//	material Water
+//}
+
+light
+{
+    position 0.45 1.98 -0.05
+    v1 0.55 1.98 -0.05
+    v2 0.45 1.98 0.05
+    emission 127 382 541
+    type Quad
+	divLevel 10
+}
+
+light
+{
+    position -0.55 1.98 -0.05
+    v1 -0.45 1.98 -0.05
+    v2 -0.55 1.98 0.05
+    emission 541 382 127
+    type Quad
+	divLevel 10
+}
+
+

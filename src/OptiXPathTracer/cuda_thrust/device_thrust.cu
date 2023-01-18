@@ -255,7 +255,7 @@ namespace MyThrustOp
                 for (int k = 0; k < v[i].depth; k++)
                 {
                     const MaterialData::Pbr& mat = mats[v[i - k].materialId];
-                    if (max(mat.metallic, mat.trans) < 0.9 || mat.roughness > 0.1)
+                    if (max(mat.metallic, mat.trans) < 0.9 || mat.roughness > 0.4)
                     {
                         return false;
                     }

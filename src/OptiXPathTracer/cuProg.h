@@ -1933,7 +1933,7 @@ namespace Shift
 
     RT_FUNCTION bool glossy(const MaterialData::Pbr& mat)
     {
-        return mat.roughness < 0.1 && max(mat.metallic, mat.trans) >= 0.99;
+        return mat.roughness < 0.4 && max(mat.metallic, mat.trans) >= 0.99;
     }
     RT_FUNCTION bool glossy(const BDPTVertex& v)
     {
@@ -1960,6 +1960,8 @@ namespace Shift
     {
         return v.type == BDPTVertex::Type::NORMALHIT && RefractionCase(Tracer::params.materials[v.materialId]);
     }
+    //eta 无论是否取倒数，结果都一样
+    //wh 无论是朝着V还是L的方向，结果也都一样
     RT_FUNCTION float dwh_dwi_refract(float3 wh, float3 V, float3 L, float eta)
     {
         float sqrtDenom = dot(L, wh) + eta * dot(V, wh);
@@ -1967,6 +1969,7 @@ namespace Shift
             std::abs((eta * eta * dot(V, wh)) / (sqrtDenom * sqrtDenom));
         return dwh_dwi;
     }
+
 
     //RT_FUNCTION bool back_trace_tanScale(const BDPTVertex& midVertex, const BDPTVertex& originLast, float3 anchor, float tan_scale, BDPTVertex& new_vertex, float& pdf)
     //{
@@ -2009,6 +2012,23 @@ namespace Shift
     //    pdf *= 1.0 / dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
     //    return true;
     //}
+
+    RT_FUNCTION float3 refract_half(float3 in_dir, float3 out_dir, float3 normal, float eta)
+    {
+        eta = max(eta, 1 / eta);
+        float3 ans;
+        if (abs(dot(in_dir, normal)) > abs(dot(out_dir, normal)))
+        {
+            ans = eta * in_dir + out_dir;
+        }
+        else
+        {
+            ans = in_dir + eta * out_dir;
+        }
+        ans = normalize(ans);
+        return dot(ans, normal) > 0 ? ans : -ans;
+    }
+
     RT_FUNCTION bool back_trace(const BDPTVertex& midVertex, float2 uv, float3 anchor, BDPTVertex& new_vertex, float& pdf, bool is_refract = false)
     {
         if (is_refract == true && RefractionCase(midVertex))
@@ -2017,13 +2037,38 @@ namespace Shift
         }
         
         float3 in_dir = normalize(anchor - midVertex.position);
+        float3 normal = midVertex.normal;
         MaterialData::Pbr mat = Tracer::params.materials[midVertex.materialId];
         mat.base_color = make_float4(midVertex.color, 1.0);
+
+#define LOBE_SCALE_ROUGH_A 0.2f 
+        float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
+
         bool refract_good = true;
-        float3 new_dir = is_refract ? Tracer::Sample_shift_refract(mat, midVertex.normal, in_dir, uv.x, uv.y,refract_good) :
-            Tracer::Sample_shift_metallic(mat, midVertex.normal, in_dir, uv.x, uv.y);
+        float3 new_dir = is_refract ? Tracer::Sample_shift_refract(mat, normal, in_dir, uv.x, uv.y,refract_good) :
+            Tracer::Sample_shift_metallic(mat, normal, in_dir, uv.x, uv.y);
         if (refract_good == false)return false;
  
+        float3 half;
+        if(is_refract)
+        {
+            half = refract_half(in_dir,new_dir,normal,mat.eta);
+        }
+        else//reflection
+        {
+            half = normalize(new_dir + in_dir) ;
+            half = dot(half, normal) > 0 ? half : -half; 
+        }
+
+        float cosTheta = dot(normal, half);
+        float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
+        float dwi_dwh = is_refract ? dwh_dwi_refract(half, in_dir, new_dir, mat.eta) : 4 * abs(dot(half, in_dir));
+
+        pdf = duv_dwh / dwi_dwh;// Tracer::Pdf(mat, midVertex.normal, in_dir, new_dir);
+
+
+
+
         Tracer::PayloadBDPTVertex payload;
         payload.clear();
         payload.seed = 0;
@@ -2045,7 +2090,7 @@ namespace Shift
         }
         new_vertex = payload.path.currentVertex();
         float3 dirVec = new_vertex.position - midVertex.position;
-        pdf = Tracer::Pdf(mat, midVertex.normal, in_dir, new_dir) / dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
+        pdf *= 1/ dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
         return true;
     }
 
@@ -2446,33 +2491,28 @@ namespace Shift
 
         return true;
     }
-    RT_FUNCTION float3 refract_half(float3 in_dir, float3 out_dir, float3 normal, float eta)
-    {
-        eta = max(eta, 1 / eta);
-        float3 ans;
-        if(abs(dot(in_dir, normal)) > abs(dot(out_dir, normal)))
-        {
-            ans = eta * in_dir + out_dir;
-        }
-        else
-        {
-            ans = in_dir + eta * out_dir;
-        }
-        ans = normalize(ans);
-        return dot(ans, normal) > 0 ? ans : -ans;
-    }
 
-
-    // Jacobian = dy / duv   
-    // write uv, refract_state, jacobian
-    RT_FUNCTION void uv_encoding(PathContainer& path, float2* uv, bool* refract_state, float* Jacobian, int g, bool reverse, float3 anchor)
-    {
+    RT_FUNCTION void refract_state_fill(bool* refract_state, PathContainer& path,float3 anchor, int g)
+    { 
         for (int i = 0; i < g; i++)
         {
             float3 in_dir = (i == 0 ? anchor : path.get(i - 1).position) - path.get(i).position;
             float3 out_dir = path.get(i + 1).position - path.get(i).position;
             refract_state[i] = isRefract(path.get(i).normal, in_dir, out_dir);
         }
+    }
+
+    // Jacobian = dy / duv   
+    // write uv, refract_state, jacobian
+    RT_FUNCTION void uv_encoding(PathContainer& path, float2* uv, bool* refract_state, float* Jacobian, int g, bool reverse, float3 anchor)
+    {
+        /*for (int i = 0; i < g; i++)
+        {
+            float3 in_dir = (i == 0 ? anchor : path.get(i - 1).position) - path.get(i).position;
+            float3 out_dir = path.get(i + 1).position - path.get(i).position;
+            refract_state[i] = isRefract(path.get(i).normal, in_dir, out_dir);
+        }*/
+        refract_state_fill(refract_state, path, anchor, g);
 
         //////////////////////////////////////////////
         ////////// mapping for y_{s - 2} /////////////
@@ -2486,7 +2526,7 @@ namespace Shift
 
             MaterialData::Pbr mat = VERTEX_MAT(path.get(0));
             float eta = mat.eta;
-#define LOBE_SCALE_ROUGH_A 0.2f 
+
             float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
             a = reverse ? a : LOBE_SCALE_ROUGH_A;
 
@@ -2858,14 +2898,17 @@ namespace Shift
         //如果追踪失败
         if (trace_hit == false) return false;
 
+        //printf("jacobian %f %d\n",local_jacobian, is_refract);
+
         //如果前后类型不同则也是映射失败
         if (newPath.get(1).type != BDPTVertex::Type::HIT_LIGHT_SOURCE) return false;
         Jacobian *= local_jacobian;
 
+
+
+
         int light_id = newPath.get(1).materialId;
-        float2 new_uv = newPath.get(1).uv;
-        //}
-        //可见性测试
+        float2 new_uv = newPath.get(1).uv; 
 
         //Tracer::lightSample light_sample;
         light_sample.ReverseSample(Tracer::params.lights[light_id], new_uv);
@@ -3593,14 +3636,65 @@ namespace Shift
         float3 dir = normalize(diff);
         return abs(dot(dir, a.normal) * dot(dir, b.normal)) / dot(diff, diff);
     }
-    RT_FUNCTION bool retracing(PathContainer& path, float3 anchor, unsigned& seed, float3& contri, float& pdf, int re_trace_length)
+    //test code 
+    //can't ensure its performance
+    RT_FUNCTION float get_duv_dwi(const MaterialData::Pbr& mat, const float3& N, const float3& V, const float3& L, bool is_refract)
+    {
+        float3 half;
+        if (is_refract)
+        {
+            half = refract_half(V,L,N,mat.eta);
+
+//            return 0;
+        }
+        else
+        {
+            half = normalize(V + L); 
+        }
+        float cosTheta = abs(dot(N, half));
+        float a = max(mat.roughness, ROUGHNESS_A_LIMIT);
+
+        float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
+        float dwi_dwh = is_refract ? dwh_dwi_refract(half, V, L, mat.eta) : 4 * abs(dot(half, V));
+        return duv_dwh / dwi_dwh;
+    }
+    RT_FUNCTION float3 SampleControlled(float& duv_dwi, const MaterialData::Pbr& mat, const float3& N, const float3& V, float2 uv, bool is_refract, bool& sample_good)
+    {
+        sample_good = true;
+        float a = max(mat.roughness,ROUGHNESS_A_LIMIT);
+        float3 half = sample_half(a, N, uv);
+        float cosTheta = abs(dot(half, N));
+        float duv_dwh = Tracer::GTR2(cosTheta,a) * cosTheta;
+        float3 out_dir;
+        if (is_refract)
+        {
+            sample_good = refract(out_dir, V, half, dot(V, N) > 0 ? mat.eta : 1 / mat.eta);
+        }
+        else
+        {
+            out_dir = reflect(-V, half);
+        } 
+        float dwi_dwh = is_refract ? dwh_dwi_refract(half, V, out_dir, mat.eta) : 4 * abs(dot(half, V));
+        duv_dwi = duv_dwh / dwi_dwh;
+        return out_dir;
+    }
+
+    RT_FUNCTION bool retracing(PathContainer& path, float3 anchor, unsigned& seed, float3& contri, float& pdf, int re_trace_length, bool* refract_state)
     {
         MaterialData::Pbr mat;
         mat = Tracer::params.materials[path.get(0).materialId];
         mat.base_color = make_float4(path.get(0).color, 1.0);
 
         float3 in_dir = normalize(anchor - path.get(0).position);
-        float3 new_dir = Tracer::Sample(mat, path.get(0).normal, in_dir, seed);
+        //float3 new_dir = Tracer::Sample(mat, path.get(0).normal, in_dir, seed);
+        float duv_dwi;
+        bool sample_good;
+        float3 new_dir = SampleControlled(duv_dwi, mat, path.get(0).normal, in_dir, make_float2(rnd(seed), rnd(seed)), refract_state[0], sample_good);
+        if (sample_good == false)return false;
+
+        pdf = duv_dwi;//Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir);
+        contri = Tracer::Eval(mat, path.get(0).normal, in_dir, new_dir) * abs(dot(path.get(0).normal, new_dir));
+        //pdf = Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir); 
 
         Tracer::PayloadBDPTVertex payload;
         payload.clear();
@@ -3609,8 +3703,7 @@ namespace Shift
         payload.origin = path.get(0).position;
         init_EyeSubpath(payload.path, payload.origin, payload.ray_direction);
 
-        contri = Tracer::Eval(mat, path.get(0).normal, in_dir, new_dir) * abs(dot(path.get(0).normal, new_dir));
-        pdf = Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir);
+        
         float3 ray_direction;
         float3 ray_origin;
         for (int i = 1; i < re_trace_length; i++)
@@ -3666,10 +3759,14 @@ namespace Shift
                 
                 float3 normal = payload.path.currentVertex().normal;
                 float3 in_dir = -ray_direction;
-                float3 out_dir = payload.ray_direction;
+//                float3 out_dir = payload.ray_direction;
 //                float3 out_dir = Tracer::Sample(mat, normal, in_dir, payload.seed);//payload.ray_direction;
 
-                pdf *= Tracer::Pdf(mat,normal,in_dir,out_dir);
+                float3 out_dir = SampleControlled(duv_dwi, mat, normal, in_dir, make_float2(rnd(seed), rnd(seed)), refract_state[i], sample_good);
+                if (sample_good == false)return false; 
+                pdf *= duv_dwi;
+
+//                pdf *= Tracer::Pdf(mat, normal, in_dir, out_dir);
                 contri *= Tracer::Eval(mat, normal, in_dir, out_dir) * abs(dot(normal, out_dir));
 //                payload.origin = payload.path.currentVertex().position;
 //                payload.ray_direction = out_dir;
@@ -3709,20 +3806,9 @@ namespace Shift
         float3 factor = make_float3(1);
         float3 bound = make_float3(1.2);
         bool bound_set = false;
-        if (re_trace_length == path.size() || re_trace_length == path.size() - 1) bound *= path.get(-1).flux;
-        else
-        {
-            bound *= BSDF(path.get(re_trace_length + 1), path.get(re_trace_length), path.get(re_trace_length - 1));
-        }
-        if (re_trace_length != path.size())
-        {
-            bound *= GeometryTerm(path.get(re_trace_length), path.get(re_trace_length - 1));
-        }
-
-        for (int i = 0; i < re_trace_length - 1; i++)
-        {
-            bound *= fmaxf(path.get(i).color);
-        }
+        bool refract_state[SHIFT_VALID_SIZE];
+        refract_state_fill(refract_state, path, anchor, glossy_count);
+ 
         //        fractChannelsFlag fcf;
         int it = 0;
         int s_it = 0;
@@ -3737,7 +3823,7 @@ namespace Shift
 
             float3 contri;
             float pdf;
-            bool retracing_good = retracing(path, anchor, seed, contri, pdf, re_trace_length);
+            bool retracing_good = retracing(path, anchor, seed, contri, pdf, re_trace_length,refract_state);
             if (retracing_good == false)
             {
                 continue;

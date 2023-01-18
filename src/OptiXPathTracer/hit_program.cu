@@ -397,7 +397,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
 //    if (dot(N, ray_direction) > 0.f)
 //        N = -N;
-    prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
+    //prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
     prd->origin = geom.P;
     if (!(prd->pdf > 0.0f))
         prd->done = true;
@@ -626,6 +626,8 @@ extern "C" __global__ void __closesthit__radiance()
     //prd->done = true;
     //prd->depth += 1;  
     //prd->result += result;
+
+     
     prd->currentResult += result;
     
     prd->origin = geom.P;
@@ -636,7 +638,7 @@ extern "C" __global__ void __closesthit__radiance()
     }
     else
     {
-        prd->ray_direction = Tracer::Sample(currentPbr, N, in_dir, prd->seed);
+        prd->ray_direction = Tracer::Sample(currentPbr, N, in_dir, prd->seed); 
         float pdf = Tracer::Pdf(currentPbr, N, in_dir, prd->ray_direction);
         if (pdf > 0.0f)
         {
