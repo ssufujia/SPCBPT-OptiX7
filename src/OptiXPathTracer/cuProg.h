@@ -1,4 +1,4 @@
-//
+ï»¿//
 // Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -332,581 +332,671 @@ struct envInfo_device :envInfo
 #define SKY (*(reinterpret_cast<const envInfo_device*>(&Tracer::params.sky)))
 
 
-namespace Tracer { 
-RT_FUNCTION int binary_sample(float* cmf, int size, unsigned int& seed, float& pmf, float cmf_range = 1.0)
-{
-
-    float index = rnd(seed) * cmf_range;
-    int mid = size / 2 - 1, l = 0, r = size;
-    while (r - l > 1)
+namespace Tracer {
+    RT_FUNCTION int binary_sample(float* cmf, int size, unsigned int& seed, float& pmf, float cmf_range = 1.0)
     {
-        if (index < cmf[mid])
+
+        float index = rnd(seed) * cmf_range;
+        int mid = size / 2 - 1, l = 0, r = size;
+        while (r - l > 1)
         {
-            r = mid + 1;
+            if (index < cmf[mid])
+            {
+                r = mid + 1;
+            }
+            else
+            {
+                l = mid + 1;
+            }
+            mid = (l + r) / 2 - 1;
         }
-        else
+        pmf = l == 0 ? cmf[l] : cmf[l] - cmf[l - 1];
+        return l;
+    }
+
+    struct SubspaceSampler_device :public SubspaceSampler
+    {
+        RT_FUNCTION const BDPTVertex& sampleSecondStage(int subspaceId, unsigned int& seed, float& sample_pmf)
         {
-            l = mid + 1;
+            int begin_index = subspace[subspaceId].jump_bias;
+            int end_index = begin_index + subspace[subspaceId].size;
+            //sample_pmf = 1.0 / subspace[subspaceId].size;
+            //int index = rnd(seed) * subspace[subspaceId].size + begin_index;
+            //printf("error %f %f %f\n", *(cmfs + begin_index), 1.0 / subspace[subspaceId].size, *(cmfs + end_index - 1));
+            int index = binary_sample(cmfs + begin_index, subspace[subspaceId].size, seed, sample_pmf) + begin_index;
+            //        if (params.lt.validState[index] == false)
+            //            printf("error found");
+                    //printf("index get %d %d\n",index, jump_buffer[index]);
+            return LVC[jump_buffer[index]];
         }
-        mid = (l + r) / 2 - 1;
-    }
-    pmf = l == 0 ? cmf[l] : cmf[l] - cmf[l - 1];  
-    return l;
-}
 
-struct SubspaceSampler_device:public SubspaceSampler
-{
-    RT_FUNCTION const BDPTVertex& sampleSecondStage(int subspaceId, unsigned int& seed, float& sample_pmf)
+
+        RT_FUNCTION const BDPTVertex& uniformSampleGlossy(unsigned int& seed, float& sample_pmf)
+        {
+            sample_pmf = 1.0 / glossy_count;
+            int index = rnd(seed) * glossy_count;
+
+            return LVC[glossy_index[index]];
+        }
+
+        RT_FUNCTION const BDPTVertex& SampleGlossySecondStage(int subspaceId, unsigned int& seed, float& sample_pmf)
+        {
+            int begin_index = glossy_subspace_bias[subspaceId];
+            int end_index = begin_index + glossy_subspace_num[subspaceId];
+
+            sample_pmf = 1.0 / (end_index - begin_index);
+            int index = rnd(seed) * (end_index - begin_index) + begin_index;
+
+            return LVC[glossy_index[index]];
+        }
+        RT_FUNCTION const BDPTVertex& uniformSample(unsigned int& seed, float& sample_pmf)
+        {
+            sample_pmf = 1.0 / vertex_count;
+            int index = rnd(seed) * vertex_count;
+
+            return LVC[jump_buffer[index]];
+        }
+        RT_FUNCTION int sampleFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
+        {
+            int begin_index = eye_subsapce * NUM_SUBSPACE;
+            int end_index = begin_index + NUM_SUBSPACE;
+            int index = binary_sample(Tracer::params.subspace_info.CMFGamma + begin_index, NUM_SUBSPACE, seed, sample_pmf);
+            //        if (params.lt.validState[index] == false)
+            //            printf("error found");
+                    //printf("index get %d %d\n",index, jump_buffer[index]); 
+            //int index = int(rnd(seed) * NUM_SUBSPACE);
+            //sample_pmf = 1.0 / NUM_SUBSPACE;
+            return index;
+        }
+
+        RT_FUNCTION int SampleGlossyFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
+        {
+            int begin_index = eye_subsapce * NUM_SUBSPACE;
+            int end_index = begin_index + NUM_SUBSPACE;
+            int index = binary_sample(Tracer::params.subspace_info.CMFCausticGamma + begin_index, NUM_SUBSPACE, seed, sample_pmf);
+            return index;
+        }
+    };
+    struct PayloadBDPTVertex
+    {//è®°å¾—åˆå§‹åŒ–
+        BDPTPath path;
+        float3 origin;
+        float3 ray_direction;
+        float3 throughput;
+        float3 result;
+        float pdf;
+        unsigned int seed;
+
+        int depth;
+        bool done;
+        RT_FUNCTION void clear()
+        {
+            path.clear();
+            depth = 0;
+            done = false;
+            throughput = make_float3(1);
+            result = make_float3(0.0);
+        }
+    };
+
+    //------------------------------------------------------------------------------
+    //
+    // GGX/smith shading helpers
+    // TODO: move into header so can be shared by path tracer and bespoke renderers
+    //
+    //------------------------------------------------------------------------------
+
+    __device__ __forceinline__ float3 schlick(const float3 spec_color, const float V_dot_H)
     {
-        int begin_index = subspace[subspaceId].jump_bias;
-        int end_index = begin_index + subspace[subspaceId].size;
-        //sample_pmf = 1.0 / subspace[subspaceId].size;
-        //int index = rnd(seed) * subspace[subspaceId].size + begin_index;
-        //printf("error %f %f %f\n", *(cmfs + begin_index), 1.0 / subspace[subspaceId].size, *(cmfs + end_index - 1));
-        int index = binary_sample(cmfs + begin_index, subspace[subspaceId].size, seed, sample_pmf) + begin_index;
-//        if (params.lt.validState[index] == false)
-//            printf("error found");
-        //printf("index get %d %d\n",index, jump_buffer[index]);
-        return LVC[jump_buffer[index]];
+        return spec_color + (make_float3(1.0f) - spec_color) * powf(1.0f - V_dot_H, 5.0f);
     }
 
-
-    RT_FUNCTION const BDPTVertex& uniformSampleGlossy(unsigned int& seed, float& sample_pmf)
+    __device__ __forceinline__ float vis(const float N_dot_L, const float N_dot_V, const float alpha)
     {
-        sample_pmf = 1.0 / glossy_count;
-        int index = rnd(seed) * glossy_count;
+        const float alpha_sq = alpha * alpha;
 
-        return LVC[glossy_index[index]];
+        const float ggx0 = N_dot_L * sqrtf(N_dot_V * N_dot_V * (1.0f - alpha_sq) + alpha_sq);
+        const float ggx1 = N_dot_V * sqrtf(N_dot_L * N_dot_L * (1.0f - alpha_sq) + alpha_sq);
+
+        return 2.0f * N_dot_L * N_dot_V / (ggx0 + ggx1);
     }
 
-    RT_FUNCTION const BDPTVertex& SampleGlossySecondStage(int subspaceId, unsigned int& seed, float& sample_pmf)
+
+    __device__ __forceinline__ float ggxNormal(const float N_dot_H, const float alpha)
     {
-        int begin_index = glossy_subspace_bias[subspaceId];
-        int end_index = begin_index + glossy_subspace_num[subspaceId];
-
-        sample_pmf = 1.0 / (end_index - begin_index);
-        int index = rnd(seed) * (end_index - begin_index) + begin_index;
-
-        return LVC[glossy_index[index]];
+        const float alpha_sq = alpha * alpha;
+        const float N_dot_H_sq = N_dot_H * N_dot_H;
+        const float x = N_dot_H_sq * (alpha_sq - 1.0f) + 1.0f;
+        return alpha_sq / (M_PIf * x * x);
     }
-    RT_FUNCTION const BDPTVertex& uniformSample(unsigned int& seed, float& sample_pmf)
-    { 
-        sample_pmf = 1.0 / vertex_count;
-        int index = rnd(seed) * vertex_count; 
 
-        return LVC[jump_buffer[index]];
-    }
-    RT_FUNCTION int sampleFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
+    __device__ __forceinline__ float float3sum(float3 c)
     {
-        int begin_index = eye_subsapce * NUM_SUBSPACE;
-        int end_index = begin_index + NUM_SUBSPACE;
-        int index = binary_sample(Tracer::params.subspace_info.CMFGamma + begin_index, NUM_SUBSPACE, seed, sample_pmf);
-        //        if (params.lt.validState[index] == false)
-        //            printf("error found");
-                //printf("index get %d %d\n",index, jump_buffer[index]); 
-        //int index = int(rnd(seed) * NUM_SUBSPACE);
-        //sample_pmf = 1.0 / NUM_SUBSPACE;
-        return index;
+        return c.x + c.y + c.z;
     }
 
-    RT_FUNCTION int SampleGlossyFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
+    __device__ __forceinline__ float3 linearize(float3 c)
     {
-        int begin_index = eye_subsapce * NUM_SUBSPACE;
-        int end_index = begin_index + NUM_SUBSPACE;
-        int index = binary_sample(Tracer::params.subspace_info.CMFCausticGamma + begin_index, NUM_SUBSPACE, seed, sample_pmf); 
-        return index;
+        return make_float3(
+            powf(c.x, 2.2f),
+            powf(c.y, 2.2f),
+            powf(c.z, 2.2f)
+        );
     }
-};
-struct PayloadBDPTVertex
-{//¼ÇµÃ³õÊ¼»¯
-    BDPTPath path;
-    float3 origin;
-    float3 ray_direction;
-    float3 throughput;
-    float3 result;
-    float pdf;
-    unsigned int seed;
 
-    int depth;
-    bool done;
-    RT_FUNCTION void clear()
+
+    //------------------------------------------------------------------------------
+    //
+    //
+    //
+    //------------------------------------------------------------------------------
+
+
+    static __forceinline__ __device__ void  packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
     {
-        path.clear();
-        depth = 0;
-        done = false;
-        throughput = make_float3(1);
-        result = make_float3(0.0);
+        const unsigned long long uptr = reinterpret_cast<unsigned long long>(ptr);
+        i0 = uptr >> 32;
+        i1 = uptr & 0x00000000ffffffff;
     }
-};
-
-//------------------------------------------------------------------------------
-//
-// GGX/smith shading helpers
-// TODO: move into header so can be shared by path tracer and bespoke renderers
-//
-//------------------------------------------------------------------------------
-
-__device__ __forceinline__ float3 schlick( const float3 spec_color, const float V_dot_H )
-{
-    return spec_color + ( make_float3( 1.0f ) - spec_color ) * powf( 1.0f - V_dot_H, 5.0f );
-}
-
-__device__ __forceinline__ float vis( const float N_dot_L, const float N_dot_V, const float alpha )
-{
-    const float alpha_sq = alpha*alpha;
-
-    const float ggx0 = N_dot_L * sqrtf( N_dot_V*N_dot_V * ( 1.0f - alpha_sq ) + alpha_sq );
-    const float ggx1 = N_dot_V * sqrtf( N_dot_L*N_dot_L * ( 1.0f - alpha_sq ) + alpha_sq );
-
-    return 2.0f * N_dot_L * N_dot_V / (ggx0+ggx1);
-}
-
-
-__device__ __forceinline__ float ggxNormal( const float N_dot_H, const float alpha )
-{
-    const float alpha_sq   = alpha*alpha;
-    const float N_dot_H_sq = N_dot_H*N_dot_H;
-    const float x          = N_dot_H_sq*( alpha_sq - 1.0f ) + 1.0f;
-    return alpha_sq/( M_PIf*x*x );
-}
-
-__device__ __forceinline__ float float3sum(float3 c)
-{
-    return c.x + c.y + c.z;
-}
-
-__device__ __forceinline__ float3 linearize( float3 c )
-{
-    return make_float3(
-            powf( c.x, 2.2f ),
-            powf( c.y, 2.2f ),
-            powf( c.z, 2.2f )
-            );
-}
-
-
-//------------------------------------------------------------------------------
-//
-//
-//
-//------------------------------------------------------------------------------
-
-
-static __forceinline__ __device__ void  packPointer(void* ptr, unsigned int& i0, unsigned int& i1)
-{
-    const unsigned long long uptr = reinterpret_cast<unsigned long long>(ptr);
-    i0 = uptr >> 32;
-    i1 = uptr & 0x00000000ffffffff;
-}
-static __forceinline__ __device__ void traceRadiance(
+    static __forceinline__ __device__ void traceRadiance(
         OptixTraversableHandle      handle,
         float3                      ray_origin,
         float3                      ray_direction,
         float                       tmin,
         float                       tmax,
-        whitted::PayloadRadiance*   payload
-        )
-{
-    unsigned int u0, u1;
-    packPointer(payload, u0, u1);  
-    optixTrace(
+        whitted::PayloadRadiance* payload
+    )
+    {
+        unsigned int u0, u1;
+        packPointer(payload, u0, u1);
+        optixTrace(
             handle,
             ray_origin, ray_direction,
             tmin,
             tmax,
             0.0f,                     // rayTime
-            OptixVisibilityMask( 1 ),
+            OptixVisibilityMask(1),
             OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
             RayType::RAY_TYPE_RADIANCE,        // SBT offset
             RayType::RAY_TYPE_COUNT,           // SBT stride
             RayType::RAY_TYPE_RADIANCE,        // missSBTIndex
-            u0, u1 );
-     
-}
-static __forceinline__ __device__ void traceLightSubPath(
-    OptixTraversableHandle      handle,
-    float3                      ray_origin,
-    float3                      ray_direction,
-    float                       tmin,
-    float                       tmax,
-    PayloadBDPTVertex*          payload
-)
-{
-    unsigned int u0, u1;
-    packPointer(payload, u0, u1);
-    optixTrace(
-        handle,
-        ray_origin, ray_direction,
-        tmin,
-        tmax,
-        0.0f,                     // rayTime
-        OptixVisibilityMask(1),
-        OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
-        RayType::RAY_TYPE_LIGHTSUBPATH,        // SBT offset
-        RayType::RAY_TYPE_COUNT,           // SBT stride
-        RayType::RAY_TYPE_LIGHTSUBPATH,        // missSBTIndex
-        u0, u1);
+            u0, u1);
 
-}
-static __forceinline__ __device__ void traceEyeSubPath(
-    OptixTraversableHandle      handle,
-    float3                      ray_origin,
-    float3                      ray_direction,
-    float                       tmin,
-    float                       tmax,
-    PayloadBDPTVertex* payload
-)
-{
-    unsigned int u0, u1;
-    packPointer(payload, u0, u1);
-    optixTrace(
-        handle,
-        ray_origin, ray_direction,
-        tmin,
-        tmax,
-        0.0f,                     // rayTime
-        OptixVisibilityMask(1),
-        OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
-        RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
-        RayType::RAY_TYPE_COUNT,           // SBT stride
-        RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
-        //RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
-        //RayType::RAY_TYPE_COUNT,           // SBT stride
-        //RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
-        u0, u1);
-
-}
-
-static __forceinline__ __device__ void traceEyeSubPath_simple(
-    OptixTraversableHandle      handle,
-    float3                      ray_origin,
-    float3                      ray_direction,
-    float                       tmin,
-    float                       tmax,
-    PayloadBDPTVertex* payload
-)
-{
-    unsigned int u0, u1;
-    packPointer(payload, u0, u1);
-    optixTrace(
-        handle,
-        ray_origin, ray_direction,
-        tmin,
-        tmax,
-        0.0f,                     // rayTime
-        OptixVisibilityMask(1),
-        OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
-        RayType::RAY_TYPE_EYESUBPATH_SIMPLE,        // SBT offset
-        RayType::RAY_TYPE_COUNT,           // SBT stride
-        RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
-        //RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
-        //RayType::RAY_TYPE_COUNT,           // SBT stride
-        //RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
-        u0, u1);
-
-}
-
-RT_FUNCTION bool visibilityTest(
-    OptixTraversableHandle handle, float3 pos_A, float3 pos_B)
-{
-    float3 bias_pos = pos_B - pos_A;
-    float len = length(bias_pos);
-    float3 dir = bias_pos / len;
-    unsigned int u0 = __float_as_uint(1.f);
-    optixTrace(
-        handle,
-        pos_A,
-        dir,
-        SCENE_EPSILON,
-        len - SCENE_EPSILON,
-        0.0f,                    // rayTime
-        OptixVisibilityMask(1),
-        OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
-        RayType::RAY_TYPE_OCCLUSION,      // SBT offset
-        RayType::RAY_TYPE_COUNT,          // SBT stride
-        RayType::RAY_TYPE_OCCLUSION,      // missSBTIndex
-        u0);
-    float res = __uint_as_float(u0);
-    if (res > 0.5)
-        return true;
-    return false;  
-}
-
-RT_FUNCTION bool visibilityTest(
-    OptixTraversableHandle handle, const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)
-{
-    if (lightVertex.is_DIRECTION())
-    {
-        float3 n_pos = -10 * SKY.r * lightVertex.normal + eyeVertex.position;
-        return visibilityTest(handle, eyeVertex.position, n_pos);
     }
-    else
+    static __forceinline__ __device__ void traceLightSubPath(
+        OptixTraversableHandle      handle,
+        float3                      ray_origin,
+        float3                      ray_direction,
+        float                       tmin,
+        float                       tmax,
+        PayloadBDPTVertex* payload
+    )
     {
-        return visibilityTest(handle, eyeVertex.position, lightVertex.position);
+        unsigned int u0, u1;
+        packPointer(payload, u0, u1);
+        optixTrace(
+            handle,
+            ray_origin, ray_direction,
+            tmin,
+            tmax,
+            0.0f,                     // rayTime
+            OptixVisibilityMask(1),
+            OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
+            RayType::RAY_TYPE_LIGHTSUBPATH,        // SBT offset
+            RayType::RAY_TYPE_COUNT,           // SBT stride
+            RayType::RAY_TYPE_LIGHTSUBPATH,        // missSBTIndex
+            u0, u1);
+
+    }
+    static __forceinline__ __device__ void traceEyeSubPath(
+        OptixTraversableHandle      handle,
+        float3                      ray_origin,
+        float3                      ray_direction,
+        float                       tmin,
+        float                       tmax,
+        PayloadBDPTVertex* payload
+    )
+    {
+        unsigned int u0, u1;
+        packPointer(payload, u0, u1);
+        optixTrace(
+            handle,
+            ray_origin, ray_direction,
+            tmin,
+            tmax,
+            0.0f,                     // rayTime
+            OptixVisibilityMask(1),
+            OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
+            RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
+            RayType::RAY_TYPE_COUNT,           // SBT stride
+            RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
+            //RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
+            //RayType::RAY_TYPE_COUNT,           // SBT stride
+            //RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
+            u0, u1);
+
     }
 
-}
+    static __forceinline__ __device__ void traceEyeSubPath_simple(
+        OptixTraversableHandle      handle,
+        float3                      ray_origin,
+        float3                      ray_direction,
+        float                       tmin,
+        float                       tmax,
+        PayloadBDPTVertex* payload
+    )
+    {
+        unsigned int u0, u1;
+        packPointer(payload, u0, u1);
+        optixTrace(
+            handle,
+            ray_origin, ray_direction,
+            tmin,
+            tmax,
+            0.0f,                     // rayTime
+            OptixVisibilityMask(1),
+            OPTIX_RAY_FLAG_CULL_BACK_FACING_TRIANGLES,
+            RayType::RAY_TYPE_EYESUBPATH_SIMPLE,        // SBT offset
+            RayType::RAY_TYPE_COUNT,           // SBT stride
+            RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
+            //RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
+            //RayType::RAY_TYPE_COUNT,           // SBT stride
+            //RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
+            u0, u1);
 
-__forceinline__ __device__ unsigned int getPayloadDepth()
-{
-    return optixGetPayload_3();
-}
+    }
 
-static __forceinline__ __device__ float traceOcclusion(
+    RT_FUNCTION bool visibilityTest(
+        OptixTraversableHandle handle, float3 pos_A, float3 pos_B)
+    {
+        float3 bias_pos = pos_B - pos_A;
+        float len = length(bias_pos);
+        float3 dir = bias_pos / len;
+        unsigned int u0 = __float_as_uint(1.f);
+        optixTrace(
+            handle,
+            pos_A,
+            dir,
+            SCENE_EPSILON,
+            len - SCENE_EPSILON,
+            0.0f,                    // rayTime
+            OptixVisibilityMask(1),
+            OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
+            RayType::RAY_TYPE_OCCLUSION,      // SBT offset
+            RayType::RAY_TYPE_COUNT,          // SBT stride
+            RayType::RAY_TYPE_OCCLUSION,      // missSBTIndex
+            u0);
+        float res = __uint_as_float(u0);
+        if (res > 0.5)
+            return true;
+        return false;
+    }
+
+    RT_FUNCTION bool visibilityTest(
+        OptixTraversableHandle handle, const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)
+    {
+        if (lightVertex.is_DIRECTION())
+        {
+            float3 n_pos = -10 * SKY.r * lightVertex.normal + eyeVertex.position;
+            return visibilityTest(handle, eyeVertex.position, n_pos);
+        }
+        else
+        {
+            return visibilityTest(handle, eyeVertex.position, lightVertex.position);
+        }
+
+    }
+
+    __forceinline__ __device__ unsigned int getPayloadDepth()
+    {
+        return optixGetPayload_3();
+    }
+
+    static __forceinline__ __device__ float traceOcclusion(
         OptixTraversableHandle handle,
         float3                 ray_origin,
         float3                 ray_direction,
         float                  tmin,
         float                  tmax
-        )
-{
-    unsigned int u0 = __float_as_uint(1.f);
-    optixTrace(
+    )
+    {
+        unsigned int u0 = __float_as_uint(1.f);
+        optixTrace(
             handle,
             ray_origin,
             ray_direction,
             tmin,
             tmax,
             0.0f,                    // rayTime
-            OptixVisibilityMask( 1 ),
+            OptixVisibilityMask(1),
             OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT,
             RayType::RAY_TYPE_OCCLUSION,      // SBT offset
             RayType::RAY_TYPE_COUNT,          // SBT stride
             RayType::RAY_TYPE_OCCLUSION,      // missSBTIndex
             u0);
-    return __uint_as_float( u0 );
-}
+        return __uint_as_float(u0);
+    }
 
 
-__forceinline__ __device__ void setPayloadResult( float3 p )
-{
-    optixSetPayload_0( __float_as_uint( p.x ) );
-    optixSetPayload_1( __float_as_uint( p.y ) );
-    optixSetPayload_2( __float_as_uint( p.z ) );
-}
+    __forceinline__ __device__ void setPayloadResult(float3 p)
+    {
+        optixSetPayload_0(__float_as_uint(p.x));
+        optixSetPayload_1(__float_as_uint(p.y));
+        optixSetPayload_2(__float_as_uint(p.z));
+    }
 
-__forceinline__ __device__ float getPayloadOcclusion()
-{
-    return __uint_as_float( optixGetPayload_0() );
-}
+    __forceinline__ __device__ float getPayloadOcclusion()
+    {
+        return __uint_as_float(optixGetPayload_0());
+    }
 
-__forceinline__ __device__ void setPayloadOcclusion( float attenuation )
-{
-    optixSetPayload_0( __float_as_uint( attenuation ) );
-}
+    __forceinline__ __device__ void setPayloadOcclusion(float attenuation)
+    {
+        optixSetPayload_0(__float_as_uint(attenuation));
+    }
 
 
 #define RT_FUNCTION __device__ __forceinline__  
-struct lightSample
-{
-    float3 position;
-    float3 emission;
-    float3 direction;
-    float2 uv;
-    const Light* bindLight;
-    float pdf;
-    union 
+    struct lightSample
     {
-        float dir_pdf;
-        float dir_pos_pdf;
-    };
-    int subspaceId;
-
-    
-    Light::Type type;
-    RT_FUNCTION void ReverseSample(const Light& light, float2 uv_)
-    {
-        bindLight = &light;
-        if (light.type == Light::Type::QUAD)
+        float3 position;
+        float3 emission;
+        float3 direction;
+        float2 uv;
+        const Light* bindLight;
+        float pdf;
+        union
         {
-            float r1 = uv_.x;
-            float r2 = uv_.y;
-            float r3 = 1 - r1 - r2;
-            //printf("random %f %f\n", r1, r2);
-            position = light.quad.u * r1 + light.quad.v * r2 + light.quad.corner * r3;
-            emission = light.quad.emission;
-            pdf = 1.0 / light.quad.area;
-            pdf /= params.lights.count;
-            uv = make_float2(r1, r2);
+            float dir_pdf;
+            float dir_pos_pdf;
+        };
+        int subspaceId;
+
+
+        Light::Type type;
+        RT_FUNCTION void ReverseSample(const Light& light, float2 uv_)
+        {
+            bindLight = &light;
+            if (light.type == Light::Type::QUAD)
             {
-                int x_block = clamp(static_cast<int>(floorf(uv.x * light.divLevel)), int(0), int(light.divLevel - 1));
-                int y_block = clamp(static_cast<int>(floorf(uv.y * light.divLevel)), int(0), int(light.divLevel - 1));
-                int lightSpaceId = light.ssBase + x_block * light.divLevel + y_block;
-                subspaceId = NUM_SUBSPACE - lightSpaceId - 1;
+                float r1 = uv_.x;
+                float r2 = uv_.y;
+                float r3 = 1 - r1 - r2;
+                //printf("random %f %f\n", r1, r2);
+                position = light.quad.u * r1 + light.quad.v * r2 + light.quad.corner * r3;
+                emission = light.quad.emission;
+                pdf = 1.0 / light.quad.area;
+                pdf /= params.lights.count;
+                uv = make_float2(r1, r2);
+                {
+                    int x_block = clamp(static_cast<int>(floorf(uv.x * light.divLevel)), int(0), int(light.divLevel - 1));
+                    int y_block = clamp(static_cast<int>(floorf(uv.y * light.divLevel)), int(0), int(light.divLevel - 1));
+                    int lightSpaceId = light.ssBase + x_block * light.divLevel + y_block;
+                    subspaceId = NUM_SUBSPACE - lightSpaceId - 1;
+                }
+            }
+            else if (light.type == Light::Type::ENV)
+            {
+                direction = SKY.reverseSample(uv_);
+                emission = SKY.color(direction);
+                subspaceId = SKY.getLabel(direction);
+                uv = uv;
+                pdf = SKY.pdf(direction);
+                pdf /= params.lights.count;
             }
         }
-        else if (light.type == Light::Type::ENV)
+        RT_FUNCTION void operator()(const Light& light, unsigned int& seed)
         {
-            direction = SKY.reverseSample(uv_);
-            emission = SKY.color(direction);
-            subspaceId = SKY.getLabel(direction);
-            uv = uv;
-            pdf = SKY.pdf(direction);
-            pdf /= params.lights.count;
+            if (light.type == Light::Type::QUAD)
+            {
+                float r1 = rnd(seed);
+                float r2 = rnd(seed);
+                float r3 = 1 - r1 - r2;
+                ReverseSample(light, make_float2(r1, r2));
+            }
+            else if (light.type == Light::Type::ENV)
+            {
+                direction = SKY.sample(seed);
+                emission = SKY.color(direction);
+                subspaceId = SKY.getLabel(direction);
+                uv = dir2uv(direction);
+                pdf = SKY.pdf(direction);
+                pdf /= params.lights.count;
+            }
+            bindLight = &light;
         }
-    }
-    RT_FUNCTION void operator()(const Light& light, unsigned int& seed)
-    {
-        if (light.type == Light::Type::QUAD)
+        RT_FUNCTION void operator()(unsigned int& seed)
         {
-            float r1 = rnd(seed);
-            float r2 = rnd(seed);
-            float r3 = 1 - r1 - r2;
-            ReverseSample(light, make_float2(r1, r2));
-        }
-        else if (light.type == Light::Type::ENV)
-        {
-            direction = SKY.sample(seed);
-            emission = SKY.color(direction);
-            subspaceId = SKY.getLabel(direction);
-            uv = dir2uv(direction);
-            pdf = SKY.pdf(direction); 
-            pdf /= params.lights.count;
-        }
-        bindLight = &light; 
-    }
-    RT_FUNCTION void operator()(unsigned int& seed)
-    {
-        int light_id = clamp(static_cast<int>(floorf(rnd(seed) * params.lights.count)), int(0), int(Tracer::params.lights.count - 1));
-        this->operator()(params.lights[light_id], seed);
+            int light_id = clamp(static_cast<int>(floorf(rnd(seed) * params.lights.count)), int(0), int(Tracer::params.lights.count - 1));
+            this->operator()(params.lights[light_id], seed);
 
-    }
-    RT_FUNCTION float3 normal()
-    {
-        if (bindLight)
+        }
+        RT_FUNCTION float3 normal()
+        {
+            if (bindLight)
+            {
+                if (bindLight->type == Light::Type::QUAD)
+                {
+                    return bindLight->quad.normal;
+                }
+                else
+                {
+                    return -direction;
+                }
+            }
+
+            return make_float3(0);
+        }
+        RT_FUNCTION float3 trace_direction()const
+        {
+            return (bindLight->type == Light::Type::ENV) ? -direction : direction;
+        }
+        RT_FUNCTION void traceMode(unsigned int& seed)
         {
             if (bindLight->type == Light::Type::QUAD)
             {
-                return bindLight->quad.normal;
+                float r1 = rnd(seed);
+                float r2 = rnd(seed);
+
+                Onb onb(bindLight->quad.normal);
+                cosine_sample_hemisphere(r1, r2, direction);
+                onb.inverse_transform(direction);
+                dir_pdf = abs(dot(direction, bindLight->quad.normal)) / M_PIf;
             }
-            else
+            else if (bindLight->type == Light::Type::ENV)
             {
-                return -direction;
+                position = SKY.sample_projectPos(direction, seed);
+                dir_pos_pdf = SKY.projectPdf();
             }
         }
+    };
 
-        return make_float3(0);
-    }
-    RT_FUNCTION float3 trace_direction()const
-    {  
-        return (bindLight->type == Light::Type::ENV) ? -direction : direction;
-    }
-    RT_FUNCTION void traceMode(unsigned int &seed)
+    static __forceinline__ __device__ void* unpackPointer(unsigned int i0, unsigned int i1)
     {
-        if (bindLight->type == Light::Type::QUAD)
-        {
-            float r1 = rnd(seed);
-            float r2 = rnd(seed);
-            
-            Onb onb(bindLight->quad.normal);
-            cosine_sample_hemisphere(r1, r2, direction);
-            onb.inverse_transform(direction);
-            dir_pdf = abs(dot(direction, bindLight->quad.normal)) / M_PIf;
-        }
-        else if (bindLight->type == Light::Type::ENV)
-        {
-            position = SKY.sample_projectPos(direction, seed);
-            dir_pos_pdf = SKY.projectPdf();
-        }
+        const unsigned long long uptr = static_cast<unsigned long long>(i0) << 32 | i1;
+        void* ptr = reinterpret_cast<void*>(uptr);
+        return ptr;
     }
-};
- 
-static __forceinline__ __device__ void* unpackPointer(unsigned int i0, unsigned int i1)
-{
-    const unsigned long long uptr = static_cast<unsigned long long>(i0) << 32 | i1;
-    void* ptr = reinterpret_cast<void*>(uptr);
-    return ptr;
-}
 
-template<typename T = PayloadRadiance>
-static __forceinline__ __device__ T* getPRD()
-{
-    const unsigned int u0 = optixGetPayload_0();
-    const unsigned int u1 = optixGetPayload_1();
-    return reinterpret_cast<T*>(unpackPointer(u0, u1));
-}
- 
+    template<typename T = PayloadRadiance>
+    static __forceinline__ __device__ T* getPRD()
+    {
+        const unsigned int u0 = optixGetPayload_0();
+        const unsigned int u1 = optixGetPayload_1();
+        return reinterpret_cast<T*>(unpackPointer(u0, u1));
+    }
+
 #include<cuda.h>
-RT_FUNCTION float sqr(float x) { return x * x; }
+    RT_FUNCTION float sqr(float x) { return x * x; }
 
-RT_FUNCTION float SchlickFresnel(float u)
-{
-    float m = clamp(1.0f - u, 0.0f, 1.0f);
-    float m2 = m * m;
-    return m2 * m2 * m; // pow(m,5)
+    RT_FUNCTION float SchlickFresnel(float u)
+    {
+        float m = clamp(1.0f - u, 0.0f, 1.0f);
+        float m2 = m * m;
+        return m2 * m2 * m; // pow(m,5)
+    }
+
+    RT_FUNCTION float GTR1(float NDotH, float a)
+    {
+        if (a >= 1.0f) return (1.0f / M_PIf);
+        float a2 = a * a;
+        float t = 1.0f + (a2 - 1.0f) * NDotH * NDotH;
+        return (a2 - 1.0f) / (M_PIf * logf(a2) * t);
+    }
+
+    RT_FUNCTION float GTR2(float NDotH, float a)
+    {
+        float a2 = a * a;
+        float t = 1.0f + (a2 - 1.0f) * NDotH * NDotH;
+        return a2 / (M_PIf * t * t);
+    }
+
+    RT_FUNCTION float smithG_GGX(float NDotv, float alphaG)
+    {
+        float a = alphaG * alphaG;
+        float b = NDotv * NDotv;
+        return 1.0f / (NDotv + sqrtf(a + b - a * b));
+    }
+
+    RT_FUNCTION float D(const float3& wh, const float3& n)
+    {
+        //BeckmannDistribution
+        const float alphax = 0.5f;
+        const float alphay = 0.5f;// what does this mean?
+        float wDotn = dot(wh, n);
+        float TanTheta = length(cross(wh, n)) / wDotn;
+        float tan2Theta = TanTheta * TanTheta;
+        if (isinf(tan2Theta)) return 0.;
+        float cos4Theta = wDotn * wDotn * wDotn * wDotn;
+        return exp(-tan2Theta * (1.0f / (alphax * alphax))) /
+            (M_PIf * alphax * alphay * cos4Theta);
+    }
+
+    RT_FUNCTION float fresnel(float cos_theta_i, float cos_theta_t, float eta)
+    {
+        const float rs = (cos_theta_i - cos_theta_t * eta) /
+            (cos_theta_i + eta * cos_theta_t);
+        const float rp = (cos_theta_i * eta - cos_theta_t) /
+            (cos_theta_i * eta + cos_theta_t);
+
+        return 0.5f * (rs * rs + rp * rp);
+    }
+
+    RT_FUNCTION float3 logf(float3 v)
+    {
+        return make_float3(log(v.x), log(v.y), log(v.z));
+    }
+    RT_FUNCTION float lerp(const float& a, const float& b, const float t)
+    {
+        return a + t * (b - a);
+    }
+
+
+    RT_FUNCTION float Lambda(const float3& w, const float3& n)
+    {
+        //BeckmannDistribution
+        const float alphax = 0.5f;
+        const float alphay = 0.5f;// what does this mean?
+        float wDotn = dot(w, n);
+        float absTanTheta = abs(length(cross(w, n)) / wDotn);
+        if (isinf(absTanTheta)) return 0.;
+        // Compute _alpha_ for direction _w_
+        float alpha = alphax;
+        //std::sqrt(wDotn * wDotn * alphax * alphax + (1 - wDotn * wDotn) * alphay * alphay);
+        float a = 1 / (alpha * absTanTheta);
+        if (a >= 1.6f) return 0;
+        return (1 - 1.259f * a + 0.396f * a * a) / (3.535f * a + 2.181f * a * a);
+    }
 }
-
-RT_FUNCTION float GTR1(float NDotH, float a)
+namespace Shift
 {
-    if (a >= 1.0f) return (1.0f / M_PIf);
-    float a2 = a * a;
-    float t = 1.0f + (a2 - 1.0f) * NDotH * NDotH;
-    return (a2 - 1.0f) / (M_PIf * logf(a2) * t);
-}
 
-RT_FUNCTION float GTR2(float NDotH, float a)
+#define ROUGHNESS_A_LIMIT 0.001f
+    RT_FUNCTION float2 sample_reverse_half(float a, float3 half)
+    {
+        a = max(ROUGHNESS_A_LIMIT, a);
+        float cosTheta = half.z;
+        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+        float sinPhi = half.y / sinTheta;
+        float cosPhi = half.x / sinTheta;
+        float phiA = acos(cosPhi);
+        float phiB = asin(sinPhi);
+        float phi = phiB > 0 ? phiA : 2 * M_PI - phiA;
+
+        float r1 = phi / 2.0f / M_PIf;
+        float A = cosTheta * cosTheta;
+
+        float r2 = (1 - A) / (A * a * a - A + 1);
+        return make_float2(r1, r2);
+    }
+
+    RT_FUNCTION float2 sample_reverse_half(float a, const float3& N, float3 half)
+    {
+        Onb onb(N);
+        onb.transform(half);
+        return sample_reverse_half(a, half);
+    }
+    RT_FUNCTION float3 sample_half(float a, const float2 uv)
+    {
+        a = max(ROUGHNESS_A_LIMIT, a);
+
+        float r1 = uv.x;
+        float r2 = uv.y;
+        float phi = r1 * 2.0 * M_PIf;
+        float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
+        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+        float sinPhi = sinf(phi);
+        float cosPhi = cosf(phi);
+
+        float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+        return half;
+    }
+
+    RT_FUNCTION float3 sample_half(float a, const float3& N, const float2 uv)
+    {
+        Onb onb(N);
+        float3 half = sample_half(a, uv);
+        onb.inverse_transform(half);
+        return half;
+    }
+
+    //eta æ— è®ºæ˜¯å¦å–å€’æ•°ï¼Œç»“æœéƒ½ä¸€æ ·
+    //wh æ— è®ºæ˜¯æœç€Vè¿˜æ˜¯Lçš„æ–¹å‘ï¼Œç»“æœä¹Ÿéƒ½ä¸€æ ·
+    RT_FUNCTION float dwh_dwi_refract(float3 wh, float3 V, float3 L, float eta)
+    {
+        float sqrtDenom = dot(L, wh) + eta * dot(V, wh);
+        float dwh_dwi =
+            std::abs((eta * eta * dot(V, wh)) / (sqrtDenom * sqrtDenom));
+        return dwh_dwi;
+    }
+
+    RT_FUNCTION float3 refract_half_fine(float3 in_dir, float3 out_dir, float3 normal, float eta)
+    {
+        if (dot(normal, in_dir) < 0) eta = 1 / eta;
+        float3 ans;
+        ans = eta * out_dir + in_dir;
+        float3 half = normalize(ans);
+        return dot(half, normal) > 0 ? half : -half;
+    }
+    RT_FUNCTION float3 refract_half(float3 in_dir, float3 out_dir, float3 normal, float eta)
+    {
+        eta = max(eta, 1 / eta);
+        float3 ans;
+        if (abs(dot(in_dir, normal)) > abs(dot(out_dir, normal)))
+        {
+            ans = eta * in_dir + out_dir;
+        }
+        else
+        {
+            ans = in_dir + eta * out_dir;
+        }
+        ans = normalize(ans);
+        return dot(ans, normal) > 0 ? ans : -ans;
+    }
+
+}
+namespace Tracer
 {
-    float a2 = a * a;
-    float t = 1.0f + (a2 - 1.0f) * NDotH * NDotH;
-    return a2 / (M_PIf * t * t);
-}
-
-RT_FUNCTION float smithG_GGX(float NDotv, float alphaG)
-{
-    float a = alphaG * alphaG;
-    float b = NDotv * NDotv;
-    return 1.0f / (NDotv + sqrtf(a + b - a * b));
-}
-
-RT_FUNCTION float D(const float3& wh, const float3& n)
-{
-    //BeckmannDistribution
-    const float alphax = 0.5f;
-    const float alphay = 0.5f;// what does this mean?
-    float wDotn = dot(wh, n);
-    float TanTheta = length(cross(wh, n)) / wDotn;
-    float tan2Theta = TanTheta * TanTheta;
-    if (isinf(tan2Theta)) return 0.;
-    float cos4Theta = wDotn * wDotn * wDotn * wDotn;
-    return exp(-tan2Theta * (1.0f / (alphax * alphax))) /
-        (M_PIf * alphax * alphay * cos4Theta);
-}
-
-RT_FUNCTION float fresnel(float cos_theta_i, float cos_theta_t, float eta)
-{
-    const float rs = (cos_theta_i - cos_theta_t * eta) /
-        (cos_theta_i + eta * cos_theta_t);
-    const float rp = (cos_theta_i * eta - cos_theta_t) /
-        (cos_theta_i * eta + cos_theta_t);
-
-    return 0.5f * (rs * rs + rp * rp);
-}
-
-RT_FUNCTION float3 logf(float3 v)
-{
-    return make_float3(log(v.x), log(v.y), log(v.z));
-}
-RT_FUNCTION float lerp(const float &a, const float &b, const float t)
-{
-    return a + t * (b - a);
-}
-
-
-RT_FUNCTION float Lambda(const float3& w, const float3& n)
-{
-    //BeckmannDistribution
-    const float alphax = 0.5f;
-    const float alphay = 0.5f;// what does this mean?
-    float wDotn = dot(w, n);
-    float absTanTheta = abs(length(cross(w, n)) / wDotn);
-    if (isinf(absTanTheta)) return 0.;
-    // Compute _alpha_ for direction _w_
-    float alpha = alphax;
-    //std::sqrt(wDotn * wDotn * alphax * alphax + (1 - wDotn * wDotn) * alphay * alphay);
-    float a = 1 / (alpha * absTanTheta);
-    if (a >= 1.6f) return 0;
-    return (1 - 1.259f * a + 0.396f * a * a) / (3.535f * a + 2.181f * a * a);
-}
 RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& normal, const float3& V_vec, const float3& L_vec)
 {
     float3 N = normal;
@@ -926,7 +1016,7 @@ RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& nor
 
     if (NDotL == 0 || NDotV == 0) return make_float3(0);
     float refract;
-    if ((1 - NDotV * NDotV) * eta * eta >= 1)// È«·´Éä
+    if ((1 - NDotV * NDotV) * eta * eta >= 1)// È«ï¿½ï¿½ï¿½ï¿½
         refract = 1;
     else
         refract = 0;
@@ -953,9 +1043,19 @@ RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& nor
     //GTR2(dot(wh,N), a);
     float FH = SchlickFresnel(dot(V, wh));
     float3 Fs = lerp(Cspec0, make_float3(1.0f), FH);
-    float F = fresnel(abs(dot(L, wh)), abs(dot(V, wh)), eta);
+    //float F = fresnel(abs(dot(V, wh)), abs(dot(L, wh)), eta);
     //printf("Fresnel: %f\n", F);
-    float3 out = (1.f - refract) * (1.f - F) * T *
+    float F = 0;
+    float cosI = abs(NDotV);
+    float sin2T = (1 - NDotV * NDotV) * eta * eta;
+
+    if (sin2T <= 1)
+    {
+        float cosT = sqrt(1 - sin2T);
+        F = fresnel(cosI, cosT, eta);
+    }
+
+    float3 out = (1 - refract) * (1.f - F) * T *
         std::abs(Ds * Gs * eta * eta *
             abs(dot(L, wh)) * abs(dot(V, wh)) * factor * factor /
             (NDotL * NDotL * sqrtDenom * sqrtDenom));
@@ -968,6 +1068,7 @@ RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& nor
 }
 RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
 {
+     
     float3 N = normal;
 
     float mateta = mat.eta;
@@ -985,14 +1086,16 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
         NDotL *= -1;
         NDotV *= -1;
     }
-    float refract;
-    if ((1 - NDotV * NDotV) * eta * eta >= 1)// È«·´Éä
-        refract = 1;
-    else
-        refract = 0;
     float3 H = normalize(L + V);
     float NDotH = dot(N, H);
     float LDotH = dot(L, H);
+    float VDotH = dot(V, H);
+
+    float refract;
+    if ((1 - NDotV * NDotV) * eta * eta >= 1)// È«ï¿½ï¿½ï¿½ï¿½
+        refract = 1;
+    else
+        refract = 0;
 
     float3 Cdlin = make_float3(mat.base_color);
     float Cdlum = 0.3f * Cdlin.x + 0.6f * Cdlin.y + 0.1f * Cdlin.z; // luminance approx.
@@ -1036,10 +1139,28 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
     float Gr = smithG_GGX(NDotL, 0.25f) * smithG_GGX(NDotV, 0.25f);
 
     float trans = mat.trans;
-    float F = fresnel(abs(LDotH), abs(NDotH), mateta);
-    float3 out = ((1.0f / M_PIf) * lerp(Fd, ss, mat.subsurface) * Cdlin + Fsheen)
-        * (1.0f - mat.metallic) * (1 - trans * (1 - F) * (1 - refract))
-        + Gs * Fs * Ds + 0.25f * mat.clearcoat * Gr * Fr * Dr;
+
+    float cosThetaI = abs(dot(N, V));
+    float sin2ThetaI = 1 - cosThetaI * cosThetaI;
+    float sin2ThetaT = eta * eta * sin2ThetaI;
+    float cosThetaT = 1;
+    if (sin2ThetaT <= 1)
+    {
+        cosThetaT = sqrt(1 - sin2ThetaT);
+    }
+    float F = fresnel(cosThetaI, cosThetaT, eta);
+
+    float3 out = (((1.0f / M_PIf) * lerp(Fd, ss, mat.subsurface) * Cdlin + Fsheen)
+        * (1.0f - mat.metallic))
+        * (1 - trans * (1 - F) * (1 - refract))
+        ;
+    if (trans > 0)
+        out = out + Gs * Ds * (1 - trans * (1 - refract) * (1 - F));
+    else
+        out = out + Gs * Ds * Fs;
+    //printf("%f %f\n", cosThetaI,F);
+        //+ Gs * Ds * (1 - trans * F);// (1 - (1 - F));// *(1 - refract));
+        //+ 0.25f * mat.clearcoat * Gr * Fr * Dr;
     //printf("eval: %f,%f,%f\n", out.x, out.y, out.z);
     return out;
 }
@@ -1050,9 +1171,10 @@ RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const f
     //float3 V = in_dir;
     //prd.origin = state.fhp;
     float r1 = rnd(seed);
-    float r2 = rnd(seed);
+    float r2 = rnd(seed);  
     float3 dir;
     float3 normal = N;
+
     float mateta = mat.eta;
     float eta = 1 / mateta;
     if (dot(normal, V) < 0)
@@ -1060,12 +1182,44 @@ RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const f
         eta = 1 / eta;
         normal = -N;
     }
+
+    if (false && mat.trans > .9)
+    {
+        float3 half = Shift::sample_half(mat.roughness*3, normal, make_float2(r1, r2));
+        if (dot(V, half) < 0)
+        {
+            half = -half;
+        }
+        float reflect_rate = .5;
+
+        float cos_i = abs(dot(half, V));
+        float sin_i = sqrt(1 - cos_i * cos_i);
+        float sin_t2 = sin_i * eta * eta;
+        if (sin_t2 > 1 ) reflect_rate = 1;
+        if (rnd(seed) < reflect_rate)
+        {
+            return reflect(-V, half);
+        }
+        else
+        {
+            float3 out_dir;
+            bool refract_good = refract(out_dir, V, half, 1 / eta);
+            if (refract_good == false)
+            {
+                printf("error refract in Sample\n");
+            }
+            return out_dir;
+        }
+    }
+
     float NdotV = abs(dot(normal, V));
     float transRatio = mat.trans;
     float transprob = rnd(seed);
-    float refractRatio = 1 - fresnel(NdotV, NdotV, eta);
+    float refractRatio;
     float refractprob = rnd(seed);
-    if (transprob < transRatio && refractprob < refractRatio) // sample transmit
+    float probability = rnd(seed);
+    float diffuseRatio = 0.5f * (1.0f - mat.metallic);// *(1 - transRatio);
+    if (transprob < transRatio) // sample transmit
     {
         Onb onb(normal); // basis
         float a = mat.roughness;
@@ -1081,23 +1235,26 @@ RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const f
 
         if (dot(V, normal) == 0) return -V;
 
-        float cosThetaI = dot(half, V);
+        float cosThetaI = NdotV;// dot(half, V);
         float sin2ThetaI = 1 - cosThetaI * cosThetaI;
         float sin2ThetaT = eta * eta * sin2ThetaI;
         if (sin2ThetaT < 1)
         {
             float cosThetaT = sqrt(1 - sin2ThetaT);
-            return  eta * -V + (eta * cosThetaI - cosThetaT) * half;
+            float3 L = eta * -V + (eta * cosThetaI - cosThetaT) * half;
+            float HdotV = abs(dot(half, V));
+            float HdotL = abs(dot(half, L));
+            //float refractRatio = 1 - fresnel(NdotV, sqrt(1 - sin2ThetaT), eta);
+            float refractRatio = 0.5;
+            if (refractprob < refractRatio)
+                return  L;
         }
-        return half * 2 * dot(half, V) - V; // È«·´Éä
-    }
-    if (dot(normal, V) < 0)
-    {
-        normal = -N;
+        else
+        {
+            return half * 2 * dot(half, V) - V; // È«ï¿½ï¿½ï¿½ï¿½
+        }
     }
     Onb onb(normal); // basis
-    float probability = rnd(seed);
-    float diffuseRatio = 0.5f * (1.0f - mat.metallic);// * (1 - transRatio);
 
     if (probability < diffuseRatio) // sample diffuse
     {
@@ -1126,11 +1283,39 @@ RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const f
 
 RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L, float3 position = make_float3(0.0), bool eye_side = false)
 {
+    if (false&&mat.trans > .9)
+    { 
+        float pdf = 0;
+        float3 reflect_half = normalize(V + L);
+        float cosTheta_reflect = abs(dot(reflect_half, normal));
+        float duv_dhalf_ref = GTR2(cosTheta_reflect, mat.roughness*3) * cosTheta_reflect;
+        float dhalf_dwi = 1 / (4 * abs(dot(reflect_half, V)));
+
+        float reflect_rate = .5;
+        float eta = 1 / mat.eta;
+        if (dot(normal, V) < 0)eta = 1 / eta;
+
+        float cos_i = abs(dot(reflect_half, V));
+        float sin_i = sqrt(1 - cos_i * cos_i);
+        float sin_t2 = sin_i * eta * eta;
+        if (sin_t2 > 1) reflect_rate = 1;
+        pdf += duv_dhalf_ref * dhalf_dwi * reflect_rate;
+
+
+        float3 refract_half = Shift::refract_half_fine(V, L, normal, mat.eta);
+        float cosTheta_refract = abs(dot(refract_half, normal));
+        float duv_d_half_refract = GTR2(cosTheta_refract, mat.roughness*3) * cosTheta_refract;
+        float dhalf_dwi_refract = (Shift::dwh_dwi_refract(refract_half, V, L, eta));
+        float dwo_dwi = dot(V, normal) > 0 ? mat.eta * mat.eta: 1 / (mat.eta * mat.eta);
+        pdf += duv_d_half_refract * dhalf_dwi_refract * .5 * dwo_dwi  ;
+
+        return pdf;
+    }
 #ifdef BRDF
     if (mat.brdf)
         return 1.0f;// return abs(dot(L, normal));
 #endif
-
+    //return abs(dot(L, normal)) * (0.5f / M_PIf);
     float transRatio = mat.trans;
     float3 n = normal;
     float mateta = mat.eta;
@@ -1143,7 +1328,10 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
     }
     float pdf;
     float NdotV = abs(dot(V, n));
-    float refractRatio = 1 - fresnel(NdotV, NdotV, eta);
+    float NdotL = abs(dot(L, n));
+    float3 wh = normalize(L + V * eta);
+    float HdotV = abs(dot(V, wh));
+    float HdotL = abs(dot(L, wh));
 
     float specularAlpha = mat.roughness;
     float clearcoatAlpha = lerp(0.1f, 0.001f, mat.clearcoatGloss);
@@ -1162,9 +1350,19 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
     float pdfSpec = lerp(pdfGTR1, pdfGTR2, ratio) / (4.0 * abs(dot(L, half)));
     float pdfDiff = abs(dot(L, n)) * (1.0f / M_PIf);
 
-    pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec);
+    float cosThetaI = dot(n, V);
+    float sin2ThetaI = 1 - cosThetaI * cosThetaI;
+    float sin2ThetaT = eta * eta * sin2ThetaI;
 
-    float3 wh = normalize(L + V * eta);
+    if (sin2ThetaT > 1)  
+        pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec);
+    else
+    {
+        //float refractRatio = 1 - fresnel(NdotV, sqrt(1 - sin2ThetaT), eta);
+        float refractRatio = .5;
+        pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * (1 - transRatio * refractRatio);
+    }
+
     //if (dot(V, wh) * dot(L, wh) > 0) return 0;
 
     // Compute change of variables _dwh\_dwi_ for microfacet transmission
@@ -1174,13 +1372,26 @@ RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L,
     float a = max(0.001f, mat.roughness);
     float Ds = GTR2(dot(wh, n), a);
     float pdfTrans = Ds * abs(dot(n, wh)) * dwh_dwi;
+    if (sin2ThetaT <= 1)  
+    {
+        //float refractRatio = 1 - fresnel(NdotV, sqrt(1 - sin2ThetaT), eta);
+        float refractRatio = .5;
+        pdf += transRatio * pdfTrans * refractRatio;
+    }
 
-    pdf += transRatio * pdfTrans * refractRatio;
-
-
+    if (isRefract(normal, V, L))
+    {
+        if (dot(normal, V) > 0)
+        {
+            pdf *= (mat.eta * mat.eta);
+        }
+        else
+        {
+            pdf /= (mat.eta * mat.eta);
+        }
+    }
     return pdf;
 }
-
 RT_FUNCTION float3 Sample_shift_refract(const MaterialData::Pbr& mat, const float3& N, const float3& V, float r1, float r2, bool& refract_good)
 {
 
@@ -1201,7 +1412,7 @@ RT_FUNCTION float3 Sample_shift_refract(const MaterialData::Pbr& mat, const floa
         onb.inverse_transform(half);
 
 
-        refract_good = refract(dir, half, V, dot(N, V) > 0 ? mat.eta : 1 / mat.eta); //reflection vector 
+        refract_good = refract(dir, V, half, dot(N, V) > 0 ? mat.eta : 1 / mat.eta); //reflection vector 
 
     }
     return dir;
@@ -1287,7 +1498,7 @@ RT_FUNCTION float2 sample_reverse_metallic(const MaterialData::Pbr& mat, const f
 
 RT_FUNCTION float3 contriCompute(const BDPTVertex* path, int path_size)
 {
-    //ÒªÇó£ºµÚ0¸ö¶¥µãÎªeye£¬µÚsize-1¸ö¶¥µãÎªlight
+    //è¦æ±‚ï¼šç¬¬0ä¸ªé¡¶ç‚¹ä¸ºeyeï¼Œç¬¬size-1ä¸ªé¡¶ç‚¹ä¸ºlight
     float3 throughput = make_float3(1);
     const BDPTVertex& light = path[path_size - 1];
     const BDPTVertex& lastMidPoint = path[path_size - 2];
@@ -1318,7 +1529,7 @@ RT_FUNCTION float3 contriCompute(const BDPTVertex* path, int path_size)
         MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
         mat.base_color = make_float4(midPoint.color, 1.0);
         throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection))
-            * Eval(mat, midPoint.normal, lastDirection, nextDirection);
+            * Eval(mat, midPoint.normal, nextDirection,lastDirection);
     }
     return throughput;
 }
@@ -1327,7 +1538,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
 
     int eyePathLength = strategy_id;
     int lightPathLength = path_size - eyePathLength; 
-    /*¹âÔ´Ä¬ÈÏÎªÃæ¹âÔ´ÉÏÒ»µã£¬Òò´Ë¿ÉÒÔÓÃcosÀ´½üËÆÄ£ÄâÆä¹âÕÕĞ§¹û£¬Èç¹ûÊÇµã¹âÔ´ĞèÒªĞŞ¸ÄÒÔÏÂ´úÂë*/
+    /*å…‰æºé»˜è®¤ä¸ºé¢å…‰æºä¸Šä¸€ç‚¹ï¼Œå› æ­¤å¯ä»¥ç”¨cosæ¥è¿‘ä¼¼æ¨¡æ‹Ÿå…¶å…‰ç…§æ•ˆæœï¼Œå¦‚æœæ˜¯ç‚¹å…‰æºéœ€è¦ä¿®æ”¹ä»¥ä¸‹ä»£ç */
 
     float pdf = 1.0;
     if (lightPathLength > 0)
@@ -1343,7 +1554,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         float3 lightDirection = normalize(lightLine);
         pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
 
-        /*Òò¾àÀëºÍÇã½Çµ¼ÖÂµÄpdf*/
+        /*å› è·ç¦»å’Œå€¾è§’å¯¼è‡´çš„pdf*/
         for (int i = 1; i < lightPathLength; i++)
         {
             const BDPTVertex& midPoint = path[path_size - i - 1];
@@ -1368,7 +1579,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         }
 
     }
-    /*ÓÉÓÚÍ¶Ó°½Çµ¼ÖÂµÄpdf±ä»¯*/
+    /*ç”±äºæŠ•å½±è§’å¯¼è‡´çš„pdfå˜åŒ–*/
     for (int i = 1; i < eyePathLength; i++)
     {
         const BDPTVertex& midPoint = path[i];
@@ -1377,7 +1588,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         float3 lineDirection = normalize(line);
         pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
     }
-    /*²ÉÑù·½ÏòµÄ¸ÅÂÊ*/
+    /*é‡‡æ ·æ–¹å‘çš„æ¦‚ç‡*/
     for (int i = 1; i < eyePathLength - 1; i++)
     {
         const BDPTVertex& midPoint = path[i];
@@ -1412,7 +1623,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
             float3 lineDirection = normalize(line);
             pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
         }
-        /*²ÉÑù·½ÏòµÄ¸ÅÂÊ*/
+        /*é‡‡æ ·æ–¹å‘çš„æ¦‚ç‡*/
         for (int i = 1; i < eyePathLength - 1; i++)
         {
             const BDPTVertex& midPoint = path[i];
@@ -1440,7 +1651,7 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
             const BDPTVertex& light = path[path_size - 1];
             const BDPTVertex& lastMidPoint = path[path_size - 2];
 
-            /*Òò¾àÀëºÍÇã½Çµ¼ÖÂµÄpdf*/
+            /*å› è·ç¦»å’Œå€¾è§’å¯¼è‡´çš„pdf*/
             for (int i = 1; i < lightPathLength; i++)
             {
                 const BDPTVertex& midPoint = path[path_size - i - 1];
@@ -1687,7 +1898,7 @@ namespace TrainData
             float3 c_dir = b.isDirLight() ? -b.normal : normalize(vec);
             MaterialData::Pbr mat = Tracer::params.materials[materialId];
             mat.base_color = make_float4(color, 1.0);
-            return Tracer::Eval(mat, normal, dir, c_dir);
+            return Tracer::Eval(mat, normal,c_dir, dir);
         }
 
     };
@@ -1732,58 +1943,10 @@ RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample,
     {
         v.type = BDPTVertex::Type::ENV;
     }
-    //ÆäËû¹âÔ´µÄ×´¿ö´ı²¹³ä
+    //å…¶ä»–å…‰æºçš„çŠ¶å†µå¾…è¡¥å……
 }
 namespace Shift
 {
-#define ROUGHNESS_A_LIMIT 0.001f
-    RT_FUNCTION float2 sample_reverse_half(float a, float3 half)
-    {  
-        a = max(ROUGHNESS_A_LIMIT, a);
-        float cosTheta = half.z;
-        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
-        float sinPhi = half.y / sinTheta;
-        float cosPhi = half.x / sinTheta;
-        float phiA = acos(cosPhi);
-        float phiB = asin(sinPhi);
-        float phi = phiB > 0 ? phiA : 2 * M_PI - phiA;
-
-        float r1 = phi / 2.0f / M_PIf;
-        float A = cosTheta * cosTheta;
-
-        float r2 = (1 - A) / (A * a * a - A + 1);
-        return make_float2(r1, r2);
-    }
-
-    RT_FUNCTION float2 sample_reverse_half(float a, const float3 & N, float3 half)
-    {
-        Onb onb(N);
-        onb.transform(half);
-        return sample_reverse_half(a, half);
-    }
-    RT_FUNCTION float3 sample_half(float a, const float2 uv)
-    {
-        a = max(ROUGHNESS_A_LIMIT, a);
-
-        float r1 = uv.x;
-        float r2 = uv.y;
-        float phi = r1 * 2.0 * M_PIf;
-        float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
-        float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
-        float sinPhi = sinf(phi);
-        float cosPhi = cosf(phi);
-
-        float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
-        return half;
-    }
-
-    RT_FUNCTION float3 sample_half(float a, const float3& N, const float2 uv)
-    {
-        Onb onb(N);
-        float3 half = sample_half(a, uv);
-        onb.inverse_transform(half);
-        return half;
-    }
     RT_FUNCTION float dh_dwi_estimate(float a, float3 normal, float3 half, float3 v)
     {
         float3 wo = 2.0f * dot(v, half) * half - v;
@@ -1960,15 +2123,6 @@ namespace Shift
     {
         return v.type == BDPTVertex::Type::NORMALHIT && RefractionCase(Tracer::params.materials[v.materialId]);
     }
-    //eta ÎŞÂÛÊÇ·ñÈ¡µ¹Êı£¬½á¹û¶¼Ò»Ñù
-    //wh ÎŞÂÛÊÇ³¯×ÅV»¹ÊÇLµÄ·½Ïò£¬½á¹ûÒ²¶¼Ò»Ñù
-    RT_FUNCTION float dwh_dwi_refract(float3 wh, float3 V, float3 L, float eta)
-    {
-        float sqrtDenom = dot(L, wh) + eta * dot(V, wh);
-        float dwh_dwi =
-            std::abs((eta * eta * dot(V, wh)) / (sqrtDenom * sqrtDenom));
-        return dwh_dwi;
-    }
 
 
     //RT_FUNCTION bool back_trace_tanScale(const BDPTVertex& midVertex, const BDPTVertex& originLast, float3 anchor, float tan_scale, BDPTVertex& new_vertex, float& pdf)
@@ -2012,23 +2166,27 @@ namespace Shift
     //    pdf *= 1.0 / dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
     //    return true;
     //}
-
-    RT_FUNCTION float3 refract_half(float3 in_dir, float3 out_dir, float3 normal, float eta)
+     
+    RT_FUNCTION float3 SampleControlled(float& duv_dwi, const MaterialData::Pbr& mat, const float3& N, const float3& V, float2 uv, bool is_refract, bool& sample_good)
     {
-        eta = max(eta, 1 / eta);
-        float3 ans;
-        if (abs(dot(in_dir, normal)) > abs(dot(out_dir, normal)))
+        sample_good = true;
+        float a = max(mat.roughness, ROUGHNESS_A_LIMIT);
+        float3 half = sample_half(a, N, uv);
+        float cosTheta = abs(dot(half, N));
+        float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
+        float3 out_dir;
+        if (is_refract)
         {
-            ans = eta * in_dir + out_dir;
+            sample_good = refract(out_dir, V, half, dot(V, N) > 0 ? mat.eta : 1 / mat.eta);
         }
         else
         {
-            ans = in_dir + eta * out_dir;
+            out_dir = reflect(-V, half);
         }
-        ans = normalize(ans);
-        return dot(ans, normal) > 0 ? ans : -ans;
+        float dwi_dwh = is_refract ? 1 / dwh_dwi_refract(half, V, out_dir, mat.eta) : 4 * abs(dot(half, V));
+        duv_dwi = duv_dwh / dwi_dwh;
+        return out_dir;
     }
-
     RT_FUNCTION bool back_trace(const BDPTVertex& midVertex, float2 uv, float3 anchor, BDPTVertex& new_vertex, float& pdf, bool is_refract = false)
     {
         if (is_refract == true && RefractionCase(midVertex))
@@ -2040,32 +2198,19 @@ namespace Shift
         float3 normal = midVertex.normal;
         MaterialData::Pbr mat = Tracer::params.materials[midVertex.materialId];
         mat.base_color = make_float4(midVertex.color, 1.0);
+         
 
-#define LOBE_SCALE_ROUGH_A 0.2f 
-        float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
-
-        bool refract_good = true;
-        float3 new_dir = is_refract ? Tracer::Sample_shift_refract(mat, normal, in_dir, uv.x, uv.y,refract_good) :
-            Tracer::Sample_shift_metallic(mat, normal, in_dir, uv.x, uv.y);
+        bool refract_good;
+        float3 new_dir = SampleControlled(pdf, mat, normal, in_dir, uv, is_refract, refract_good);
         if (refract_good == false)return false;
- 
-        float3 half;
-        if(is_refract)
-        {
-            half = refract_half(in_dir,new_dir,normal,mat.eta);
-        }
-        else//reflection
-        {
-            half = normalize(new_dir + in_dir) ;
-            half = dot(half, normal) > 0 ? half : -half; 
-        }
-
-        float cosTheta = dot(normal, half);
-        float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
-        float dwi_dwh = is_refract ? dwh_dwi_refract(half, in_dir, new_dir, mat.eta) : 4 * abs(dot(half, in_dir));
-
-        pdf = duv_dwh / dwi_dwh;// Tracer::Pdf(mat, midVertex.normal, in_dir, new_dir);
-
+  
+        //float cos_A = dot(normal, in_dir);
+        //float cos_B = dot(normal, new_dir);
+        //float sin_A = sqrt(1 - cos_A * cos_A);
+        //float sin_B = sqrt(1 - cos_B * cos_B);
+        //if (is_refract == true)
+        //    printf("check info %f %f %f %d %f %f\n %f %f %f-%f %f %f\n\n", sin_A, sin_B, sin_A / sin_B, dot(normal, in_dir) > 0, pdf, cos_A, 
+        //        normal.x, normal.y, normal.z, in_dir.x, in_dir.y, in_dir.z);
 
 
 
@@ -2117,11 +2262,11 @@ namespace Shift
         return glossy(a) == glossy(b);
     }
 
-    //¼òµ¥µÄÂ·¾¶Æ«ÒÆÊµÏÖ
-    //Ê×ÏÈÍ³¼ÆĞèÒªÆ«ÒÆµÄ¶¥µãÊıÄ¿£¬Õâ¸öÊıÄ¿µÈÍ¬ÓÚ´ÓÄ©¶ËÍùÇ°ÊıµÄ¹â»¬¶¥µãÊıÄ¿
-    //¼ÆËãÔ­ÏÈµÄÂ·¾¶pdf
-    //¸ù¾İÆ«ÒÆ¶¥µãÊıÄ¿´ÓÄ©¶Ë¿ªÊ¼ÖØĞÂ×·×Ù
-    //ÖØÓ³ÉäÊ±ÒªÔÚ×îºó×¢Òâ¿É¼ûĞÔ
+    //ç®€å•çš„è·¯å¾„åç§»å®ç°
+    //é¦–å…ˆç»Ÿè®¡éœ€è¦åç§»çš„é¡¶ç‚¹æ•°ç›®ï¼Œè¿™ä¸ªæ•°ç›®ç­‰åŒäºä»æœ«ç«¯å¾€å‰æ•°çš„å…‰æ»‘é¡¶ç‚¹æ•°ç›®
+    //è®¡ç®—åŸå…ˆçš„è·¯å¾„pdf
+    //æ ¹æ®åç§»é¡¶ç‚¹æ•°ç›®ä»æœ«ç«¯å¼€å§‹é‡æ–°è¿½è¸ª
+    //é‡æ˜ å°„æ—¶è¦åœ¨æœ€åæ³¨æ„å¯è§æ€§
     struct PathContainer
     {
         BDPTVertex* v;
@@ -2396,14 +2541,14 @@ namespace Shift
         pdf *= 1.0 / dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
         return true;
     }
-    RT_FUNCTION float2 get_origin_uv(PathContainer& p, int index)// ´Óindex+1¸ö¶¥µãÕıÏòÉú³ÉµÚindex¸ö¶¥µãµÄuv //µ¥¹âÔ´¼ÙÉè£¿    
+    RT_FUNCTION float2 get_origin_uv(PathContainer& p, int index)// ä»index+1ä¸ªé¡¶ç‚¹æ­£å‘ç”Ÿæˆç¬¬indexä¸ªé¡¶ç‚¹çš„uv //å•å…‰æºå‡è®¾ï¼Ÿ    
     {
-        //ËÄÖÖÇé¿öÏÂ
-        //²éÑ¯µãÔÚ¹âÔ´ÉÏ£¬Ö±½Ó·µ»Øuv£¬ÕâÔÚµ¥¹âÔ´ÏÂÊÇ³ÉÁ¢µÄ£¬¶à¹âÔ´Çé¿öÏÂĞèÒª¶îÍâµÄÓ³Éä£¬ĞèÒª×¢Òâ
-        //Ô´µãÔÚ»·¾³¹âÉÏ£¬Õâ¸öÊ±ºòuvÈ¡¾öÓÚ²éÑ¯µãµÄÎ»ÖÃºÍÔ´µã´ú±íµÄ»·¾³¹â·½Ïò
-        //Ô´µãÔÚ±íÃæ¹âÉÏ£¬»òÕßÔÚdiffuse±íÃæÉÏ£¬Õâ¸öÊ±ºòÖ±½Ó¸ù¾İ·¨ÏßºÍ½Ç¶È´¦Àí
-        //Ô´µãÔÚ½ğÊô±íÃæÉÏ£¬Õâ¸öÊ±ºòĞèÒª·´Ïò×·×Ù
-        //´òµ½¹âÔ´µÄÌØÅĞ
+        //å››ç§æƒ…å†µä¸‹
+        //æŸ¥è¯¢ç‚¹åœ¨å…‰æºä¸Šï¼Œç›´æ¥è¿”å›uvï¼Œè¿™åœ¨å•å…‰æºä¸‹æ˜¯æˆç«‹çš„ï¼Œå¤šå…‰æºæƒ…å†µä¸‹éœ€è¦é¢å¤–çš„æ˜ å°„ï¼Œéœ€è¦æ³¨æ„
+        //æºç‚¹åœ¨ç¯å¢ƒå…‰ä¸Šï¼Œè¿™ä¸ªæ—¶å€™uvå–å†³äºæŸ¥è¯¢ç‚¹çš„ä½ç½®å’Œæºç‚¹ä»£è¡¨çš„ç¯å¢ƒå…‰æ–¹å‘
+        //æºç‚¹åœ¨è¡¨é¢å…‰ä¸Šï¼Œæˆ–è€…åœ¨diffuseè¡¨é¢ä¸Šï¼Œè¿™ä¸ªæ—¶å€™ç›´æ¥æ ¹æ®æ³•çº¿å’Œè§’åº¦å¤„ç†
+        //æºç‚¹åœ¨é‡‘å±è¡¨é¢ä¸Šï¼Œè¿™ä¸ªæ—¶å€™éœ€è¦åå‘è¿½è¸ª
+        //æ‰“åˆ°å…‰æºçš„ç‰¹åˆ¤
         if (index + 1 == p.size()) return p.get(index).uv;
         if (index + 2 == p.size() && p.get(index + 1).type == BDPTVertex::Type::ENV)
         {
@@ -2454,8 +2599,8 @@ namespace Shift
         //recompute jacobian part one in the dominator
         for (int i = 0; i < glossy_count; i++)
         {
-            //Õâ¸ö²Ù×÷ÊÇÓĞ·çÏÕµÄ£¬ÒòÎªÔÚ·ÇRMISµÄ°æ±¾µÄÊµÏÖÀï£¬¶¥µãµÄsinglePdfÊôĞÔ²¢²»Ç¿ÖÆÒªÇóÕæµÄÓëÕıÏò×ÓÂ·¾¶×·×ÙµÄÒ»ÖÂ£¬
-            //ÊÂÊµÉÏÕâ¸öº¯Êı·µ»ØµÄÂ·¾¶µÄĞÂÉú³É¶¥µãµÄsinglePdf¾Í²»ÊÇÕıÏòµÄ¶øÊÇ·´ÏòµÄ
+            //è¿™ä¸ªæ“ä½œæ˜¯æœ‰é£é™©çš„ï¼Œå› ä¸ºåœ¨éRMISçš„ç‰ˆæœ¬çš„å®ç°é‡Œï¼Œé¡¶ç‚¹çš„singlePdfå±æ€§å¹¶ä¸å¼ºåˆ¶è¦æ±‚çœŸçš„ä¸æ­£å‘å­è·¯å¾„è¿½è¸ªçš„ä¸€è‡´ï¼Œ
+            //äº‹å®ä¸Šè¿™ä¸ªå‡½æ•°è¿”å›çš„è·¯å¾„çš„æ–°ç”Ÿæˆé¡¶ç‚¹çš„singlePdfå°±ä¸æ˜¯æ­£å‘çš„è€Œæ˜¯åå‘çš„
             Jacobian /= originPath.get(i + 1).singlePdf;
 
         }
@@ -2465,19 +2610,19 @@ namespace Shift
         float3 local_anchor = anchor;
         for (int i = 0; i < glossy_count; i++)
         {
-            float2 back_trace_uv = get_origin_uv(originPath, i + 1);//»ñÈ¡´ÓµÚi + 2 ¸ö¶¥µãÕıÏòÉú³ÉÔ­³õÂ·¾¶µÄµ¹ÊıµÚi + 1 ¸ö¶¥µãµÄuv¡£
+            float2 back_trace_uv = get_origin_uv(originPath, i + 1);//è·å–ä»ç¬¬i + 2 ä¸ªé¡¶ç‚¹æ­£å‘ç”ŸæˆåŸåˆè·¯å¾„çš„å€’æ•°ç¬¬i + 1 ä¸ªé¡¶ç‚¹çš„uvã€‚
             float local_jacobian;
             bool trace_hit = back_trace(originPath.get(i), back_trace_uv, local_anchor, newPath.get(i + 1), local_jacobian);
 
-            //Èç¹û×·×ÙÊ§°Ü
+            //å¦‚æœè¿½è¸ªå¤±è´¥
             if (trace_hit == false) return false;
 
-            //Èç¹ûÇ°ºóÀàĞÍ²»Í¬ÔòÒ²ÊÇÓ³ÉäÊ§°Ü
+            //å¦‚æœå‰åç±»å‹ä¸åŒåˆ™ä¹Ÿæ˜¯æ˜ å°„å¤±è´¥
             if (shift_type_compare(originPath.get(i + 1), newPath.get(i + 1)) == false) return false;
             local_anchor = newPath.get(i).position;
             Jacobian *= local_jacobian;
         }
-        //¿É¼ûĞÔ²âÊÔ
+        //å¯è§æ€§æµ‹è¯•
 
         if (originPath.size() == glossy_count + 1)
         {
@@ -2485,7 +2630,7 @@ namespace Shift
             light_sample.ReverseSample(Tracer::params.lights[newPath.get(glossy_count).materialId], newPath.get(glossy_count).uv);
             newPath.get(glossy_count).flux = light_sample.emission;
             return true;
-        }//Èç¹ûÕûÌõÂ·¾­¶¼ÊÇÖØĞÂÉú³ÉµÄÄÇ¾Í²»ĞèÒª¿É¼ûĞÔ²âÊÔ 
+        }//å¦‚æœæ•´æ¡è·¯ç»éƒ½æ˜¯é‡æ–°ç”Ÿæˆçš„é‚£å°±ä¸éœ€è¦å¯è§æ€§æµ‹è¯• 
         return Tracer::visibilityTest(Tracer::params.handle, newPath.get(glossy_count + 1), newPath.get(glossy_count));
 
 
@@ -2528,6 +2673,7 @@ namespace Shift
             float eta = mat.eta;
 
             float a = max(ROUGHNESS_A_LIMIT, mat.roughness);
+#define LOBE_SCALE_ROUGH_A 0.2f 
             a = reverse ? a : LOBE_SCALE_ROUGH_A;
 
 
@@ -2543,7 +2689,7 @@ namespace Shift
 
             float cosTheta = dot(normal, half);
             float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
-            float dwi_dwh = refract_state[0] ? dwh_dwi_refract(half, in_dir, out_dir, eta) : 4 * dot(half, in_dir);
+            float dwi_dwh = refract_state[0] ? 1 / dwh_dwi_refract(half, in_dir, out_dir, eta) : 4 * abs(dot(half, in_dir));
             Jacobian[0] = dwi_dwh / duv_dwh;// dwi / duv 
         } 
 
@@ -2570,7 +2716,7 @@ namespace Shift
             
             float cosTheta = dot(normal, half);
             float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
-            float dwi_dwh = refract_state[i] ? dwh_dwi_refract(half, in_dir, out_dir, eta) : 4 * abs(dot(half, in_dir));
+            float dwi_dwh = refract_state[i] ? 1 / dwh_dwi_refract(half, in_dir, out_dir, eta) : 4 * abs(dot(half, in_dir));
             Jacobian[i] = dwi_dwh / duv_dwh;// dwi / duv
         }
 
@@ -2636,7 +2782,7 @@ namespace Shift
 
                 float cosTheta = dot(half, normal);
                 float duv_dwh = Tracer::GTR2(cosTheta, a) * cosTheta;
-                float dwi_dwh = refract_state[i] ? dwh_dwi_refract(half, in_dir, ray_direction, eta) : 4 * abs(dot(half, in_dir));
+                float dwi_dwh = refract_state[i] ? 1 / dwh_dwi_refract(half, in_dir, ray_direction, eta) : 4 * abs(dot(half, in_dir));
                 Jacobian[i] = duv_dwh / dwi_dwh;
             }
 
@@ -2769,13 +2915,13 @@ namespace Shift
             }
              
             
-            //Èç¹û×·×ÙÊ§°Ü
+            //å¦‚æœè¿½è¸ªå¤±è´¥
             if (trace_hit == false) {
                 //printf(" equal map fails for miss trace\n");
                 Jacobian = local_jacobian;
                 return false;
             }
-            //Èç¹ûÇ°ºóÀàĞÍ²»Í¬ÔòÒ²ÊÇÓ³ÉäÊ§°Ü
+            //å¦‚æœå‰åç±»å‹ä¸åŒåˆ™ä¹Ÿæ˜¯æ˜ å°„å¤±è´¥
             if (shift_type_compare(originPath.get(i + 1), newPath.get(i + 1)) == false) {
                 //printf(" equal map fails for type difference\n");
                 return false; 
@@ -2787,8 +2933,8 @@ namespace Shift
         {
            // printf("%f info compare %f %f %f %f\n",Jacobian, float3weight(originPath.get(1).position), float3weight(originPath.get(2).position), float3weight(newPath.get(1).position), float3weight(newPath.get(2).position));
         }
-        //ÓëÏÖÓĞµÄºÍ¹â»¬·´ÉäÎŞ¹ØµÄÂ·¾¶µÄ¿É¼ûĞÔ²âÊÔ
-        //ÌØÀı£¬Èç¹ûÕûÌõÂ·¾­¶¼ÊÇÖØĞÂÉú³ÉµÄÄÇ¾Í²»ĞèÒª¿É¼ûĞÔ²âÊÔ 
+        //ä¸ç°æœ‰çš„å’Œå…‰æ»‘åå°„æ— å…³çš„è·¯å¾„çš„å¯è§æ€§æµ‹è¯•
+        //ç‰¹ä¾‹ï¼Œå¦‚æœæ•´æ¡è·¯ç»éƒ½æ˜¯é‡æ–°ç”Ÿæˆçš„é‚£å°±ä¸éœ€è¦å¯è§æ€§æµ‹è¯• 
         if (originPath.size() == glossy_count + 1)
         {
             Tracer::lightSample light_sample;
@@ -2809,7 +2955,7 @@ namespace Shift
 
 
 
-    //bounce´ÎÊıÎª1µÄÀ´×ÔÃæ¹âÔ´µÄ³¤¶ÈÎª2µÄ¹âÂ·£¬»áÊÊÓÃ±¾º¯ÊıµÄuvËæ»úÊıÖØÑİÓ³Éä·½°¸
+    //bounceæ¬¡æ•°ä¸º1çš„æ¥è‡ªé¢å…‰æºçš„é•¿åº¦ä¸º2çš„å…‰è·¯ï¼Œä¼šé€‚ç”¨æœ¬å‡½æ•°çš„uvéšæœºæ•°é‡æ¼”æ˜ å°„æ–¹æ¡ˆ
     RT_FUNCTION bool path_shift_uvRemap_1bounce_old(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian)
     {
         if (originPath.size() != 2 || glossy(originPath.get(0)) == false || originPath.get(1).type != BDPTVertex::Type::QUAD)
@@ -2844,15 +2990,15 @@ namespace Shift
                 originPath.get(i + 1).position - originPath.get(i).position);
             bool trace_hit = back_trace(originPath.get(i), back_trace_uv, local_anchor, newPath.get(i + 1), local_jacobian, is_refract);
 
-            //Èç¹û×·×ÙÊ§°Ü
+            //å¦‚æœè¿½è¸ªå¤±è´¥
             if (trace_hit == false) return false;
 
-            //Èç¹ûÇ°ºóÀàĞÍ²»Í¬ÔòÒ²ÊÇÓ³ÉäÊ§°Ü
+            //å¦‚æœå‰åç±»å‹ä¸åŒåˆ™ä¹Ÿæ˜¯æ˜ å°„å¤±è´¥
             if (shift_type_compare(originPath.get(i + 1), newPath.get(i + 1)) == false) return false;
             local_anchor = newPath.get(i).position;
             Jacobian *= local_jacobian;
         }
-        //¿É¼ûĞÔ²âÊÔ
+        //å¯è§æ€§æµ‹è¯•
 
         if (originPath.size() == glossy_count + 1)
         {
@@ -2862,7 +3008,7 @@ namespace Shift
 
             init_vertex_from_lightSample(light_sample, newPath.get(glossy_count));
             return true;
-        }//Èç¹ûÕûÌõÂ·¾­¶¼ÊÇÖØĞÂÉú³ÉµÄÄÇ¾Í²»ĞèÒª¿É¼ûĞÔ²âÊÔ 
+        }//å¦‚æœæ•´æ¡è·¯ç»éƒ½æ˜¯é‡æ–°ç”Ÿæˆçš„é‚£å°±ä¸éœ€è¦å¯è§æ€§æµ‹è¯• 
         return Tracer::visibilityTest(Tracer::params.handle, newPath.get(glossy_count + 1), newPath.get(glossy_count));
 
 
@@ -2895,12 +3041,12 @@ namespace Shift
             originPath.get(1).position - originPath.get(0).position);
         bool trace_hit = back_trace(originPath.get(0), remap_uv, anchor, newPath.get(1), local_jacobian, is_refract);
 
-        //Èç¹û×·×ÙÊ§°Ü
+        //å¦‚æœè¿½è¸ªå¤±è´¥
         if (trace_hit == false) return false;
 
         //printf("jacobian %f %d\n",local_jacobian, is_refract);
 
-        //Èç¹ûÇ°ºóÀàĞÍ²»Í¬ÔòÒ²ÊÇÓ³ÉäÊ§°Ü
+        //å¦‚æœå‰åç±»å‹ä¸åŒåˆ™ä¹Ÿæ˜¯æ˜ å°„å¤±è´¥
         if (newPath.get(1).type != BDPTVertex::Type::HIT_LIGHT_SOURCE) return false;
         Jacobian *= local_jacobian;
 
@@ -2954,8 +3100,8 @@ namespace Shift
         if (glossy(a.get(0)) == false) return false;
         return true;
     }
-    //·µ»Øfalse±íÊ¾Ó³Éäµ½ÁËÒ»¸ö¹±Ï×ÖµÎª0µÄÂ·¾¶
-    //·µ»ØtrueÔò±íÊ¾Õı³£Ó³Éä£¬×¢ÒâÈç¹ûÊÇ²»Ó¦¸Ã±»Ó³ÉäµÄÂ·¾¶±»µ÷ÓÃÁË¸Ãº¯Êı£¬Ò²»á·µ»Øtrue£¬Â·¾¶½«²»»á·¢ÉúÈÎºÎ¸Ä±ä¡£
+    //è¿”å›falseè¡¨ç¤ºæ˜ å°„åˆ°äº†ä¸€ä¸ªè´¡çŒ®å€¼ä¸º0çš„è·¯å¾„
+    //è¿”å›trueåˆ™è¡¨ç¤ºæ­£å¸¸æ˜ å°„ï¼Œæ³¨æ„å¦‚æœæ˜¯ä¸åº”è¯¥è¢«æ˜ å°„çš„è·¯å¾„è¢«è°ƒç”¨äº†è¯¥å‡½æ•°ï¼Œä¹Ÿä¼šè¿”å›trueï¼Œè·¯å¾„å°†ä¸ä¼šå‘ç”Ÿä»»ä½•æ”¹å˜ã€‚
     RT_FUNCTION bool path_shift(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian, bool reverse = false)
     {
         if (shiftPathType(originPath) == false)
@@ -3172,7 +3318,7 @@ namespace Shift
                 float3 lightDirection = normalize(lightLine);
                 pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
 
-                /*Òò¾àÀëºÍÇã½Çµ¼ÖÂµÄpdf*/
+                /*å› è·ç¦»å’Œå€¾è§’å¯¼è‡´çš„pdf*/
                 for (int i = 1; i < lightPathLength; i++)
                 {
                     const BDPTVertex& midPoint = newPath.get(-1 - i);
@@ -3199,7 +3345,7 @@ namespace Shift
         }
         else
         {
-            /*¹âÔ´Ä¬ÈÏÎªÃæ¹âÔ´ÉÏÒ»µã£¬Òò´Ë¿ÉÒÔÓÃcosÀ´½üËÆÄ£ÄâÆä¹âÕÕĞ§¹û£¬Èç¹ûÊÇµã¹âÔ´ĞèÒªĞŞ¸ÄÒÔÏÂ´úÂë*/
+            /*å…‰æºé»˜è®¤ä¸ºé¢å…‰æºä¸Šä¸€ç‚¹ï¼Œå› æ­¤å¯ä»¥ç”¨cosæ¥è¿‘ä¼¼æ¨¡æ‹Ÿå…¶å…‰ç…§æ•ˆæœï¼Œå¦‚æœæ˜¯ç‚¹å…‰æºéœ€è¦ä¿®æ”¹ä»¥ä¸‹ä»£ç */
             if (lightPathLength > 0)
             {
                 const BDPTVertex& light = path[path_size - 1];
@@ -3213,7 +3359,7 @@ namespace Shift
                 float3 lightDirection = normalize(lightLine);
                 pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
 
-                /*Òò¾àÀëºÍÇã½Çµ¼ÖÂµÄpdf*/
+                /*å› è·ç¦»å’Œå€¾è§’å¯¼è‡´çš„pdf*/
                 for (int i = 1; i < lightPathLength; i++)
                 {
                     const BDPTVertex& midPoint = path[path_size - i - 1];
@@ -3239,7 +3385,7 @@ namespace Shift
 
             }
         }
-        /*ÓÉÓÚÍ¶Ó°½Çµ¼ÖÂµÄpdf±ä»¯*/
+        /*ç”±äºæŠ•å½±è§’å¯¼è‡´çš„pdfå˜åŒ–*/
         for (int i = 1; i < eyePathLength; i++)
         {
             const BDPTVertex& midPoint = path[i];
@@ -3248,7 +3394,7 @@ namespace Shift
             float3 lineDirection = normalize(line);
             pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
         }
-        /*²ÉÑù·½ÏòµÄ¸ÅÂÊ*/
+        /*é‡‡æ ·æ–¹å‘çš„æ¦‚ç‡*/
         for (int i = 1; i < eyePathLength - 1; i++)
         {
             const BDPTVertex& midPoint = path[i];
@@ -3297,7 +3443,7 @@ namespace Shift
             float3 lineDirection = normalize(line);
             pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
         }
-        /*²ÉÑù·½ÏòµÄ¸ÅÂÊ*/
+        /*é‡‡æ ·æ–¹å‘çš„æ¦‚ç‡*/
         for (int i = 1; i < eyePathLength - 1; i++)
         {
             const BDPTVertex& midPoint = path[i];
@@ -3337,7 +3483,7 @@ namespace Shift
                 const BDPTVertex& light = newPath.get(-1);
                 const BDPTVertex& lastMidPoint = newPath.get(-2);
 
-                /*Òò¾àÀëºÍÇã½Çµ¼ÖÂµÄpdf*/
+                /*å› è·ç¦»å’Œå€¾è§’å¯¼è‡´çš„pdf*/
                 for (int i = 1; i < lightPathLength; i++)
                 {
                     const BDPTVertex& midPoint = newPath.get(-1 - i);
@@ -3397,7 +3543,7 @@ namespace Shift
                 const BDPTVertex& light = path[path_size - 1];
                 const BDPTVertex& lastMidPoint = path[path_size - 2];
 
-                /*Òò¾àÀëºÍÇã½Çµ¼ÖÂµÄpdf*/
+                /*å› è·ç¦»å’Œå€¾è§’å¯¼è‡´çš„pdf*/
                 for (int i = 1; i < lightPathLength; i++)
                 {
                     const BDPTVertex& midPoint = path[path_size - i - 1];
@@ -3566,7 +3712,7 @@ namespace Shift
             light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
             init_vertex_from_lightSample(light_sample, path.get(1));
 
-            float3 bsdf = Tracer::Eval(mat, normal, in_dir, new_dir);
+            float3 bsdf = Tracer::Eval(mat, normal, new_dir, in_dir);
             float3 out_vec = light_sample.position - path.get(0).position;
             float3 contri = bsdf * abs(dot(new_dir, normal) * dot(new_dir, light_sample.normal())) / dot(out_vec, out_vec);// *light_sample.emission;
             float pdf = Tracer::Pdf(mat, normal, in_dir, new_dir) * abs(dot(new_dir, light_sample.normal())) / dot(out_vec, out_vec);
@@ -3658,26 +3804,6 @@ namespace Shift
         float dwi_dwh = is_refract ? dwh_dwi_refract(half, V, L, mat.eta) : 4 * abs(dot(half, V));
         return duv_dwh / dwi_dwh;
     }
-    RT_FUNCTION float3 SampleControlled(float& duv_dwi, const MaterialData::Pbr& mat, const float3& N, const float3& V, float2 uv, bool is_refract, bool& sample_good)
-    {
-        sample_good = true;
-        float a = max(mat.roughness,ROUGHNESS_A_LIMIT);
-        float3 half = sample_half(a, N, uv);
-        float cosTheta = abs(dot(half, N));
-        float duv_dwh = Tracer::GTR2(cosTheta,a) * cosTheta;
-        float3 out_dir;
-        if (is_refract)
-        {
-            sample_good = refract(out_dir, V, half, dot(V, N) > 0 ? mat.eta : 1 / mat.eta);
-        }
-        else
-        {
-            out_dir = reflect(-V, half);
-        } 
-        float dwi_dwh = is_refract ? dwh_dwi_refract(half, V, out_dir, mat.eta) : 4 * abs(dot(half, V));
-        duv_dwi = duv_dwh / dwi_dwh;
-        return out_dir;
-    }
 
     RT_FUNCTION bool retracing(PathContainer& path, float3 anchor, unsigned& seed, float3& contri, float& pdf, int re_trace_length, bool* refract_state)
     {
@@ -3693,7 +3819,7 @@ namespace Shift
         if (sample_good == false)return false;
 
         pdf = duv_dwi;//Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir);
-        contri = Tracer::Eval(mat, path.get(0).normal, in_dir, new_dir) * abs(dot(path.get(0).normal, new_dir));
+        contri = Tracer::Eval(mat, path.get(0).normal, new_dir, in_dir) * abs(dot(path.get(0).normal, new_dir));
         //pdf = Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir); 
 
         Tracer::PayloadBDPTVertex payload;
@@ -3717,13 +3843,13 @@ namespace Shift
                 1e16f,  // tmax
                 &payload);
 
-            if (payload.path.size == begin_depth)//missÁË
+            if (payload.path.size == begin_depth)//missäº†
             { 
                 //if (i == 2)
                 //    info_print(path, anchor, ray_direction);
                 return false;
             }
-            if (payload.done == true && i != re_trace_length - 1)//ÌáÇ°½áÊøÁË£¬»òÕß×·µ½µÄÂ·¾¶¸ü¶ÌÁË
+            if (payload.done == true && i != re_trace_length - 1)//æå‰ç»“æŸäº†ï¼Œæˆ–è€…è¿½åˆ°çš„è·¯å¾„æ›´çŸ­äº†
             { 
                 return false;
             }
@@ -3742,14 +3868,14 @@ namespace Shift
                     //printf("light_sourcce_pos %f %f %f\n",light_sample.position.x, light_sample.position.y,light_sample.position.z);
                     contri *= light_sample.emission;
                 }
-                else//×·×Ùµ½µÄÂ·¾¶Ã»´òµ½¹âÔ´ÉÏ
+                else//è¿½è¸ªåˆ°çš„è·¯å¾„æ²¡æ‰“åˆ°å…‰æºä¸Š
                 { 
                     return false;
                 }
             }
             else if(i!= re_trace_length - 1)
             {
-                if (glossy(payload.path.currentVertex()) == false)//Î´¾­glossyÂ·¾¶
+                if (glossy(payload.path.currentVertex()) == false)//æœªç»glossyè·¯å¾„
                 {
                     return false;
                 }
@@ -3767,7 +3893,7 @@ namespace Shift
                 pdf *= duv_dwi;
 
 //                pdf *= Tracer::Pdf(mat, normal, in_dir, out_dir);
-                contri *= Tracer::Eval(mat, normal, in_dir, out_dir) * abs(dot(normal, out_dir));
+                contri *= Tracer::Eval(mat, normal, out_dir, in_dir) * abs(dot(normal, out_dir));
 //                payload.origin = payload.path.currentVertex().position;
 //                payload.ray_direction = out_dir;
                 path.get(i) = payload.path.currentVertex();

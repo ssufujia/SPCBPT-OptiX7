@@ -11,7 +11,7 @@ material LeftWall
 {
 	color 0.63 0.065 0.05
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
@@ -19,7 +19,7 @@ material RightWall
 {
 	color 0.14 0.45 0.091
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
@@ -27,7 +27,7 @@ material Floor
 {
 	color 0.725 0.71 0.68
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
@@ -35,7 +35,7 @@ material Ceiling
 {
 	color 0.725 0.71 0.68
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
@@ -43,7 +43,7 @@ material BackWall
 {
 	color 0.725 0.71 0.68
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
@@ -51,7 +51,7 @@ material ShortBox
 {
 	color 0.725 0.71 0.68
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
@@ -59,7 +59,7 @@ material TallBox
 {
 	color 0.725 0.71 0.68
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
@@ -67,17 +67,25 @@ material Light
 {
 	color 0 0 0
 	roughness 0.1
-	metallic 0.5
+	metallic 0.0
 	specular 0.5
 }
 
 material Water
 {
 	color 1 1 1
-	roughness 0.01
+	roughness 0.1
 	metallic 1.0
 	trans 1.0
-	eta 0.75
+	eta .75
+}
+material Water2
+{
+	color 1 1 1
+	roughness 0.1
+	metallic 1.0
+	trans 1.0
+	eta 1.33333
 }
 
 mesh

@@ -765,7 +765,7 @@ extern "C" __global__ void __raygen__SPCBPT_for_enhance_no_rmis()
 }*/
 
 extern "C" __global__ void __raygen__shift_combine()
-{
+{ 
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -948,7 +948,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()) * fractFactor;
 
 
-                        float3 res = contri / pdf / pmf;
+                        float3 res = contri / pdf / pmf ;
                         //if (float3weight(res) > 1)printf("evalFactor ratio rate %f\n", float3weight(fractFactor));
                         if (!ISINVALIDVALUE(res))
                         {
