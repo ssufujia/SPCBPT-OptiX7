@@ -1,0 +1,104 @@
+cameraSetting
+{
+#	eye 0.500000 274.399994 279.600006
+#	lookat 278.000000 273.399994 279.600006
+
+	eye 2.78000000 2.79 -8.70953491
+	lookat 2.78000000 2.79 -8.70753516
+
+}
+
+material white
+{
+	color 0.725 0.71 0.68
+}
+
+material red
+{
+	color 0.63 0.065 0.05
+}
+
+material green
+{
+	color 0.14 0.45 0.091
+}
+material Mirror
+{
+   color 1 1 1
+   roughness 0.001
+   metallic 1.0
+
+}
+material black
+{
+	color 0 0 0
+}
+
+
+
+mesh
+{
+	file cornell_box/cbox_ceiling2.obj
+	material Mirror
+}
+
+mesh
+{
+	file cornell_box/cbox_floor.obj
+	material white
+}
+
+mesh
+{
+	file cornell_box/cbox_back.obj
+	material white
+}
+
+mesh
+{
+	file cornell_box/cbox_smallbox.obj
+	material white
+}
+
+mesh
+{
+	file cornell_box/box_lamp_inside.obj
+	material black
+}
+
+#mesh
+#{
+#	file cornell_box/box_lamp_top.obj
+#	material Mirror
+#}
+
+
+mesh
+{
+	file cornell_box/box_lamp_outside.obj
+	material white
+
+}
+
+
+mesh
+{
+	file cornell_box/cbox_greenwall.obj
+	material green
+}
+
+mesh
+{
+	file cornell_box/cbox_redwall.obj
+	material red
+}
+
+light
+{
+	divLevel 3
+	position 2.940208 1.122309 3.115552
+	emission 170 120 40
+	v2 4.076816 1.122309 2.763060
+	v1 3.292700 1.122310 4.266550
+	type Quad
+}

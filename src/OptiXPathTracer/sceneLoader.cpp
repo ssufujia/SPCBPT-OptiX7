@@ -108,6 +108,7 @@ Scene* LoadScene(const char* filename)
 
 				sscanf(line, " trans %f", &material.trans);
 				sscanf(line, " eta %f", &material.eta);
+				if (material.roughness < .001)material.roughness = .001;
 			}
 
 			// Check if texture is already loaded

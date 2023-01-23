@@ -2873,7 +2873,9 @@ namespace Shift
 
         Jacobian = 1;
         for (int i = 0; i < glossy_count; i++)Jacobian *= abs(Jacobians_encode[i] * Jacobians_decode[i]);
- 
+        
+        //if (glossy_count == 2)printf("map good %d %f\n", map_good, Jacobian);
+
         return map_good;
     }
     RT_FUNCTION bool path_shift_tanScale(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian, bool reverse = false)
@@ -3820,8 +3822,7 @@ namespace Shift
 
         pdf = duv_dwi;//Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir);
         contri = Tracer::Eval(mat, path.get(0).normal, new_dir, in_dir) * abs(dot(path.get(0).normal, new_dir));
-        //pdf = Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir); 
-
+        //pdf = Tracer::Pdf(mat, path.get(0).normal, in_dir, new_dir);  
         Tracer::PayloadBDPTVertex payload;
         payload.clear();
         payload.seed = seed;
@@ -3894,8 +3895,8 @@ namespace Shift
 
 //                pdf *= Tracer::Pdf(mat, normal, in_dir, out_dir);
                 contri *= Tracer::Eval(mat, normal, out_dir, in_dir) * abs(dot(normal, out_dir));
-//                payload.origin = payload.path.currentVertex().position;
-//                payload.ray_direction = out_dir;
+                payload.origin = payload.path.currentVertex().position;
+                payload.ray_direction = out_dir;
                 path.get(i) = payload.path.currentVertex();
             }
             else if(i == re_trace_length - 1)
@@ -3949,7 +3950,7 @@ namespace Shift
 
             float3 contri;
             float pdf;
-            bool retracing_good = retracing(path, anchor, seed, contri, pdf, re_trace_length,refract_state);
+            bool retracing_good = retracing(path, anchor, seed, contri, pdf, re_trace_length, refract_state);
             if (retracing_good == false)
             {
                 continue;
@@ -3999,7 +4000,8 @@ namespace Shift
             }
         }
         
-        //if (path.size() == 3) printf(" %f  %d %d %d %d %d\n", float3weight(ans),  it, s_it, b_it, path.size(), re_trace_length);
+        //if (path.size() == 3)
+         //   printf(" %f  %d %d %d\n", float3weight(ans),  it, s_it, b_it);
         //printf("%d %d %d record %f %f %f %f\n", re_trace_length, path.size(), s_it, s_it > 0 ? records[0] : 0, 
          //   s_it > 1 ? records[1] : 0, s_it > 2 ? records[2] : 0, s_it > 3 ? records[3] : 0);
         return ans;

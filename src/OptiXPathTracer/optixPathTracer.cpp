@@ -776,7 +776,8 @@ int main( int argc, char* argv[] )
     try
     {
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_icoBall.scene");
+//         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
+         string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
@@ -876,7 +877,7 @@ int main( int argc, char* argv[] )
 
                     glfwSwapBuffers(window);
 
-                    estimation::es.estimation_mode = false;
+                    //estimation::es.estimation_mode = false;
                     if (estimation::es.estimation_mode == true)
                     {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);

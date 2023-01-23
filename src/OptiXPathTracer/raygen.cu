@@ -395,7 +395,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         const float  a = 1.0f / static_cast<float>(subframe_index + 1);
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
-    }
+    } 
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
      
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -462,8 +462,8 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
 
-#define MAX_PATH_LENGTH_FOR_MIS 20
-    BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
+#define MAX_PATH_LENGTH_FOR_MIS 8
+    BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS +4];
     int buffer_size = 0;
     pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++; 
 
@@ -500,10 +500,12 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
             pathBuffer[buffer_size - 1] = light_vertex;
               
             res = eval_path(pathBuffer,buffer_size,buffer_size);
+            if (buffer_size > MAX_PATH_LENGTH_FOR_MIS)
+                res *= 0;
             result += res; 
             break;
         }
-        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS)break;
+        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS + 4)break;
 
         BDPTVertex& eye_subpath = payload.path.currentVertex();
         for (int it = 0; it < CONNECTION_N; it++)
@@ -524,7 +526,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
 
-            if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
+            if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS ) &&
                 (Tracer::visibilityTest(Tracer::params.handle, eye_subpath.position, light_subpath.position)))
             { 
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
@@ -563,6 +565,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
+    //if (subframe_index > 10)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
    
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -800,8 +803,7 @@ extern "C" __global__ void __raygen__shift_combine()
     payload.origin = ray_origin;
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
-
-#define MAX_PATH_LENGTH_FOR_MIS 20
+     
     BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
     int buffer_size = 0;
     pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
@@ -867,7 +869,8 @@ extern "C" __global__ void __raygen__shift_combine()
                 float b = 1 - caustic_connection_prob;
                 caustic_connection_prob *= 10;
                 caustic_connection_prob = caustic_connection_prob / (caustic_connection_prob + b);
-                caustic_connection_prob = max(caustic_connection_prob, .5);
+//                caustic_connection_prob = max(caustic_connection_prob, .5);
+                caustic_connection_prob = .5;
 #ifdef CAUSTIC_SPECIAL
                 caustic_connection_prob = 1;
 #endif // CAUSTIC_SPECIAL
@@ -875,6 +878,7 @@ extern "C" __global__ void __raygen__shift_combine()
             }
             else
                 caustic_connection_prob = 0;
+            //caustic_connection_prob = 0;
             //////////////////////////////
             //////////////////////////////
             /////// caustic path //////////
@@ -912,7 +916,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 }
                 const BDPTVertex& light_subpath = *light_subpath_p;
                 
-                //if (light_subpath.depth != 1)continue;
+                //if (light_subpath.depth != 1)continue; 
 
                 float final_pmf = guide_ratio * (pmf_firstStage * pmf_secondStage) + (1 - guide_ratio) * pmf_uniform;
 
@@ -931,7 +935,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                         Shift::PathContainer finalPath(light_sub_new, 1);
 
-
+                        
                         bool shift_good = Shift::path_shift(originPath, finalPath, eye_subpath.position, shift_pdf);
                         if (shift_good == false)continue;
 
@@ -945,6 +949,8 @@ extern "C" __global__ void __raygen__shift_combine()
                         float3 fractFactor = make_float3(1);
                         //if(finalPath.size() == 2)
                         fractFactor = Shift::evalFract(finalPath, eye_subpath.position, payload.seed);
+                        //fractFactor = make_float3(abs(fractFactor.x), abs(fractFactor.y), abs(fractFactor.z));
+                        //printf("factor %f %f %f\n", fractFactor.x, fractFactor.y, fractFactor.z);
                         float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()) * fractFactor;
 
 
@@ -1053,7 +1059,7 @@ extern "C" __global__ void __raygen__shift_combine()
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
-    //if (subframe_index > 100)return;
+    //if (subframe_index > 10)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -1098,8 +1104,7 @@ extern "C" __global__ void __raygen__glossy_shift_only()
     payload.origin = ray_origin;
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
-
-#define MAX_PATH_LENGTH_FOR_MIS 20
+     
     BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
     int buffer_size = 0;
     pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
@@ -1330,8 +1335,9 @@ extern "C" __global__ void __raygen__lightTrace()
                 &payload);
             if (payload.path.size > begin_depth)
             {
+                float e = payload.path.currentVertex().contri_float();
+                if (e < 0.00001)break;
                 pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias); 
-                float e = payload.path.currentVertex().contri_float(); 
                 CheckLightBufferState;
 
             }
@@ -1628,7 +1634,7 @@ extern "C" __global__ void __raygen__TrainData()
 
     if (currentPath->is_caustic == false)
     {
-      //  if (rnd(seed) > 1.0 / 8.0)currentPath->valid = false;
+        if (rnd(seed) > 1.0 / 8.0)currentPath->valid = false;
     }
 }
 
