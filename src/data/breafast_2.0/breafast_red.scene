@@ -1,0 +1,176 @@
+cameraSetting
+{
+	eye -0.623726 -6.587055 1.204726 
+	lookat -0.623726 -5.587055 1.204728 
+      up 0 0 1
+}
+
+material  breakfast_room:Artwork
+{
+    color 0.00 0.00 0.00
+    roughness 0.99
+    albedoTex breafast_2.0/textures/picture3.jpg
+}
+material  breakfast_room:Black_Rubber
+{
+    color 0.64 0.64 0.64
+    roughness 0.040000000000000036
+}
+material  breakfast_room:Ceramic
+{
+    color 0.8 0.8 0.8
+    roughness 0.0
+}
+material  breakfast_room:Ceramic_001
+{
+    color 0.50 0.50 0.50
+    roughness 0.8200000000000001
+}
+material  breakfast_room:Chrome
+{
+    color 0.00 0.00 0.00
+    roughness 0.0
+}
+material  breakfast_room:Floor_Tiles
+{
+    color 0.00 0.00 0.00
+    roughness 0.7
+    albedoTex breafast_2.0/textures/tiles.png
+}
+material  breakfast_room:Frosted_Glass
+{
+    color 0.90 0.08 0.01
+    roughness 0.8
+}
+material  breakfast_room:Gold_Paint
+{
+    color 0.20 0.10 0.00
+    roughness 0.9
+}
+material  breakfast_room:Material_002
+{
+    color 0.50 0.50 0.50
+    roughness 0.8200000000000001
+}
+material  breakfast_room:Material_005
+{
+    color 0.50 0.50 0.50
+    roughness 0.8200000000000001
+}
+material  breakfast_room:Paint___Black_Satin
+{
+    color 0.00 0.00 0.00
+    roughness 0.8
+}
+material  breakfast_room:Paint___White_Gloss
+{
+    color 0.8 0.8 0.8
+    roughness 0.95
+}
+material  breakfast_room:Paint___White_Matt
+{
+    color 0.90 0.90 0.90
+    roughness 0.99
+}
+material  breakfast_room:White_Marble
+{
+    color 0.70 0.70 0.70
+    roughness 0.9
+}
+material  breakfast_room:White_Plastic
+{
+    color 0.8 0.8 0.8
+    roughness 0.9
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.001.obj
+    material breakfast_room:Frosted_Glass
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.002.obj
+    material breakfast_room:White_Plastic
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.003.obj
+    material breakfast_room:Paint___Black_Satin
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.004.obj
+    material breakfast_room:Ceramic_001
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.005.obj
+    material breakfast_room:Gold_Paint
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.006.obj
+    material breakfast_room:Material_005
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.007.obj
+    material breakfast_room:Material_002
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.008.obj
+    material breakfast_room:Ceramic
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.009.obj
+    material breakfast_room:Chrome
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.010.obj
+    material breakfast_room:Black_Rubber
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.011.obj
+    material breakfast_room:White_Marble
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.012.obj
+    material breakfast_room:Floor_Tiles
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.013.obj
+    material breakfast_room:Paint___White_Matt
+}
+
+mesh
+{
+    file breafast_2.0\geometry\breakfast_room.014.obj
+    material breakfast_room:Artwork
+}
+
+light
+{
+	direction -1 0.1 -0.6
+	emission 24 12 8
+	type Direction
+}
+

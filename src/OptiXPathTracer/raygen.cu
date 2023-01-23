@@ -1059,7 +1059,7 @@ extern "C" __global__ void __raygen__shift_combine()
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
-    //if (subframe_index > 10)return;
+    if (subframe_index > 10)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -1634,7 +1634,7 @@ extern "C" __global__ void __raygen__TrainData()
 
     if (currentPath->is_caustic == false)
     {
-        if (rnd(seed) > 1.0 / 8.0)currentPath->valid = false;
+        if (rnd(seed) > 1.0 / 4.0)currentPath->valid = false;
     }
 }
 

@@ -1,0 +1,25 @@
+ply
+format ascii 1.0
+comment Created by Blender 2.80 (sub 75) - www.blender.org, source file: 'breafast_room.blend'
+element vertex 6
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+property float s
+property float t
+element face 4
+property list uchar uint vertex_indices
+end_header
+-6.305749 -9.888323 -1.419960 0.000000 0.000000 1.000000 0.019279 -0.525477
+5.133022 -9.888323 -1.419960 0.000000 0.000000 1.000000 5.284731 -0.525477
+5.133022 -2.823203 -1.419958 0.000000 0.000000 1.000000 5.284731 2.781544
+-6.305749 -2.823203 -1.419958 0.000000 0.000000 1.000000 0.019279 2.781544
+5.133022 4.055528 -1.419957 0.000000 0.000000 1.000000 5.284731 6.001320
+-6.305749 4.055528 -1.419957 0.000000 0.000000 1.000000 0.019279 6.001320
+3 0 1 2
+3 0 2 3
+3 3 2 4
+3 3 4 5
