@@ -1,0 +1,5430 @@
+
+
+
+cameraSetting
+{
+
+
+up      0.000000 1.000000 0.000000
+eye     -0.318746 2.204264 -1.649909
+lookat  -2.179732 -1.415354 -2.400182
+
+
+#up      0.000000 1.000000 0.000000
+#eye     -0.392655 2.051186 -1.729190
+#lookat  -2.608369 -0.913501 -2.404806
+	geo_normal 1
+    fov 60
+}
+light
+{
+ 
+	position -1.124205 1.864583 -2.386024
+	v1 -0.620121 1.864583 -2.386024
+	v2 -1.124205 1.783139 -2.344007
+
+    emission 700 500 400
+	divLevel 1
+    type Quad
+}
+
+material RugBSDF
+{
+   color 1 1 1
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/rug.png
+}
+
+material blackBSDF
+{
+   color 0 0 0
+   roughness 0.5
+   metallic 0.0
+ 
+}
+
+
+material WoodBSDF
+{
+   color 1 1 1
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/wood.jpg
+}
+
+material MirrorBSDF
+{
+   color 1 1 1
+   roughness 0.001
+   metallic 1.0
+}
+
+material StainlessSmoothBSDF
+{
+   color 1 1 1
+   roughness 0.01
+   metallic 1.0
+}
+
+material BathtubeBSDF
+{
+   color 0.612066 0.612066 0.612066
+   roughness 0.5
+   metallic 0.0
+}
+
+material StainlessRoughBSDF
+{
+   color 1 1 1 
+   roughness 0.01
+   metallic 0.0
+}
+
+material FloorBSDF
+{
+   color 1 1 1 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/floor_tiles.png
+}
+
+material PotsBSDF
+{
+   color 0.00631 0.00631 0.00631
+   roughness 0.5
+   metallic 0.0
+}
+
+
+material MarbleBSDF
+{
+   color 1 1 1 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/marble.jpg
+}
+
+
+material BulbGlassBSDF
+{
+   color 1 1 1 
+   roughness 0.01
+   metallic 1.0
+}
+
+
+material BlackPlasticBSDF
+{
+   color 0.00631 0.00631 0.00631
+   roughness 0.5
+   metallic 0.0
+}
+
+material BlindsBSDF
+{
+   color 0.893289 0.893289 0.893289
+   roughness 0.5
+   metallic 0.0
+}
+
+
+material WoodFrameBSDF
+{
+   color 1 1 1 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/wood2.jpg
+}
+
+material Painting3BSDF
+{
+   color 0.0581872 0.0342302 0.0179364
+   roughness 0.5
+   metallic 0.0
+}
+
+
+material Painting1BSDF
+{
+   color 1 1 1 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/picture1.jpg
+}
+
+material Painting4BSDF
+{
+   color 0.0477758 0.0209511 0.00715504
+   roughness 0.5
+   metallic 0.0
+}
+	
+material LightBSDF
+{
+   color 0 0 0
+   roughness 0.5
+   metallic 0.0
+}
+
+material GreyWallBSDF
+{
+   color 0.893289 0.893289 0.893289
+   roughness 0.5
+   metallic 0.0
+}
+
+material WhiteWoodBSDF
+{
+   color 0.893289 0.893289 0.893289
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/wood2.jpg
+}
+
+material CeilingBSDF
+{
+   color 0.684615 0.684615 0.684615
+   roughness 0.5
+   metallic 0.0
+}
+
+material WallpaperBSDF
+{
+   color 1 1 1 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/wallpaper-1.jpg
+}
+
+material LeavesBSDF
+{
+   color 0.573159 0.215764 0.022013
+   roughness 0.5
+   metallic 0.0
+}
+
+material LeaveStemsBSDF
+{
+   color 0.0638149 0.022013 0.00120174
+   roughness 0.5
+   metallic 0.0
+}
+
+material VaseBSDF
+{
+   color 0.612066 0.612066 0.612066
+   roughness 0.5
+   metallic 0.0
+}
+
+material WindowFrameBSDF
+{
+   color 0.00631 0.00631 0.00631
+   roughness 0.5
+   metallic 0.0
+}
+
+material PaperBSDF
+{
+   color 0.578596 0.578596 0.578596
+   roughness 0.5
+   metallic 0.0
+}
+
+material WoodDiffuseBSDF
+{
+   color 1 1 1 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/wood.jpg
+}
+
+material Painting2BSDF
+{
+   color 1 1 1 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/wallpaper-2.jpg
+}
+
+material MetalPlateBSDF
+{
+   color 0.4259 0.4259 0.4259
+   roughness 0.01
+   metallic 1.0
+}
+
+material BlindsStringBSDF
+{
+   color 0.578596 0.578596 0.578596 
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/wood2.jpg
+}
+
+material GoldBSDF
+{
+   color 1 1 1 
+   roughness 0.01
+   metallic 1.0
+}
+
+material FoamBSDF
+{
+   color 0.531049 0.531049 0.531049
+   roughness 0.5
+   metallic 0.0
+   albedoTex bathroom_b/textures/foam_bump.jpg
+}
+
+
+
+mesh
+{
+	file bathroom_b\Mesh381.obj
+	material StainlessRoughBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh252.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh238.obj
+	material FoamBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh633.obj
+	material WhiteWoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh235.obj
+	material WhiteWoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh351.obj
+	material WhiteWoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh233.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh688.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh444.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh101.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh151.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh308.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh327.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh341.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh290.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh080.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh227.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh309.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh199.obj
+	material BlackPlasticBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh342.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh317.obj
+	material LightBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh726.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh540.obj
+	material LightBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh276.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh349.obj
+	material BlackPlasticBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh254.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh229.obj
+	material BlackPlasticBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh359.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh166.obj
+	material LightBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh369.obj
+	material PaperBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh372.obj
+	material Painting1BSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh793.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh378.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh380.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh363.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh046.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh118.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh345.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh251.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh219.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh589.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh659.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh344.obj
+	material MarbleBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh602.obj
+	material MirrorBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh367.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh206.obj
+	material RugBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh031.obj
+	material WoodDiffuseBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh515.obj
+	material GoldBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh377.obj
+	material GoldBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh205.obj
+	material Painting2BSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh424.obj
+	material BlackPlasticBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh425.obj
+	material MetalPlateBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh474.obj
+	material MetalPlateBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh209.obj
+	material Painting3BSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh203.obj
+	material Painting4BSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh263.obj
+	material BlindsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh405.obj
+	material BlindsStringBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh253.obj
+	material BlindsStringBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh197.obj
+	material BlindsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh052.obj
+	material WindowFrameBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh629.obj
+	material WindowFrameBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh268.obj
+	material WindowFrameBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh195.obj
+	material VaseBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh295.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh434.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh193.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh357.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh136.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh450.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh269.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh592.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh192.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh191.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh331.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh297.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh343.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh304.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh815.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh293.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh282.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh226.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh189.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh463.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh709.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh361.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh247.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh236.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh595.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh301.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh386.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh387.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh324.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh299.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh126.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh763.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh217.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh390.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh244.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh392.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh393.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh336.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh218.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh401.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh577.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh364.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh259.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh409.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh414.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh320.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh816.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh224.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh723.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh210.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh036.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh419.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh421.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh699.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh404.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh590.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh608.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh427.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh430.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh111.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh412.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh432.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh439.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh440.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh433.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh575.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh473.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh447.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh064.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh137.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh220.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh354.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh415.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh438.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh250.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh853.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh454.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh033.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh456.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh458.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh394.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh200.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh462.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh841.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh330.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh464.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh468.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh728.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh820.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh472.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh242.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh504.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh476.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh053.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh484.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh311.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh485.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh232.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh162.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh365.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh489.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh264.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh582.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh491.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh493.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh167.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh461.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh437.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh285.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh497.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh465.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh410.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh667.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh370.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh068.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh211.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh411.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh294.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh321.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh507.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh514.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh179.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh516.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh358.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh606.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh183.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh180.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh501.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh178.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh355.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh176.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh175.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh174.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh460.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh172.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh284.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh420.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh266.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh124.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh170.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh744.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh455.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh249.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh169.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh429.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh204.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh448.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh332.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh313.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh165.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh642.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh100.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh267.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh164.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh163.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh469.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh146.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh337.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh161.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh160.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh154.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh318.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh152.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh442.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh481.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh045.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh500.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh148.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh145.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh107.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh142.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh079.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh721.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh724.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh129.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh128.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh486.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh123.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh201.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh093.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh799.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh121.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh119.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh553.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh431.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh373.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh490.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh114.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh185.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh325.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh216.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh112.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh049.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh085.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh374.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh138.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh159.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh110.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh551.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh449.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh215.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh399.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh196.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh134.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh248.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh466.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh271.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh106.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh104.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh495.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh347.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh102.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh208.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh243.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh622.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh673.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh801.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh231.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh099.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh258.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh322.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh260.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh092.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh090.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh087.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh832.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh720.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh400.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh082.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh181.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh529.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh078.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh117.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh509.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh255.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh077.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh225.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh122.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh303.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh656.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh482.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh687.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh083.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh483.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh075.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh073.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh646.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh116.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh156.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh705.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh506.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh237.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh071.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh823.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh069.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh418.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh329.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh065.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh240.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh188.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh738.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh063.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh280.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh062.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh061.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh141.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh060.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh849.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh144.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh312.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh305.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh133.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh067.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh479.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh730.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh648.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh207.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh499.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh057.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh452.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh487.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh055.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh155.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh139.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh054.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh413.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh222.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh095.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh127.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh310.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh830.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh278.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh422.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh669.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh048.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh214.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh089.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh212.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh086.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh047.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh459.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh292.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh043.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh070.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh279.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh042.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh040.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh423.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh619.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh503.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh202.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh694.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh108.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh616.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh035.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh113.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh034.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh428.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh105.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh652.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh528.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh477.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh296.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh288.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh030.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh028.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh389.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh027.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh150.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh051.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh025.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh024.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh754.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh356.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh022.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh518.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh519.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh520.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh710.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh522.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh526.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh527.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh319.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh532.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh533.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh508.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh534.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh536.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh538.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh467.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh541.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh543.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh352.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh512.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh545.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh023.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh539.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh029.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh547.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh544.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh376.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh548.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh362.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh475.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh157.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh549.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh554.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh517.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh555.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh125.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh109.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh239.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh076.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh556.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh557.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh634.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh559.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh561.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh562.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh088.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh395.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh563.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh565.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh568.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh569.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh072.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh571.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh572.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh573.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh574.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh576.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh182.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh579.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh581.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh059.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh283.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh446.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh570.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh583.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh586.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh591.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh593.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh594.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh348.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh597.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh601.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh605.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh607.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh186.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh115.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh609.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh610.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh612.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh558.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh050.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh190.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh614.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh850.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh812.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh617.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh470.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh618.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh620.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh621.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh158.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh623.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh492.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh435.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh624.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh625.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh135.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh627.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh657.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh306.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh782.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh628.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh834.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh631.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh326.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh245.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh636.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh505.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh791.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh637.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh391.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh638.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh639.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh265.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh230.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh748.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh228.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh168.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh766.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh478.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh643.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh647.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh261.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh796.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh768.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh649.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh651.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh789.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh653.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh655.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh658.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh660.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh234.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh314.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh661.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh177.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh626.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh131.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh662.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh494.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh396.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh663.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh081.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh032.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh664.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh560.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh665.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh416.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh471.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh281.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh674.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh666.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh670.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh671.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh672.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh675.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh397.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh511.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh388.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh676.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh678.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh453.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh198.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh598.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh513.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh679.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh680.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh681.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh718.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh701.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh683.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh340.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh241.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh256.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh684.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh221.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh689.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh690.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh691.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh692.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh350.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh530.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh693.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh368.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh496.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh686.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh546.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh406.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh695.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh379.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh382.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh074.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh696.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh697.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh700.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh613.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh702.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh644.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh704.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh677.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh706.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh707.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh708.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh525.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh603.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh566.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh058.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh091.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh366.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh712.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh587.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh426.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh714.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh140.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh147.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh713.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh143.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh716.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh149.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh719.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh722.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh725.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh727.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh731.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh632.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh103.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh732.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh550.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh746.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh761.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh316.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh443.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh735.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh715.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh084.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh026.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh277.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh703.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh403.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh153.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh041.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh736.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh535.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh737.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh510.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh739.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh480.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh096.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh274.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh654.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh740.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh682.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh741.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh742.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh743.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh747.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh750.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh751.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh752.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh745.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh334.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh753.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh044.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh711.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh273.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh398.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh650.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh756.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh488.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh640.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh384.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh758.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh759.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh760.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh762.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh764.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh596.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh767.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh611.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh769.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh323.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh770.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh771.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh772.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh773.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh775.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh580.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh037.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh776.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh777.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh779.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh781.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh784.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh289.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh585.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh729.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh328.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh785.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh786.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh270.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh788.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh790.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh552.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh275.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh780.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh039.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh335.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh523.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh792.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh778.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh794.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh795.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh797.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh846.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh800.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh802.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh272.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh734.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh803.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh804.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh806.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh765.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh807.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh808.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh809.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh056.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh307.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh749.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh564.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh338.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh811.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh615.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh685.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh813.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh291.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh814.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh173.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh223.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh817.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh120.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh818.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh733.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh298.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh819.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh821.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh066.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh531.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh822.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh194.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh824.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh698.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh339.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh825.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh826.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh097.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh407.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh827.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh098.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh828.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh286.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh831.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh833.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh502.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh668.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh645.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh783.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh835.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh521.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh838.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh717.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh524.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh787.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh836.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh257.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh171.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh353.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh839.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh346.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh840.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh315.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh130.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh578.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh842.obj
+	material LeaveStemsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh287.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh436.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh187.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh383.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh371.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh246.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh457.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh843.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh588.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh132.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh441.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh635.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh844.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh845.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh805.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh810.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh641.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh630.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh847.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh755.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh360.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh848.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh584.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh599.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh184.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh600.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh851.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh757.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh852.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh262.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh333.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh854.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh021.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh020.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh445.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh019.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh498.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh537.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh451.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh829.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh094.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh018.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh017.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh774.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh213.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh016.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh015.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh417.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh014.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh385.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh013.obj
+	material LeavesBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh798.obj
+	material WoodFrameBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh012.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh837.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh402.obj
+	material StainlessSmoothBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh604.obj
+	material PotsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh011.obj
+	material PotsBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh567.obj
+	material MarbleBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh010.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh038.obj
+	material WhiteWoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh300.obj
+	material WhiteWoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh009.obj
+	material WhiteWoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh302.obj
+	material BathtubeBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh008.obj
+	material BathtubeBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh007.obj
+	material FloorBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh006.obj
+	material WoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh005.obj
+	material GreyWallBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh004.obj
+	material WallpaperBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh003.obj
+	material CeilingBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh542.obj
+	material WhiteWoodBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh375.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh408.obj
+	material LightBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh002.obj
+	material LightBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh001.obj
+	material BulbGlassBSDF
+}
+
+mesh
+{
+	file bathroom_b\Mesh000.obj
+	material BlackPlasticBSDF
+}
+
+mesh
+{
+	file bathroom_b\Light_0001.obj
+	material LightBSDF
+}
+mesh
+{
+	file bathroom_b\geo-fake\lightrim.obj
+	material blackBSDF
+}
+
+mesh
+{
+	file bathroom_b\geo-fake\lightrim_0.obj
+	material WoodBSDF
+
+}
+

@@ -18,7 +18,7 @@ material  BlackWoodLacquer
 {
     color 0.078481 0.078481 0.078481
     roughness 0.01
-    metallic 0.4
+    metallic 0.0
 }
 material  Ceramic
 {
@@ -50,7 +50,7 @@ material  Light
 material  Mirror
 {
     color 1 1 1
-    roughness 0.0
+    roughness 0.001
     metallic 1.0
 }
 material  Plastic
@@ -77,14 +77,14 @@ material  Wood
 {
     color 0.48 0.48 0.48
     roughness 0.01
-    metallic 0.2
+    metallic 0.0
     albedoTex bathroom/textures\Wood_BaseColor.jpg
 }
 material  WoodFloor
 {
     color 1 1 1
     roughness 0.01
-    metallic 0.1
+    metallic 0.0
     albedoTex bathroom/textures\WoodFloor_BaseColor.jpg
 }
 mesh
