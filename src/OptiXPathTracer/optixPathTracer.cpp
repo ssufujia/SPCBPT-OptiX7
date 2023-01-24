@@ -775,8 +775,8 @@ int main( int argc, char* argv[] )
 
     try
     {
-                 string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //string scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        //         string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        string scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
@@ -827,6 +827,16 @@ int main( int argc, char* argv[] )
             preprocessing(TScene);
         }
 
+        if(false)
+        {
+            params.estimate_pr. ref_buffer = nullptr;
+            if (estimation::es.estimation_mode == true)
+            {
+                thrust::device_ptr<float4> ref_buffer;
+
+                params.estimate_pr.ref_buffer = thrust::raw_pointer_cast(ref_buffer);
+            }
+        }
         //if( outfile.empty() )
         if(true)
         {
@@ -880,7 +890,7 @@ int main( int argc, char* argv[] )
 
                     glfwSwapBuffers(window);
 
-                    //estimation::es.estimation_mode = false;
+                    estimation::es.estimation_mode = false;
                     if (estimation::es.estimation_mode == true)
                     {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);

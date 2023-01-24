@@ -1,0 +1,194 @@
+
+cameraSetting
+{
+    eye  0.083151 0.162833 0.308588
+	lookat 0.037775 0.136238 0.223537
+ 
+    
+    #eye 2.653059 0.733602 1.036655
+    #lookat 2.555092 0.751108 1.026866
+    fov 45
+}
+material  Bin
+{
+    color 0.01 0.01 0.01
+    roughness 0.1
+}
+material  BlackWoodLacquer
+{
+    color 0.078481 0.078481 0.078481
+    roughness 0.01
+    metallic 0.4
+}
+material  Ceramic
+{
+    color 0.95 0.95 0.95
+    roughness 0.005
+    metallic 0.4
+}
+material  DarkBorder
+{
+    color 1 1 1
+    roughness 0.0
+}
+material  DarkPlastic
+{
+    color 0.1 0.1 0.1
+    roughness 0.0
+}
+material  Label
+{
+    color 0.8 0.8 0.8
+    roughness 0.0
+    albedoTex bathroom/textures\Label_BaseColor.png
+}
+material  Light
+{
+    color 0.5 0.5 0.5
+    roughness 0.0
+}
+material  Mirror
+{
+    color 1 1 1
+    roughness 0.0
+    metallic 1.0
+}
+material  Plastic
+{
+    color 0.01 0.01 0.01
+    roughness 0.0
+}
+material  Towel
+{
+    color 0.8 0.8 0.8
+    roughness 0.99
+}
+material  Trims
+{
+    color 1 1 1
+    roughness 0.97
+}
+material  Wall
+{
+    color .98 .98 .98
+    roughness 0.5
+}
+material  Wood
+{
+    color 0.48 0.48 0.48
+    roughness 0.01
+    metallic 0.2
+    albedoTex bathroom/textures\Wood_BaseColor.jpg
+}
+material  WoodFloor
+{
+    color 1 1 1
+    roughness 0.01
+    metallic 0.1
+    albedoTex bathroom/textures\WoodFloor_BaseColor.jpg
+}
+mesh
+{
+    file bathroom\geometry\Bin.obj
+    material Bin
+}
+
+mesh
+{
+    file bathroom\geometry\BlackWoodLacquer.obj
+    material BlackWoodLacquer
+}
+
+mesh
+{
+    file bathroom\geometry\Ceramic.obj
+    material Ceramic
+}
+
+mesh
+{
+    file bathroom\geometry\DarkBorder.obj
+    material DarkBorder
+}
+
+mesh
+{
+    file bathroom\geometry\DarkPlastic.obj
+    material DarkPlastic
+}
+
+mesh
+{
+    file bathroom\geometry\Label(2).obj
+    material Label
+}
+
+ 
+
+mesh
+{
+    file bathroom\geometry\Mirror.obj
+    material Mirror
+}
+
+mesh
+{
+    file bathroom\geometry\Plastic.obj
+    material Plastic
+}
+
+mesh
+{
+    file bathroom\geometry\StainlessRough.obj
+    material Mirror
+}
+
+mesh
+{
+    file bathroom\geometry\Towel.obj
+    material Towel
+}
+
+mesh
+{
+    file bathroom\geometry\Trims.obj
+    material Trims
+}
+
+mesh
+{
+    file bathroom\geometry\Wall.obj
+    material Wall
+}
+
+mesh
+{
+    file bathroom\geometry\Wood.obj
+    material Wood
+}
+
+mesh
+{
+    file bathroom\geometry\WoodFloor(2).obj
+    material WoodFloor
+}
+
+light
+{
+	v2 0.072634 0.312535 -0.232572
+	position -0.098634 0.312535 -0.232572
+	v1 -0.098634 0.113865 -0.232572
+	emission 7 7 7 
+      divLevel 7
+	type Quad
+}
+light
+{
+	v1 0.072634 0.312535 0.32572
+	position -0.098634 0.312535 0.32572
+	v2 -0.098634 0.113865 0.32572
+	emission 1 1 1 
+      divLevel 7
+	type Quad
+}
+

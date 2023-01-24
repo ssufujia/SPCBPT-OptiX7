@@ -81,6 +81,7 @@ struct LaunchParams
     BufferView<MaterialData::Pbr> materials;
     float3                   miss_color;
     OptixTraversableHandle   handle;
+
 };
 
 struct PayloadRadiance

@@ -951,8 +951,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         fractFactor = Shift::evalFract(finalPath, eye_subpath.position, payload.seed);
                         //fractFactor = make_float3(abs(fractFactor.x), abs(fractFactor.y), abs(fractFactor.z));
                         //printf("factor %f %f %f\n", fractFactor.x, fractFactor.y, fractFactor.z);
-                        float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()) * fractFactor;
-
+                        float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()) * fractFactor; 
 
                         float3 res = contri / pdf / pmf ;
                         //if (float3weight(res) > 1)printf("evalFactor ratio rate %f\n", float3weight(fractFactor));
@@ -1059,7 +1058,7 @@ extern "C" __global__ void __raygen__shift_combine()
         const float3 accum_color_prev = make_float3(Tracer::params.accum_buffer[image_index]);
         accum_color = lerp(accum_color_prev, accum_color, a);
     }
-    if (subframe_index > 10)return;
+    //if (subframe_index > 10)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);

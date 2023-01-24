@@ -3035,7 +3035,7 @@ namespace Shift
         //recompute jacobian part one in the dominator
         Tracer::lightSample light_sample;
         light_sample.ReverseSample(Tracer::params.lights[originPath.get(1).materialId], remap_uv);
-        Jacobian /= light_sample.pdf;
+        Jacobian /= light_sample.pdf * Tracer::params.lights.count;
 
         //retrace from anchor, update the jacobian value 
         float local_jacobian;
@@ -3081,6 +3081,7 @@ namespace Shift
         float3 out_dir = normalize(out_vec);
         float3 in_dir = normalize(anchor - originPath.get(0).position);
         bool is_refract = isRefract(originPath.get(0).normal, in_dir, out_dir);
+        //if (is_refract == true)printf("eeeee");
         float2 map_uv = is_refract ? Tracer::sample_reverse_refract(mat, originPath.get(0).normal, in_dir, out_dir)
             : Tracer::sample_reverse_metallic(mat, originPath.get(0).normal, in_dir, out_dir);
 
@@ -3088,11 +3089,12 @@ namespace Shift
         Tracer::lightSample light_sample;
         light_sample.ReverseSample(Tracer::params.lights[originPath.get(1).materialId], map_uv);
         init_vertex_from_lightSample(light_sample, newPath.get(1));
-        Jacobian *= light_sample.pdf;
+        Jacobian *= light_sample.pdf * Tracer::params.lights.count;
 
         Jacobian /= Tracer::Pdf(mat, originPath.get(0).normal, in_dir, out_dir);
         Jacobian /= 1.0 / dot(out_vec, out_vec) * abs(dot(out_dir, newPath.get(1).normal));
-        bool map_suc = Tracer::visibilityTest(Tracer::params.handle, newPath.get(0), newPath.get(1));
+        bool map_suc = Tracer::visibilityTest(Tracer::params.handle, newPath.get(1), newPath.get(0));
+        //printf("%d suc\n",map_suc);
         return map_suc;
     }
 
@@ -3943,7 +3945,7 @@ namespace Shift
         while (true)
         {
             it++;
-            if (it > 10) {
+            if (it > 30) {
                 //printf("trace rays more than expectation\n");
                 break;
             }
