@@ -43,7 +43,7 @@ struct BDPTVertex
     float lastSinglePdf;
 
     //float d;     //can be replaced by RIS_pointer, consider to remove
-
+    float inverPdfEst;
 
     short materialId;
 

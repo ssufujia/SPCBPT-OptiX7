@@ -39,7 +39,7 @@
 #define DIR_JUDGE 0
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
 #define RMIS_FLAG true
-//#define CAUSTIC_SPECIAL
+#define CAUSTIC_SPECIAL
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"

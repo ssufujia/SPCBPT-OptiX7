@@ -91,7 +91,7 @@ int32_t mouse_button = -1;
 int32_t samples_per_launch = 1; 
 
 std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye")};
-int render_alg_id = 0;
+int render_alg_id = 1;
 bool one_frame_render_only = false;
 float render_fps = 60;
 //------------------------------------------------------------------------------
@@ -505,7 +505,7 @@ void env_params_setup(const sutil::Scene& scene)
 }
 void lt_params_setup(const sutil::Scene& scene)
 {
-    lt_params.M_per_core = 100;
+    lt_params.M_per_core = 10;
     lt_params.core_padding = 800;
     lt_params.num_core = 1000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
@@ -775,10 +775,10 @@ int main( int argc, char* argv[] )
 
     try
     {
-//                 string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //string scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+                 string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //tring scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
-        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+//        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
 
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 

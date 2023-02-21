@@ -907,6 +907,7 @@ namespace Tracer {
         if (a >= 1.6f) return 0;
         return (1 - 1.259f * a + 0.396f * a * a) / (3.535f * a + 2.181f * a * a);
     }
+
 }
 namespace Shift
 {
@@ -1945,6 +1946,34 @@ RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample,
     }
     //其他光源的状况待补充
 }
+namespace Tracer
+{
+
+    RT_FUNCTION BDPTVertex FastTrace(BDPTVertex& a, float3 direction, bool& success)
+    {
+        Tracer::PayloadBDPTVertex payload;
+        payload.clear();
+        payload.seed = 0;
+        payload.ray_direction = direction;
+        payload.origin = a.position;
+        init_EyeSubpath(payload.path, payload.origin, payload.ray_direction);
+
+        float3 ray_direction = payload.ray_direction;
+        float3 ray_origin = payload.origin;
+        int begin_depth = payload.path.size;
+        Tracer::traceEyeSubPath_simple(Tracer::params.handle, ray_origin, ray_direction,
+            SCENE_EPSILON,  // tmin
+            1e16f,  // tmax
+            &payload);
+        if (payload.path.size == begin_depth)
+        {
+            success = 0;
+            return BDPTVertex();
+        }
+        success = 1;
+        return payload.path.currentVertex();
+    }
+}
 namespace Shift
 {
     RT_FUNCTION float dh_dwi_estimate(float a, float3 normal, float3 half, float3 v)
@@ -2305,6 +2334,7 @@ namespace Shift
             return *(v + i * it_step);
         }
     };
+
     RT_FUNCTION float3 etaCheck(float3 in_dir, float3 ref_dir, float3 normal)
     {
         float cosA = abs(dot(ref_dir, normal));
@@ -3785,6 +3815,187 @@ namespace Shift
         float3 diff = a.position - b.position;
         float3 dir = normalize(diff);
         return abs(dot(dir, a.normal) * dot(dir, b.normal)) / dot(diff, diff);
+    }
+    RT_FUNCTION float tracingPdf(BDPTVertex& a, BDPTVertex b)
+    {
+        if (a.depth == 0&& a.type == BDPTVertex::Type::QUAD)
+        {
+            return GeometryTerm(a, b) * 1 / M_PI * Tracer::visibilityTest(Tracer::params.handle, a, b);
+        }
+        else
+        {
+            //TBD
+            return 0;
+        }
+    }
+    struct getClosestPointFunction
+    {
+        float3 a;
+        float3 b;
+        float3 c; 
+        float3 p;
+        RT_FUNCTION getClosestPointFunction(float3 a, float3 b, float3 c, float3 p) :a(a), b(b), c(c), p(p) {}
+        RT_FUNCTION float3 getSegDis(float3 aa, float3 bb, float3 pp, float3 normal_plane)
+        {
+            float3 ap = aa - pp;
+            float3 normal = normalize(cross(normal_plane, aa - bb));
+            float dis = dot(ap, normal);
+            float3 projectPoint = pp + dis * normal;
+
+            float3 aapp = projectPoint - aa;
+            float3 bbpp = projectPoint - bb;
+            if (dot(aapp, bbpp) < 0)return projectPoint;
+            if (dot(aapp, aapp) < dot(bbpp, bbpp))return aa;
+            return bb;
+        }
+        RT_FUNCTION float3 operator()()
+        {
+            float3 normal = normalize(cross(b - a, c - a));
+            float3 ap = a - p;
+            
+            float dis = dot(ap, normal);
+            float3 projectPoint = p + dis * normal;
+
+            float3 aP = a - projectPoint;
+            float3 bP = b - projectPoint;
+            float3 cP = c - projectPoint;
+
+            float3 ab = a - b;
+            float3 bc = b - c;
+            float3 ca = c - a;
+            if (dot(cross(aP, -ab), cross(bP, -bc)) > 0 && dot(cross(bP, -bc), cross(cP, -ca)) > 0) return projectPoint;
+
+            float3 Ca = getSegDis(a, b, projectPoint, normal);
+            float3 Cb = getSegDis(b, c, projectPoint, normal);
+            float3 Cc = getSegDis(c, a, projectPoint, normal);
+
+            float3 ans = Ca;
+            if (length(Ca - p) > length(Cb - p))ans = Cb;
+            if (length(Cb - p) > length(Cc - p))ans = Cc;
+            return ans;
+        } 
+
+    };
+    RT_FUNCTION float getClosestGeometry_upperBound(Light &light, float3 position,float3 normal,float3& sP)
+    {
+        Tracer::lightSample light_sample;
+        float3 ca = getClosestPointFunction(light.quad.corner, light.quad.u, light.quad.v,position)();
+        float3 cb = getClosestPointFunction(-light.quad.corner + light.quad.u + light.quad.v, light.quad.u, light.quad.v, position)();
+        float3 c = length(ca - position) < length(cb - position) ? ca: cb;
+        float3 diff = c - position;
+        float3 dir = normalize(diff);
+        sP = c;
+
+        float cos_bound = abs(dot(normal,dir));
+        if (abs(dot(normalize(light.quad.corner - position), normal)) > cos_bound)cos_bound = abs(dot(normalize(light.quad.corner - position), normal));
+        if (abs(dot(normalize(light.quad.u - position), normal)) > cos_bound)cos_bound = abs(dot(normalize(light.quad.u - position), normal));
+        if (abs(dot(normalize(light.quad.v - position), normal)) > cos_bound)cos_bound = abs(dot(normalize(light.quad.v - position), normal));
+        if (abs(dot(normalize(-light.quad.corner + light.quad.u + light.quad.v - position), normal)) > cos_bound)
+            cos_bound = abs(dot(normalize(-light.quad.corner + light.quad.u + light.quad.v - position), normal));
+
+
+        return abs(dot(dir, light.quad.normal) ) / dot(diff, diff) * 1 / M_PI * cos_bound;
+
+    }
+    RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed)
+    {
+        if (path.size() != 2 || glossy(path.get(0)) == false)
+        {
+           // printf("C %d %d\n", path.size(), glossy(path.get(0)));
+            return 0;
+        }
+        //printf("A");
+        Light light = Tracer::params.lights[path.get(1).materialId];
+
+//        light_sample.ReverseSample(light, path.get(1).uv);
+//        float pdf_ref = light_sample.pdf * tracingPdf(path.get(1),path.get(0));
+        float3 sP;
+        float upperbound = getClosestGeometry_upperBound(light, path.get(0).position, path.get(0).normal,sP);
+
+        float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
+        //if (pdf_ref_sum / upperbound > 1)
+            //printf("bound compute test %f %f %f\n", pdf_ref_sum / upperbound, length(sP - path.get(0).position),length(path.get(1).position - path.get(0).position));
+        int pdf_ref_count = 1;
+        float bound = pdf_ref_sum / pdf_ref_count * 2;
+        bound = upperbound;
+        //bound += path.get(1).pdf; 
+        float ans = 0; 
+
+        float variance_accumulate = 0;
+        float average_accumulate = 0;
+        int suc_int = 0;
+        for (int i = 0; i < 50; i++)
+        { 
+            ans = 0; 
+            suc_int++;
+            float times = 1;
+            int loop_time = 0;
+            while (true)
+            {
+                loop_time += 1;
+                if (loop_time > 1000)break;
+                ans += times / bound;
+                BDPTVertex& v = path.get(0);
+                float ratio = 0.8;
+                BDPTVertex np;
+
+                if (rnd(seed) > ratio)//method choice
+                {
+                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal: -v.normal);
+                    float3 dir;
+                    cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                    onb.inverse_transform(dir);
+                    bool success_hit;
+                    np = Tracer::FastTrace(v, dir, success_hit);
+                    if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)continue;
+                    Light light = Tracer::params.lights[np.materialId];
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, np.uv);
+                    init_vertex_from_lightSample(light_sample, np);
+                } 
+                else
+                {  
+                    float2 uv = make_float2(rnd(seed), rnd(seed));
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, uv); 
+                    init_vertex_from_lightSample(light_sample, np);
+                }
+
+                float pdf = (np.pdf * tracingPdf(np, path.get(0))) / (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+                //float pdf = tracingPdf(np, path.get(0));
+
+                float q = pdf / bound;
+                float continue_rate = 1 - q;
+                float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                if (abs(continue_rate) > 1)
+                { 
+                    bound *= 2;
+                    ans = 0;
+                    suc_int -= 1;
+                    break;
+                };
+
+                if (rnd(seed) > rr_rate)
+                {
+                    break;
+                }
+                {
+                    times *= continue_rate / rr_rate;
+                }
+            }
+            
+            variance_accumulate += ans * ans;
+            average_accumulate += ans;
+            if (suc_int == 1)break;
+        }
+        ans = average_accumulate / suc_int;
+        variance_accumulate /= suc_int;
+        variance_accumulate -= ans * ans;
+       // printf("average %f variance %f %d %d\n", ans, variance_accumulate, pdf_ref_count, suc_int);
+        
+        
+        //printf("compare pdf %f %f %d\n", ans, 1.0 / path.get(0).pdf, pdf_ref_count);
+        return ans;
     }
     //test code 
     //can't ensure its performance

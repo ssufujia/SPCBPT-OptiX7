@@ -10,7 +10,7 @@
 #include "cuProg.h"
 #include "rmis.h"
 
-//#define PT_BRDF_STRATEGY_ONLY
+#define PT_BRDF_STRATEGY_ONLY
 //#define PT_NEE_STRATEGY_ONLY
 
 extern "C" __global__ void __anyhit__radiance()
@@ -168,7 +168,7 @@ extern "C" __global__ void __closesthit__lightsource()
     if (dot(prd->ray_direction, light_sample.normal()) <= 0
         && (prd->depth == 0 || prd->depth <= 6)
 #ifdef CAUSTIC_SPECIAL
-        && (prd->depth == 0 || prd->depth <= 5)
+        && (prd->depth == 0 || prd->depth <= 2)
        // && (prd->depth != 2)
         && ((prd->caustic_bounce_state == 0 && prd->depth == 0) || prd->caustic_bounce_state == 2)
 #endif // CAUSTIC_SPECIAL 
