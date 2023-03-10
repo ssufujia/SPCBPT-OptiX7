@@ -3926,12 +3926,17 @@ namespace Shift
         float variance_accumulate = 0;
         float average_accumulate = 0;
         int suc_int = 0;
+
+        /* 使用老方法还是用纯RR？ */
+        bool RR_option = 0;
+        float RR_rate = 0.75;
+
         /* pdf估计的核心流程 */
         for (int i = 0; i < 50; i++)
         { 
             ans = 0; 
             suc_int++;
-            float times = 1;
+            float factor = 1;
             int loop_cnt = 0;
             // 
             while (true)
@@ -3939,7 +3944,7 @@ namespace Shift
                 loop_cnt += 1;
                 if (loop_cnt > 1000) 
                     break;
-                ans += times / bound;
+                ans += factor / bound;
                 BDPTVertex& v = path.get(0);
                 float ratio = 0.8;
                 BDPTVertex np;
@@ -3979,22 +3984,34 @@ namespace Shift
                                   (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
                 //float pdf = tracingPdf(np, path.get(0));
 
-                float continue_rate = 1 - pdf / bound;
-                /* 这一段在干嘛？ */
-                if (abs(continue_rate) > 1)
-                { 
-                    bound *= 2;
-                    ans = 0;
-                    suc_int -= 1;
-                    break;
-                };
+                if (RR_option) {
+                    /* 试一试纯RR效果如何 */
+                    if (rnd(seed) > RR_rate)
+                        break;
+                    factor *= (1 - pdf / bound) / RR_rate;
 
-                float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
-                if (rnd(seed) > rr_rate)
-                {
-                    break;
+                } else {
+                    /* 老方法，sfj写的 */
+                    float continue_rate = 1 - pdf / bound;
+                    /* 测出来continue_rate都很接近于1 */
+                    // printf("c_rate: %f\n", continue_rate);
+                    /* 这一段在干嘛？ */
+                    if (abs(continue_rate) > 1)
+                    { 
+                        bound *= 2;
+                        ans = 0;
+                        suc_int -= 1;
+                        break;
+                    };
+
+                    float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                    if (rnd(seed) > rr_rate)
+                    {
+                        break;
+                    }
+                    factor *= continue_rate / rr_rate;
                 }
-                times *= continue_rate / rr_rate;
+                
             }  // end while
             variance_accumulate += ans * ans;
             average_accumulate += ans;
