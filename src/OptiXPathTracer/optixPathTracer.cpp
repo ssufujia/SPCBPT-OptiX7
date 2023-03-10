@@ -789,7 +789,6 @@ int main( int argc, char* argv[] )
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
 
-
         auto myScene = LoadScene(scenePath.c_str()); 
         
         myScene->getMeshData(0);
@@ -880,8 +879,6 @@ int main( int argc, char* argv[] )
                     render_time += t1 - t0;
                     t0 = t1;                    
                     
-
-
 
                     displaySubframe(output_buffer, gl_display, window);
                     t1 = std::chrono::steady_clock::now();

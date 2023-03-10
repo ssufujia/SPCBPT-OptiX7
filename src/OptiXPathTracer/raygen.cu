@@ -189,8 +189,6 @@ RT_FUNCTION void init_lightSubPath_from_lightSample(Tracer::lightSample& light_s
 }
 
 
-
-
 __device__ float3 direction_connect_ZGCBPT(const BDPTVertex& a, const BDPTVertex& b)
 {
     float3 L = make_float3(0.0f);
@@ -829,6 +827,7 @@ extern "C" __global__ void __raygen__shift_combine()
     payload.seed = seed;
     payload.ray_direction = ray_direction;
     payload.origin = ray_origin;
+    //  视子路初始化
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
 
@@ -846,10 +845,13 @@ extern "C" __global__ void __raygen__shift_combine()
             break;
         }
         int begin_depth = payload.path.size;
-        Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
+        // 追视子路
+        Tracer::traceEyeSubPath(
+            Tracer::params.handle, ray_origin, ray_direction,
             SCENE_EPSILON,  // tmin
             1e16f,  // tmax
-            &payload);
+            &payload
+        );
         if (payload.path.size == begin_depth)
         {
             break;
@@ -1004,7 +1006,6 @@ extern "C" __global__ void __raygen__shift_combine()
                             }
                             finalPath.get(1) = np;
                         }
-
 
 
                         for (int i = 0; i < finalPath.size(); i++)
@@ -1372,9 +1373,8 @@ extern "C" __global__ void __raygen__glossy_shift_only()
 }
 
 
-
-
 #define CheckLightBufferState if(!(lightVertexCount<lt_params.core_padding)) break; 
+
 RT_FUNCTION void pushVertexToLVC(BDPTVertex& v, unsigned int& putId, int bufferBias)
 {
     const LightTraceParams& lt_params = Tracer::params.lt;
@@ -1387,7 +1387,7 @@ extern "C" __global__ void __raygen__lightTrace()
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const int    subframe_index = Tracer::params.lt.launch_frame;
-    unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    unsigned int seed = tea< 4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
 
     Tracer::PayloadBDPTVertex payload;
     payload.seed = seed;
@@ -1401,64 +1401,72 @@ extern "C" __global__ void __raygen__lightTrace()
     while (true)
     {
         payload.clear();
-        int light_id = clamp(static_cast<int>(floorf(rnd(seed) * Tracer::params.lights.count)), int(0), int(Tracer::params.lights.count - 1));
+        int light_id = 
+            clamp(static_cast<int>(floorf(rnd(seed) * Tracer::params.lights.count)), 
+                            int(0), int(Tracer::params.lights.count - 1));
         const Light& light = Tracer::params.lights[light_id];
         Tracer::lightSample light_sample; 
         light_sample(light, seed); 
-
 
         light_sample.traceMode(seed);
         float3 ray_direction = light_sample.trace_direction();
         float3 ray_origin = light_sample.position; 
         init_lightSubPath_from_lightSample(light_sample, payload.path);
+        /* lightVertexCount 在经过这个函数后会加1 */
         pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias); 
         CheckLightBufferState;
 
+        /* 一次光子路生长的过程 */
         while (true)
         {
             int begin_depth = payload.path.size;
-            Tracer::traceLightSubPath(Tracer::params.handle, ray_origin, ray_direction,
+            Tracer::traceLightSubPath(
+                Tracer::params.handle, 
+                ray_origin, 
+                ray_direction,
                 SCENE_EPSILON,  // tmin
                 1e16f,  // tmax
-                &payload);
+                &payload
+            );
+            /* 如果光子路追踪打到了面片 */
             if (payload.path.size > begin_depth)
             {
-                ///////////////////////////////////
-                ///////// pdf inverse check////////
-                ///////////////////////////////////
+                /* 进行残缺光子路pdf的计算，目前只支持 L -> S 长度为2的光子路 */
                 if (payload.path.currentVertex().depth == 1 && Shift::glossy(payload.path.currentVertex()))
                 {
                     BDPTVertex v[2];
+                    /* 这是光源上的顶点 */
                     v[1] = payload.path.lastVertex();
+                    /* 这是glossy表面上的顶点 */
                     v[0] = payload.path.currentVertex();
-
+                    /* 不知为何换成了pathContainer这个结构，步长为1，大小为2 */
+                    /* 注意，path中光子路的顺序和v中是反的！ */
                     Shift::PathContainer path(v, 1, 2);
                     float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed);
                     payload.path.currentVertex().inverPdfEst = pdf_inverse; 
+                    /* 还是会继续追下去 */
                 }
 
-
-
                 float e = payload.path.currentVertex().contri_float();
-                if (e < 0.00001)break;
+                /* 如果这条光子路很废，直接扔了（虽然不知道怎么采出来的） */
+                if (e < 0.00001) 
+                    break;
+                /* 放进LVC里面，一次放一个顶点，注意lightVertexCount在函数内部加一 */
                 pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias); 
                 CheckLightBufferState;
-                
             }
             ray_direction = payload.ray_direction;
             ray_origin = payload.origin;
             if (payload.done || payload.depth > 50)
-            {
                 break;
-            }
             payload.depth += 1;
-
         }
         lightPathCount++;
-        if (lightPathCount >= lt_params.M_per_core)break;
+        if (lightPathCount >= lt_params.M_per_core)
+            break;
         CheckLightBufferState; 
     }
-    //printf("Light Trace %d get %d path and %d vertices\n", launch_index, lightPathCount, lightVertexCount);
+    // printf("Light Trace %d get %d path and %d vertices\n", launch_index, lightPathCount, lightVertexCount);
     for (int i = lightVertexCount; i < lt_params.core_padding; i++)
     {
         lt_params.validState[lightVertexCount + bufferBias] = false;
@@ -1573,8 +1581,6 @@ RT_FUNCTION void PreTrace_buildPathInfo(BDPTVertex* eye, TrainData::nVertex_devi
             }
         }
     }
-
-
 
     path->valid = true;
     
