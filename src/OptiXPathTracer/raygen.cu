@@ -227,8 +227,8 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
     float3 fa, fb;
     float3 ADcolor;
     MaterialData::Pbr mat_a = Tracer::params.materials[a.materialId];
-    mat_a.base_color = make_float4(a.color, 1.0); 
-    fa = Tracer::Eval(mat_a, a.normal, -connectDir, LA_DIR) / (mat_a.brdf ? abs(dot(a.normal, connectDir)) : 1.0f);
+    mat_a.base_color = make_float4(a.color, 1.0);
+    fa = Tracer::Eval(mat_a, a.normal, LA_DIR, -connectDir) / (mat_a.brdf ? abs(dot(a.normal, connectDir)) : 1.0f);
 
     MaterialData::Pbr mat_b;
     if (!b.isOrigin)
