@@ -166,7 +166,7 @@ extern "C" __global__ void __closesthit__lightsource()
     float3 ray_direction = optixGetWorldRayDirection();
 
     if (dot(prd->ray_direction, light_sample.normal()) <= 0
-        && (prd->depth == 0 || prd->depth <= 6)
+        //&& (prd->depth == 0 || prd->depth <= 6)
 #ifdef CAUSTIC_SPECIAL
         && (prd->depth == 0 || prd->depth <= 2)
        // && (prd->depth != 2)
@@ -301,7 +301,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     {
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
     }
-    NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction , -ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
+    NextVertex.flux = Tracer::Eval(currentPbr, N, inver_ray_direction, prd->ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
     NextVertex.singlePdf = prd->pdf;
 
     MidVertex.lastPosition = LastVertex.position;
@@ -467,7 +467,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
     {
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
     }
-    NextVertex.flux = Tracer::Eval(currentPbr, N, -ray_direction, prd->ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f); 
+    NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction, -ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
     NextVertex.singlePdf = prd->pdf;
      
     MidVertex.lastPosition = LastVertex.position;
@@ -629,7 +629,7 @@ extern "C" __global__ void __closesthit__radiance()
     //prd->depth += 1;  
     //prd->result += result;
 
-    if (prd->depth > 5) result *= 0;
+    //if (prd->depth > 5) result *= 0;
     prd->currentResult += result;
     
     prd->origin = geom.P;

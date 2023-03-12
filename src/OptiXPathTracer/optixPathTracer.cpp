@@ -557,7 +557,7 @@ void launchLightTrace(sutil::Scene& scene)
     CUDA_SYNC_CHECK();  
 }
 void launchLVCTrace(sutil::Scene& scene)
-{
+{ 
     launchLightTrace(scene);
     auto p_v = thrust::device_pointer_cast(params.lt.ans);
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
@@ -567,7 +567,7 @@ void launchLVCTrace(sutil::Scene& scene)
     params.sampler.glossy_count = sampler.glossy_count;
     params.sampler.glossy_index = sampler.glossy_index;
     params.sampler.glossy_subspace_bias = sampler.glossy_subspace_bias;
-    params.sampler.glossy_subspace_num = sampler.glossy_subspace_num;
+    params.sampler.glossy_subspace_num = sampler.glossy_subspace_num;  
 
 }
 int launchPretrace(sutil::Scene& scene)
@@ -775,10 +775,11 @@ int main( int argc, char* argv[] )
 
     try
     {
-                 string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+     //            string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //tring scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
 
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 

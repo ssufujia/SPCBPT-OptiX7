@@ -227,8 +227,8 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
     float3 fa, fb;
     float3 ADcolor;
     MaterialData::Pbr mat_a = Tracer::params.materials[a.materialId];
-    mat_a.base_color = make_float4(a.color, 1.0); 
-    fa = Tracer::Eval(mat_a, a.normal, -connectDir, LA_DIR) / (mat_a.brdf ? abs(dot(a.normal, connectDir)) : 1.0f);
+    mat_a.base_color = make_float4(a.color, 1.0);  
+    fa = Tracer::Eval(mat_a, a.normal, LA_DIR, -connectDir) / (mat_a.brdf ? abs(dot(a.normal, connectDir)) : 1.0f);
 
     MaterialData::Pbr mat_b;
     if (!b.isOrigin)
@@ -867,7 +867,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
         if (payload.path.hit_lightSource())
         {
-            if (RMIS_FLAG)
+            if (false&&RMIS_FLAG)
             {
                 float3 res = lightStraghtHit(payload.path.currentVertex());
                 result += res;
@@ -887,9 +887,24 @@ extern "C" __global__ void __raygen__shift_combine()
                 //if (Shift::IsCausticPath(pathBuffer, buffer_size))res *= 0; 
 
 #ifdef CAUSTIC_SPECIAL
-                if (payload.depth != 1)
+                //if (payload.depth != 1)
                     res *= 0;
 #endif // CAUSTIC_SPECIAL
+
+                ////////////////////////////////
+                ////////// MIS Compute /////////
+                ////////////////////////////////
+                if (false&&buffer_size == 4 && Shift::glossy(pathBuffer[buffer_size - 2]) && !Shift::glossy(pathBuffer[buffer_size - 3]))
+                { 
+                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
+                    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
+                    res += contri / pdf * 3.14*2;
+                    float mis_weight = Shift::GeometryTerm(pathBuffer[buffer_size - 1], pathBuffer[buffer_size - 2]);
+                    float mis_weight2 = Shift::GeometryTerm(pathBuffer[buffer_size - 3], pathBuffer[buffer_size - 2]);
+                    res *= 0* mis_weight2 / (mis_weight + mis_weight2);
+                }
+
+
 
                 result += res;
             }
@@ -1024,6 +1039,13 @@ extern "C" __global__ void __raygen__shift_combine()
  //                       float3 res = contri / pdf / pmf;
                         float3 res = contri / pdf / pmf * light_subpath.inverPdfEst;// *1.225;
                         //if (float3weight(res) > 1)printf("evalFactor ratio rate %f\n", float3weight(fractFactor));
+                        
+                        ///////////////////////////////////
+                        ////////// MIS computation ////////
+                        ///////////////////////////////////
+                        //float mis_weight = Shift::GeometryTerm(finalPath.get(0), finalPath.get(1));
+                        //float mis_weight2 = Shift::GeometryTerm(eye_subpath, finalPath.get(0));
+                        //res *=  mis_weight / (mis_weight + mis_weight2);
                         if (!ISINVALIDVALUE(res))
                         {
                             result += res / CONNECTION_N;
