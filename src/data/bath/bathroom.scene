@@ -1,0 +1,702 @@
+material _unnamed_25
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_28
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_31
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_34
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_37
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_40
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_43
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_46
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_49
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_52
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_55
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BinBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BlackWoodLacquerBSDF
+{
+	 color 0.05000000074505806 0.05000000074505806 0.05000000074505806
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material CeramicBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material DarkBorderBSDF
+{
+	 color 0.05000000074505806 0.05000000074505806 0.05000000074505806
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material DarkPlasticBSDF
+{
+	 color 0.05000000074505806 0.05000000074505806 0.05000000074505806
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material None
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material LabelBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex bath\textures\Label.png
+}
+
+material MirrorBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material PlasticBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material RoughGlassBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material StainlessRoughBSDF
+{
+	 color 0.5369645953178406 0.5310379862785339 0.5316768288612366
+	 roughness 0.10000000149011612
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material TowelBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material TrimsBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material WallBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material WallRightBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 1.0
+	 metallic 0.0
+	 specular 0.00
+	 trans 0
+}
+
+material WoodBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+	 albedoTex bath\textures\WoodPanel.png
+}
+
+material WoodFloorBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+	 albedoTex bath\textures\WoodFloor.jpg
+}
+
+cameraSetting
+{
+	 eye 4.443150043487549 16.93440055847168 49.91019821166992
+	 lookat -0.11446662992238998 -0.11326023191213608 -0.9869495630264282
+	 fov 60
+}
+
+mesh
+{
+	 file bath\RoughGlass.obj
+	 material RoughGlassBSDF
+}
+
+mesh
+{
+	 file bath\Plastic.obj
+	 material PlasticBSDF
+}
+
+mesh
+{
+	 file bath\Label.obj
+	 material LabelBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0001.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0002.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0003.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\Towel_0001.obj
+	 material TowelBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0004.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\BlackWoodLacquer_0001.obj
+	 material BlackWoodLacquerBSDF
+}
+
+mesh
+{
+	 file bath\BlackWoodLacquer_0002.obj
+	 material BlackWoodLacquerBSDF
+}
+
+mesh
+{
+	 file bath\BlackWoodLacquer_0003.obj
+	 material BlackWoodLacquerBSDF
+}
+
+mesh
+{
+	 file bath\BlackWoodLacquer_0004.obj
+	 material BlackWoodLacquerBSDF
+}
+
+mesh
+{
+	 file bath\BlackWoodLacquer_0005.obj
+	 material BlackWoodLacquerBSDF
+}
+
+mesh
+{
+	 file bath\BlackWoodLacquer_0006.obj
+	 material BlackWoodLacquerBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0001.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0002.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\BlackWoodLacquer_0007.obj
+	 material BlackWoodLacquerBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0003.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0004.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0005.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0006.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0005.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0006.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0007.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0008.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0009.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0010.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0011.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\Mirror_0001.obj
+	 material MirrorBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0012.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\Towel_0002.obj
+	 material TowelBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0013.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\DarkPlastic_0001.obj
+	 material DarkPlasticBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0014.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0015.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0016.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\Towel_0003.obj
+	 material TowelBSDF
+}
+
+mesh
+{
+	 file bath\Towel_0004.obj
+	 material TowelBSDF
+}
+
+mesh
+{
+	 file bath\Bin.obj
+	 material BinBSDF
+}
+
+mesh
+{
+	 file bath\DarkPlastic_0002.obj
+	 material DarkPlasticBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0017.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0018.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0019.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0020.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0021.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\StainlessRough_0022.obj
+	 material StainlessRoughBSDF
+}
+
+mesh
+{
+	 file bath\Ceramic_0001.obj
+	 material CeramicBSDF
+}
+
+mesh
+{
+	 file bath\Ceramic_0002.obj
+	 material CeramicBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0007.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0008.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\Wood_0001.obj
+	 material WoodBSDF
+}
+
+mesh
+{
+	 file bath\Wood_0002.obj
+	 material WoodBSDF
+}
+
+mesh
+{
+	 file bath\Ceramic_0003.obj
+	 material CeramicBSDF
+}
+
+mesh
+{
+	 file bath\DarkBorder.obj
+	 material DarkBorderBSDF
+}
+
+mesh
+{
+	 file bath\Wood_0003.obj
+	 material WoodBSDF
+}
+
+mesh
+{
+	 file bath\WoodFloor.obj
+	 material WoodFloorBSDF
+}
+
+mesh
+{
+	 file bath\WallRight.obj
+	 material WallRightBSDF
+}
+
+mesh
+{
+	 file bath\Wall_0009.obj
+	 material WallBSDF
+}
+
+mesh
+{
+	 file bath\Mirror_0002.obj
+	 material MirrorBSDF
+}
+
+mesh
+{
+	 file bath\Trims.obj
+	 material TrimsBSDF
+}
+
+mesh
+{
+	 file bath\Wood_0004.obj
+	 material WoodBSDF
+}
+
+mesh
+{
+	 file bath\_unnamed_24.obj
+	 material _unnamed_25
+}
+
+mesh
+{
+	 file bath\_unnamed_27.obj
+	 material _unnamed_28
+}
+
+mesh
+{
+	 file bath\_unnamed_30.obj
+	 material _unnamed_31
+}
+
+mesh
+{
+	 file bath\_unnamed_33.obj
+	 material _unnamed_34
+}
+
+mesh
+{
+	 file bath\_unnamed_36.obj
+	 material _unnamed_37
+}
+
+mesh
+{
+	 file bath\_unnamed_39.obj
+	 material _unnamed_40
+}
+
+mesh
+{
+	 file bath\_unnamed_42.obj
+	 material _unnamed_43
+}
+
+mesh
+{
+	 file bath\_unnamed_45.obj
+	 material _unnamed_46
+}
+
+mesh
+{
+	 file bath\_unnamed_48.obj
+	 material _unnamed_49
+}
+
+mesh
+{
+	 file bath\_unnamed_51.obj
+	 material _unnamed_52
+}
+
+mesh
+{
+	 file bath\_unnamed_54.obj
+	 material _unnamed_55
+}
+
+light
+{
+	 position -11.650489807128906 11.179399490356445 -20.275253295898438
+	 emission 32.39930419921875 28.40859375 24.28322265625
+	 v1 8.349510192871094 11.179399490356445 -20.27525520324707
+	 v2 -11.650489807128906 31.179399490356445 -20.275253295898438
+	 type Quad
+}
+

@@ -549,7 +549,7 @@ namespace Tracer {
 
     }
     static __forceinline__ __device__ void traceEyeSubPath(
-        OptixTraversableHandle      handle,
+        OptixTraversableHandle      handle, 
         float3                      ray_origin,
         float3                      ray_direction,
         float                       tmin,
@@ -1016,7 +1016,7 @@ RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& nor
 
     if (NDotL == 0 || NDotV == 0) return make_float3(0);
     float refract;
-    if ((1 - NDotV * NDotV) * eta * eta >= 1)// ȫ����
+    if ((1 - NDotV * NDotV) * eta * eta >= 1)
         refract = 1;
     else
         refract = 0;
@@ -1061,11 +1061,10 @@ RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& nor
             (NDotL * NDotL * sqrtDenom * sqrtDenom));
     //if(out.x!=0)
     //    printf("trans: %f,%f,%f\n", out.x, out.y, out.z);
-
-
     return out;
 
 }
+
 RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
 {
      
@@ -1092,7 +1091,7 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
     float VDotH = dot(V, H);
 
     float refract;
-    if ((1 - NDotV * NDotV) * eta * eta >= 1)// ȫ����
+    if ((1 - NDotV * NDotV) * eta * eta >= 1)
         refract = 1;
     else
         refract = 0;
@@ -1164,9 +1163,10 @@ RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, cons
     //printf("eval: %f,%f,%f\n", out.x, out.y, out.z);
     return out;
 }
+
+
 RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed)
 {
-
     //float3 N = normal;
     //float3 V = in_dir;
     //prd.origin = state.fhp;
@@ -1397,7 +1397,6 @@ RT_FUNCTION float3 Sample_shift_refract(const MaterialData::Pbr& mat, const floa
 
     float3 dir;
     Onb onb(N); // basis
-
     {
         float a = max(0.001f, mat.roughness);
 

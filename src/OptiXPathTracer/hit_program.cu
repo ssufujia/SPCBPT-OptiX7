@@ -10,7 +10,7 @@
 #include "cuProg.h"
 #include "rmis.h"
 
-//#define PT_BRDF_STRATEGY_ONLY
+#define PT_BRDF_STRATEGY_ONLY
 //#define PT_NEE_STRATEGY_ONLY
 
 extern "C" __global__ void __anyhit__radiance()

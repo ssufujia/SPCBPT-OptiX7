@@ -1,0 +1,12 @@
+# Blender v3.4.1 OBJ File: 'livingroom.blend'
+# www.blender.org
+mtllib Walls_0001.mtl
+o Walls_0001
+v -1.972186 -0.166450 8.182830
+v 1.686574 -0.166450 8.182830
+v -1.972186 3.225090 8.182830
+v 1.686574 3.225090 8.182830
+vn 0.0000 0.0000 1.0000
+usemtl WallsBSDF
+s off
+f 1//1 2//1 4//1 3//1

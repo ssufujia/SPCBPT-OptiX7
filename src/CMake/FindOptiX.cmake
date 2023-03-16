@@ -52,7 +52,7 @@ endif()
 find_path(OptiX_INCLUDE
   NAMES optix.h
   PATHS "${OptiX_INSTALL_DIR}/include"
-  NO_DEFAULT_PATH
+  "C:/ProgramData/NVIDIA Corporation/OptiX SDK 7.5.0/include"
   )
 find_path(OptiX_INCLUDE
   NAMES optix.h

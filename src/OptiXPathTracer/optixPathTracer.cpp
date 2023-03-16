@@ -778,13 +778,13 @@ int main( int argc, char* argv[] )
 //                 string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //string scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
-        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+//        string scenePath = string(SAMPLES_DIR) + string("/data/easy/easy.scene");
 
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
-//         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
+         string scenePath = string(SAMPLES_DIR) + string("/data/newlive/livingroom.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
@@ -826,7 +826,7 @@ int main( int argc, char* argv[] )
         //pre tracing
         { 
             handleCameraUpdate(params);
-            preprocessing(TScene);
+            //preprocessing(TScene);
         }
 
         if(false)

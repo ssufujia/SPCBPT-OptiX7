@@ -1,0 +1,13 @@
+# Blender MTL File: 'livingroom.blend'
+# Material Count: 1
+
+newmtl FloorBSDF
+Ns 375.403317
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd E:\\model\\living-room-2\\textures\\wood4.jpg
