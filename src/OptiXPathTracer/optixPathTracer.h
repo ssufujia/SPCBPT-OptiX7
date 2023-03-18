@@ -60,12 +60,12 @@
 #define LDSE_ENABLE     0
 
 /* LSAE */
-#define LSAE_ENABLE     0
+#define LSAE_ENABLE     1
 
 #define LSE_ENABLE       0
 
 /* LSDE 是主要的焦散来源 */
-#define LSDE_ENABLE     1
+#define LSDE_ENABLE     0
 
 
 #include"whitted.h"

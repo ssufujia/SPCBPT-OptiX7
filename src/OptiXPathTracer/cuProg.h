@@ -3858,13 +3858,10 @@ namespace Shift
         /* 目前只支持顶点数量为2的情况 */
         if (path.size() != 2 || glossy(path.get(0)) == false)
         {
-            // printf("C %d %d\n", path.size(), glossy(path.get(0)));
             return 0;
         }
-        //printf("A");
+
         Light light = Tracer::params.lights[path.get(1).materialId];
-        //        light_sample.ReverseSample(light, path.get(1).uv);
-        //        float pdf_ref = light_sample.pdf * tracingPdf(path.get(1),path.get(0));
         float3 sP;
         /* 估计pdf上界 */
         float upperbound = getClosestGeometry_upperBound(
@@ -3875,12 +3872,10 @@ namespace Shift
         );
 
         float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
-        //if (pdf_ref_sum / upperbound > 1)
-            //printf("bound compute test %f %f %f\n", pdf_ref_sum / upperbound, length(sP - path.get(0).position),length(path.get(1).position - path.get(0).position));
         int pdf_ref_count = 1;
         float bound = pdf_ref_sum / pdf_ref_count * 2;
         bound = upperbound;
-        //bound += path.get(1).pdf; 
+        
         float ans = 0; 
 
         float variance_accumulate = 0;
@@ -3923,7 +3918,7 @@ namespace Shift
                     /* 从glossy顶点出发进行追踪 */
                     bool success_hit;
                     np = Tracer::FastTrace(v, dir, success_hit);
-                    /* 这里直接continue正确吗？ */
+                    /* 这里直接continue是正确的 */
                     if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
                         continue;
                     Light light = Tracer::params.lights[np.materialId];
@@ -3983,8 +3978,6 @@ namespace Shift
         ans = average_accumulate / suc_int;
         variance_accumulate /= suc_int;
         variance_accumulate -= ans * ans;
-       // printf("average %f variance %f %d %d\n", ans, variance_accumulate, pdf_ref_count, suc_int);
-        //printf("compare pdf %f %f %d\n", ans, 1.0 / path.get(0).pdf, pdf_ref_count);
         return ans;
     }
 
