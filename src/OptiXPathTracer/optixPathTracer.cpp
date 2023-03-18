@@ -775,15 +775,15 @@ int main( int argc, char* argv[] )
 
     try
     {
-                 string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+          //       string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //tring scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
 
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-//         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
-//         string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
+ //        string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
+         string scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");

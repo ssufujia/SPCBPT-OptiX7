@@ -80,8 +80,6 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     float3 inver_ray_direction = -ray_direction;  
  
 
-     
-
     //printf("hit light source %d %f %f %f\n", hit_group_data->material_data.light_id,
     //    hit_group_data->material_data.emissive_factor.x, hit_group_data->material_data.emissive_factor.y, hit_group_data->material_data.emissive_factor.z);
       
@@ -150,30 +148,37 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
 }
 extern "C" __global__ void __closesthit__lightsource()
 {
-    //const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
-    //const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
-
-
-
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
 
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
+    /* 打到了哪个光源? */
     const Light& light = Tracer::params.lights[hit_group_data->material_data.light_id];
     const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
+    /* 算一算打到点的采样 pdf（用于MIS） */
     Tracer::lightSample light_sample;
     light_sample.ReverseSample(light, geom.texcoord->UV);
     float t_hit = optixGetRayTmax();
     float3 ray_direction = optixGetWorldRayDirection();
 
-    if (dot(prd->ray_direction, light_sample.normal()) <= 0
-        && (prd->depth == 0 || prd->depth <= 6)
-#ifdef CAUSTIC_SPECIAL
-        && (prd->depth == 0 || prd->depth <= 2)
-       // && (prd->depth != 2)
-        && ((prd->caustic_bounce_state == 0 && prd->depth == 0) || prd->caustic_bounce_state == 2)
-#endif // CAUSTIC_SPECIAL 
-        )
+    if ( /* 打中的光源法向要求与光线方向相反 */
+        (dot(prd->ray_direction, light_sample.normal()) <= 0 ) && (
+        /* 所有光路 */
+            ALL_ENABLE ||
+        /* 光源直击, L - E */
+            (LE_ENABLE && prd->depth == 0) ||
+        /* L - D - E */
+            (LDE_ENABLE && prd->depth == 1 && prd->caustic_bounce_state == 0b0) || 
+        /* L - D - S - E */
+            (LDSE_ENABLE && prd->depth == 2 && prd->caustic_bounce_state == 0b01) ||
+        /* L - S - * - E */
+            (LSAE_ENABLE && prd->depth > 0 && (prd->caustic_bounce_state & (1ll << (prd->depth-1)))) ||
+        /* L - S - E */
+            (LSE_ENABLE && prd->depth == 1 && prd->caustic_bounce_state == 0b1) ||
+        /* L - S - D - E */
+            (LSDE_ENABLE && prd->depth == 2 && prd->caustic_bounce_state == 0b10) 
+        ))
     {
+        /* PT 加 NEE 的 MIS */
         float MIS_weight = 1;
         if (prd->depth != 0 )
         {
@@ -184,17 +189,14 @@ extern "C" __global__ void __closesthit__lightsource()
         }
 #ifdef PT_BRDF_STRATEGY_ONLY 
         MIS_weight = 1;
-#endif // PT_BRDF_STRATEGY_ONLY 
-
+#endif 
 #ifdef PT_NEE_STRATEGY_ONLY 
         MIS_weight = 0;
-#endif // PT_BRDF_STRATEGY_ONLY 
-
+#endif 
         prd->result += prd->throughput * light_sample.emission * MIS_weight;
     }
-    //printf("hit light source %d %f %f %f\n", hit_group_data->material_data.light_id,
-    //    hit_group_data->material_data.emissive_factor.x, hit_group_data->material_data.emissive_factor.y, hit_group_data->material_data.emissive_factor.z);
     prd->done = true;
+    return;
 }
 
 RT_FUNCTION void ColorTexSample(const LocalGeometry& geom, MaterialData::Pbr& pbr)
@@ -518,43 +520,32 @@ extern "C" __global__ void __closesthit__lightSubpath()
         return;
     }
 }
-extern "C" __global__ void __closesthit__radiance()
+/* 这个函数应该是 PT 在打到普通面片时被调用 */
+extern "C" __global__ void __closesthit__radiance() 
 {
+    // printf("__closesthit__radiance()\n");
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>( optixGetSbtDataPointer() );
     const LocalGeometry          geom           = getLocalGeometry( hit_group_data->geometry_data );
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
 
-    //
-    // Retrieve material data
-    //
+    /* Retrieve material data */
     MaterialData::Pbr currentPbr = hit_group_data->material_data.pbr;
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
-    //float3 N = NormalTexSample(geom, hit_group_data->material_data);
-    float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
-//    if (dot(N, optixGetWorldRayDirection()) > 0.f)
-//        N = -N; 
+    float3 N = geom.N;
     float3 in_dir = -prd->ray_direction;
     float3 result = make_float3( 0.0f );
 
     float rr_rate = Tracer::rrRate(currentPbr);
     prd->glossy_bounce = Shift::glossy(currentPbr) ? prd->glossy_bounce : false;
-    if (prd->caustic_bounce_state == 0)
-    {
-        prd->caustic_bounce_state = Shift::glossy(currentPbr) ? 0 : 1;
-    }
-    else if (prd->caustic_bounce_state == 1 )
-    {
-        prd->caustic_bounce_state = Shift::glossy(currentPbr) ? 2 : 3;
-    }
-    else if(prd->caustic_bounce_state == 2)
-    {
-      //  prd->caustic_bounce_state = Shift::glossy(currentPbr) ? 2 : 3; 
-    }
-    //if (currentPbr.roughness > .9 && currentPbr.metallic < 0.1)rr_rate = fmaxf(make_float3(currentPbr.base_color));
 
-
-
+    /*  prd->caustic_bounce_state 用二进制按LSB到MSB的顺序编码了当前路径，0 代表 D, 1 代表 S */
+    /* 比如 caustic_bounce_state 为 0010，depth 为 4，说明当前路径为 E - D - S - D - D*/
+    /* caustic_bounce_state 大小为 long long 以保证够用 */
+    prd->caustic_bounce_state = (prd->caustic_bounce_state) | 
+        ((long long) Shift::glossy(currentPbr) << prd->depth);
+ 
+    /* 计算 NEE */
     int light_id = clamp(static_cast<int>(floorf(rnd(prd->seed) * Tracer::params.lights.count)), int(0), int(Tracer::params.lights.count - 1));
     Light light = Tracer::params.lights[light_id];
     if (light.type == Light::Type::QUAD)
@@ -618,7 +609,6 @@ extern "C" __global__ void __closesthit__radiance()
             float3 eval = Tracer::Eval(currentPbr, N, L, V);
             result += prd->throughput * light_sample.emission / light_sample.pdf * eval * L_dot_N;
         }
-
     }
 
     //const LocalGeometry geom = getLocalGeometry(hit_group_data->geometry_data);
@@ -629,9 +619,9 @@ extern "C" __global__ void __closesthit__radiance()
     //prd->depth += 1;  
     //prd->result += result;
 
-    if (prd->depth > 5) result *= 0;
+    if (prd->depth > 5) 
+        result *= 0;
     prd->currentResult += result;
-    
     prd->origin = geom.P;
 
     if (rnd(prd->seed) > rr_rate)
@@ -650,8 +640,6 @@ extern "C" __global__ void __closesthit__radiance()
             float cos_out = abs(dot(prd->ray_direction, N));
             float sin_in = sqrt(1 - cos_in * cos_in);
             float sin_out = sqrt(1 - cos_out * cos_out);
-         //   if(sin_in>.9)
-         //       printf("get result, %f %f %f %f %f\n", sin_in, sin_out,sin_in / sin_out, float3weight(bsdf), pdf);
         }
         if (pdf > 0.0f)
         {

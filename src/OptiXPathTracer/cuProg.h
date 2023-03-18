@@ -572,7 +572,8 @@ namespace Tracer {
             //RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
             //RayType::RAY_TYPE_COUNT,           // SBT stride
             //RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
-            u0, u1);
+            u0, u1
+        );
 
     }
 
@@ -1701,7 +1702,6 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         }
         return pdf * float3weight(connectRate_SOL(eye_subspace_id, light_subspace_id, light_contri));
     }
-
     RT_FUNCTION float rrRate(float3 color)
     {
         float rr_rate = fmaxf(color);
@@ -3929,7 +3929,7 @@ namespace Shift
 
         /* 使用老方法还是用纯RR？ */
         bool RR_option = 0;
-        float RR_rate = 0.75;
+        float RR_rate = 0.8;
 
         /* pdf估计的核心流程 */
         for (int i = 0; i < 50; i++)
@@ -3942,8 +3942,10 @@ namespace Shift
             while (true)
             {
                 loop_cnt += 1;
-                if (loop_cnt > 1000) 
+                if (loop_cnt > 1000) {
+                    // printf("Break due to loop_cnt > 1000 \n");
                     break;
+                }
                 ans += factor / bound;
                 BDPTVertex& v = path.get(0);
                 float ratio = 0.8;
@@ -4006,13 +4008,12 @@ namespace Shift
 
                     float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
                     if (rnd(seed) > rr_rate)
-                    {
                         break;
-                    }
                     factor *= continue_rate / rr_rate;
                 }
                 
             }  // end while
+            // printf("loop_cnt: %d\n", loop_cnt);
             variance_accumulate += ans * ans;
             average_accumulate += ans;
             /* 提前退出了 */

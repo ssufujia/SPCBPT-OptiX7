@@ -99,7 +99,7 @@ struct PayloadRadiance
     unsigned int seed;
     bool done;
     bool glossy_bounce;
-    short caustic_bounce_state;
+    long long caustic_bounce_state;
     RT_FUNCTION PayloadRadiance()
     {
         result = make_float3(0); 

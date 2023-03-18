@@ -39,7 +39,21 @@
 #define DIR_JUDGE 0
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
 #define RMIS_FLAG true
-#define CAUSTIC_SPECIAL
+
+/* 控制 PT 渲染哪些路径 */
+#define ALL_ENABLE       0
+#define LE_ENABLE         1
+#define LDE_ENABLE       0
+#define LDSE_ENABLE     0
+
+/* A 代表 Any，即通配符 */
+/* LSDE 是主要的焦散 */
+#define LSAE_ENABLE     1
+#define LSE_ENABLE       0
+#define LSDE_ENABLE     0
+
+
+
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
