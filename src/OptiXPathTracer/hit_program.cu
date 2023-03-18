@@ -162,21 +162,26 @@ extern "C" __global__ void __closesthit__lightsource()
 
     if ( /* 打中的光源法向要求与光线方向相反 */
         (dot(prd->ray_direction, light_sample.normal()) <= 0 ) && (
-        /* 所有光路 */
-            ALL_ENABLE ||
         /* 光源直击, L - E */
-            (LE_ENABLE && prd->depth == 0) ||
-        /* L - D - E */
-            (LDE_ENABLE && prd->depth == 1 && prd->caustic_bounce_state == 0b0) || 
-        /* L - D - S - E */
-            (LDSE_ENABLE && prd->depth == 2 && prd->caustic_bounce_state == 0b01) ||
-        /* L - S - * - E */
-            (LSAE_ENABLE && prd->depth > 0 && (prd->caustic_bounce_state & (1ll << (prd->depth-1)))) ||
-        /* L - S - E */
-            (LSE_ENABLE && prd->depth == 1 && prd->caustic_bounce_state == 0b1) ||
-        /* L - S - D - E */
-            (LSDE_ENABLE && prd->depth == 2 && prd->caustic_bounce_state == 0b10) 
-        ))
+            (LE_ENABLE && prd->depth == 0) || (
+            /* 是否是 S_ONLY */
+                (!S_ONLY || prd->path_record) && (
+                /* L - * - E，所有光路 */
+                    LAE_ENABLE ||
+                /* L - D - E */
+                    (LDE_ENABLE && prd->depth == 1 && prd->path_record == 0b0) || 
+                /* L - D - S - E */
+                    (LDSE_ENABLE && prd->depth == 2 && prd->path_record == 0b01) ||
+                /* L - S - * - E */
+                    (LSAE_ENABLE && prd->depth > 0 && (prd->path_record & (1ll << (prd->depth-1)))) ||
+                /* L - S - E */
+                    (LSE_ENABLE && prd->depth == 1 && prd->path_record == 0b1) ||
+                /* L - S - D - E */
+                    (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) 
+                )
+            )
+        )
+    )
     {
         /* PT 加 NEE 的 MIS */
         float MIS_weight = 1;
@@ -539,10 +544,10 @@ extern "C" __global__ void __closesthit__radiance()
     float rr_rate = Tracer::rrRate(currentPbr);
     prd->glossy_bounce = Shift::glossy(currentPbr) ? prd->glossy_bounce : false;
 
-    /*  prd->caustic_bounce_state 用二进制按LSB到MSB的顺序编码了当前路径，0 代表 D, 1 代表 S */
-    /* 比如 caustic_bounce_state 为 0010，depth 为 4，说明当前路径为 E - D - S - D - D*/
-    /* caustic_bounce_state 大小为 long long 以保证够用 */
-    prd->caustic_bounce_state = (prd->caustic_bounce_state) | 
+    /*  prd->path_record 用二进制按LSB到MSB的顺序编码了当前路径，0 代表 D, 1 代表 S */
+    /* 比如 path_record 为 0010，depth 为 4，说明当前路径为 E - D - S - D - D*/
+    /* path_record 大小为 long long 以保证够用 */
+    prd->path_record = (prd->path_record) | 
         ((long long) Shift::glossy(currentPbr) << prd->depth);
  
     /* 计算 NEE */

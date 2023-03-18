@@ -40,18 +40,32 @@
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
 #define RMIS_FLAG true
 
+/* BDPT 控制，一旦启用，则只会渲染指定光路 */
+#define BDPT_CONTROL 1
+
+/* 只渲染含有 S 的光路，LE除外 */
+/* 在 PT 控制中，优先级高于 ALL_ENABLE */
+/* 在 BDPT 控制中，这个选项很重要！ */
+#define S_ONLY 1
+
 /* 控制 PT 渲染哪些路径 */
-#define ALL_ENABLE       0
+/* L 代表光源，E 为摄像机，S 为Specular，这里指glossy表面 ，即包括镜面和折射面 */
+/* A 代表 Any，即通配符 */
+
+/* L - * - E，即所有光路 */
+#define LAE_ENABLE       0
+
 #define LE_ENABLE         1
 #define LDE_ENABLE       0
 #define LDSE_ENABLE     0
 
-/* A 代表 Any，即通配符 */
-/* LSDE 是主要的焦散 */
-#define LSAE_ENABLE     1
-#define LSE_ENABLE       0
-#define LSDE_ENABLE     0
+/* LSAE */
+#define LSAE_ENABLE     0
 
+#define LSE_ENABLE       0
+
+/* LSDE 是主要的焦散来源 */
+#define LSDE_ENABLE     1
 
 
 #include"whitted.h"

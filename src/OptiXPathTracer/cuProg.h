@@ -428,6 +428,7 @@ namespace Tracer {
         unsigned int seed;
         int depth;
         bool done;
+        long long path_record;
         RT_FUNCTION void clear()
         {
             path.clear();
@@ -435,6 +436,7 @@ namespace Tracer {
             done = false;
             throughput = make_float3(1);
             result = make_float3(0.0);
+            path_record = 0;
         }
     };
 
@@ -2150,48 +2152,6 @@ namespace Shift
     {
         return v.type == BDPTVertex::Type::NORMALHIT && RefractionCase(Tracer::params.materials[v.materialId]);
     }
-
-    //RT_FUNCTION bool back_trace_tanScale(const BDPTVertex& midVertex, const BDPTVertex& originLast, float3 anchor, float tan_scale, BDPTVertex& new_vertex, float& pdf)
-    //{
-    //    float3 in_dir = normalize(anchor - midVertex.position);
-    //    float3 normal = midVertex.normal;
-    //    float3 reflect = 2.0f * dot(in_dir, normal) * normal - in_dir;
-    //    
-    //    float3 origin_out = normalize(originLast.position - midVertex.position); 
-    //    float cosTheta = dot(origin_out, reflect);
-    //    if (cosTheta < 0.0)return false;
-    //    float3 cosProject = cosTheta * reflect;
-    //    float3 biasVector = origin_out - cosProject; 
-    //    float3 new_out = cosProject + tan_scale * biasVector;
-    //    float3 new_dir = normalize(new_out); 
-    //    //MaterialData::Pbr mat = Tracer::params.materials[midVertex.materialId];
-    //    //mat.base_color = make_float4(midVertex.color, 1.0);
-    //    //float3 new_dir; //Tracer::Sample_shift_metallic(mat, midVertex.normal, in_dir, uv.x, uv.y);
-    //    Tracer::PayloadBDPTVertex payload;
-    //    payload.clear();
-    //    payload.seed = 0;
-    //    payload.ray_direction = new_dir;
-    //    payload.origin = midVertex.position;
-    //    init_EyeSubpath(payload.path, payload.origin, payload.ray_direction); 
-    //    float3 ray_direction = payload.ray_direction;
-    //    float3 ray_origin = payload.origin;
-    //    int begin_depth = payload.path.size;
-    //    Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
-    //        SCENE_EPSILON,  // tmin
-    //        1e16f,  // tmax
-    //        &payload);
-    //    if (payload.path.size == begin_depth)
-    //    {
-    //        return false;
-    //    }
-    //    new_vertex = payload.path.currentVertex();
-    //    float3 dirVec = new_vertex.position - midVertex.position;
-    //    float3 originVec = originLast.position - midVertex.position; 
-    //    pdf = 1.0 / tan_scale / tan_scale * dot(new_out, new_out) / dot(origin_out, origin_out) * abs(dot(normal, origin_out)) / abs(dot(normal, new_dir));
-    //    pdf /= 1.0 / dot(originVec, originVec) * abs(dot(origin_out, originLast.normal));
-    //    pdf *= 1.0 / dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
-    //    return true;
-    //}
      
     RT_FUNCTION float3 SampleControlled(float& duv_dwi, const MaterialData::Pbr& mat, const float3& N, const float3& V, float2 uv, bool is_refract, bool& sample_good)
     {
