@@ -59,11 +59,14 @@
 #define LDE_ENABLE       0
 #define LDSE_ENABLE     0
 
+/* LDSAE */
+#define LDSAE_ENABLE     0
+/* LDSDE */
+#define LDSDE_ENABLE     1
 /* LSAE */
-#define LSAE_ENABLE     1
-
+#define LSAE_ENABLE     0
+/* LSE */
 #define LSE_ENABLE       0
-
 /* LSDE 是主要的焦散来源 */
 #define LSDE_ENABLE     0
 
@@ -78,7 +81,6 @@ struct Subspace
     int size;
     float sum_pmf;
     float Q;
-
 };
 struct LightTraceParams
 {    

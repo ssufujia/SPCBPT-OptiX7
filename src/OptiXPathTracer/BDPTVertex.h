@@ -52,6 +52,8 @@ struct BDPTVertex
     short subspaceId;//subspace ID, consider to rename
     short depth;
 
+    long long path_record;
+
     //used for RMIS computing
     short lastZoneId;
     enum Type
@@ -66,10 +68,9 @@ struct BDPTVertex
     bool lastBrdf = false;
     bool isBrdf = false;
 
-    bool isLastVertex_direction;//if this vertex comes from the directional light 
+    bool isLastVertex_direction; //if this vertex comes from the directional light 
 
-
-    __host__ __device__ BDPTVertex() :isBrdf(false), lastBrdf(false) {}
+    __host__ __device__ BDPTVertex() :isBrdf(false), lastBrdf(false), path_record(0) {}
     __host__ __device__ bool is_LL_DIRECTION()const { return isLastVertex_direction; }
     __host__ __device__ bool is_DIRECTION()const { return type == BDPTVertex::Type::DIRECTION||type == BDPTVertex::Type::ENV; }
     __host__ __device__ bool hit_lightSource()const { return type == BDPTVertex::Type::ENV_MISS||type == BDPTVertex::Type::HIT_LIGHT_SOURCE; }

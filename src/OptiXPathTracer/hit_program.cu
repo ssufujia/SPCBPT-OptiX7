@@ -172,6 +172,8 @@ extern "C" __global__ void __closesthit__lightsource()
                     (LDE_ENABLE && prd->depth == 1 && prd->path_record == 0b0) || 
                 /* L - D - S - E */
                     (LDSE_ENABLE && prd->depth == 2 && prd->path_record == 0b01) ||
+                /* L - D - S - D - E */
+                    (LDSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b010) ||
                 /* L - S - * - E */
                     (LSAE_ENABLE && prd->depth > 0 && (prd->path_record & (1ll << (prd->depth-1)))) ||
                 /* L - S - E */
@@ -411,8 +413,6 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     if (!(prd->pdf > 0.0f))
         prd->done = true;
 
-
-
     //    prd->path.size += 1;
     prd->path.push();
     BDPTVertex& MidVertex = prd->path.currentVertex();
@@ -433,6 +433,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
 }
 extern "C" __global__ void __closesthit__lightSubpath()
 {
+    // printf("lightSubpath\n");
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
     const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
     Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
@@ -442,17 +443,16 @@ extern "C" __global__ void __closesthit__lightSubpath()
     MaterialData::Pbr currentPbr = hit_group_data->material_data.pbr;
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
-    float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
-//    if (dot(N, ray_direction) > 0.f)
-//        N = -N;
+    float3 N = geom.N;
+    // NormalTexSample(geom, hit_group_data->material_data);
+    // if (dot(N, ray_direction) > 0.f)
+    // N = -N;
     prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
     prd->pdf           = Tracer::Pdf(currentPbr, N, inver_ray_direction, prd->ray_direction);
     prd->origin        = geom.P;
     if (!(prd->pdf > 0.0f))
         prd->done = true;
     
-
-   
 //    prd->path.size += 1;
     prd->path.push();
     BDPTVertex& MidVertex = prd->path.currentVertex();
@@ -462,26 +462,20 @@ extern "C" __global__ void __closesthit__lightSubpath()
     MidVertex.normal = N;//这个在折射场景里需要进一步讨论
     MidVertex.type = BDPTVertex::Type::NORMALHIT;
     float pdf_G = abs(dot(MidVertex.normal, ray_direction) * dot(LastVertex.normal, ray_direction)) / (t_hit * t_hit);
+
     if (LastVertex.is_DIRECTION())
-    {
         pdf_G = abs(dot(MidVertex.normal, ray_direction) * dot(LastVertex.normal, ray_direction));
-    }
     if (LastVertex.isOrigin)
-    {
         MidVertex.flux = LastVertex.flux * pdf_G;
-    }
     else
-    {
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
-    }
+
     NextVertex.flux = Tracer::Eval(currentPbr, N, -ray_direction, prd->ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f); 
     NextVertex.singlePdf = prd->pdf;
      
     MidVertex.lastPosition = LastVertex.position;
     if (LastVertex.is_DIRECTION())
-    {
         MidVertex.lastPosition = MidVertex.position - ray_direction;
-    }
 
     MidVertex.color = make_float3(currentPbr.base_color);
     MidVertex.lastNormalProjection = abs(dot(LastVertex.normal, ray_direction));
@@ -500,30 +494,20 @@ extern "C" __global__ void __closesthit__lightSubpath()
 
     MidVertex.last_lum = Tracer::float3sum(LastVertex.flux / LastVertex.pdf);
 
-    {
-        MidVertex.lastSinglePdf = LastVertex.singlePdf;
-        MidVertex.isLastVertex_direction = LastVertex.depth == 0 && (LastVertex.is_DIRECTION());
-        if (LastVertex.isOrigin)
-        {
-            rmis::tracing_init_light(MidVertex, LastVertex);
-        }
-        else
-        {
-            rmis::tracing_update_light(MidVertex, LastVertex);
-        } 
+    MidVertex.lastSinglePdf = LastVertex.singlePdf;
+    MidVertex.isLastVertex_direction = LastVertex.depth == 0 && (LastVertex.is_DIRECTION());
+    if (LastVertex.isOrigin)
+        rmis::tracing_init_light(MidVertex, LastVertex);
+    else
+        rmis::tracing_update_light(MidVertex, LastVertex);
 
-        float r = rnd(prd->seed);
-        float rr_rate = Tracer::rrRate(currentPbr);
-        if (r > rr_rate)
-        {
-            prd->done = true;
-        }
-        else
-        {
-            NextVertex.singlePdf *= rr_rate;
-        }
-        return;
-    }
+    float r = rnd(prd->seed);
+    float rr_rate = Tracer::rrRate(currentPbr);
+    if (r > rr_rate)
+        prd->done = true;
+    else
+        NextVertex.singlePdf *= rr_rate;
+    return;
 }
 /* 这个函数应该是 PT 在打到普通面片时被调用 */
 extern "C" __global__ void __closesthit__radiance() 

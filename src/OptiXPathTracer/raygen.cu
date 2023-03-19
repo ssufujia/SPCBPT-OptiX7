@@ -635,16 +635,16 @@ extern "C" __global__ void __raygen__shift_combine()
         pathBuffer[buffer_size++] = payload.path.currentVertex(); 
 
         /* 如果视子路击中了光源 */
+        float3 res = make_float3(0.0);
         if (payload.path.hit_lightSource())
         {
             if (RMIS_FLAG)
             {
-                float3 res = lightStraghtHit(payload.path.currentVertex());
-                result += res;
+                res = lightStraghtHit(payload.path.currentVertex());
             }
             else
             {
-                float3 res = make_float3(0.0);
+                res = make_float3(0.0);
                 Tracer::lightSample light_sample;
                 light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
 
@@ -652,21 +652,21 @@ extern "C" __global__ void __raygen__shift_combine()
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
                 res += eval_path(pathBuffer, buffer_size, buffer_size);
-
-                /* 如果启用BDPT control，则PT 策略只会渲染 LE 光路 */
-                if (BDPT_CONTROL)
+            } 
+            /* 如果启用BDPT control，则PT 策略只会渲染 LE 光路 */
+            if (BDPT_CONTROL)
+            {
+                /* PT 策略只会渲染 LE */
+                if (LE_ENABLE)
                 {
-                    /* PT 策略只会渲染 LE */
-                    if (LE_ENABLE)
-                    {
-                        if (payload.depth != 1)
-                            res *= 0;
-                    }
-                    else
+                    if (payload.depth != 1)
                         res *= 0;
                 }
-                result += res;
+                else
+                    res *= 0;
             }
+            // printf("here0");
+            result += res;
             break;
         }
         
@@ -730,12 +730,14 @@ extern "C" __global__ void __raygen__shift_combine()
                     /* 光子路为 LS，视子路为 any */
                     ((LSAE_ENABLE && light_subpath.depth == 1) ||
                     /* 光子路为LS，视子路为DE，整条路径为LSDE */
-                    (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record)) &&
+                    (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
+                    /* 光子路为LDS，视子路为DE，整条路径为LDSDE */
+                    (LDSDE_ENABLE && light_subpath.depth == 2 && payload.depth == 1 && !payload.path_record)) &&
                     /* 其他约束条件 */
                     (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
                 {
-
+                    // printf("here\n");
                     float pmf = Tracer::params.sampler.path_count * final_pmf * caustic_connection_prob;
 
                     const BDPTVertex* light_ptr = &light_subpath;
@@ -795,6 +797,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size);
                         float3 res = contri / pdf / pmf;
 
+                        printf("here2\n");
                         if (!ISINVALIDVALUE(res))
                             result += res / CONNECTION_N;
                     }
@@ -851,6 +854,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
                     if (!ISINVALIDVALUE(res))
                     {
+                        printf("here3\n");
                         result += res / CONNECTION_N;
                     }
                 }
@@ -1164,34 +1168,40 @@ extern "C" __global__ void __raygen__lightTrace()
             /* 如果光子路追踪打到了面片 */
             if (payload.path.size > begin_depth) 
             {
+                BDPTVertex& curVertex = payload.path.currentVertex();
+                /* 更新光子路pathrecord */
+                payload.path_record = (payload.path_record) |
+                    ((long long)Shift::glossy(curVertex) << payload.depth);
+                curVertex.path_record = payload.path_record;
+
                 /* 进行残缺光子路pdf的计算，L -> S 长度为2的光子路 */
-                if (payload.path.currentVertex().depth == 1 && Shift::glossy(payload.path.currentVertex()))
+                if (curVertex.depth == 1 && curVertex.path_record)
                 {
                     BDPTVertex v[2];
                     /* 这是光源上的顶点 */
                     v[1] = payload.path.lastVertex();
                     /* 这是glossy表面上的顶点 */
-                    v[0] = payload.path.currentVertex();
+                    v[0] = curVertex;
                     /* 不知为何换成了pathContainer这个结构，步长为1，大小为2 */
                     /* 注意，path中光子路的顺序和v中是反的！ */
                     Shift::PathContainer path(v, 1, 2);
                     float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed);
-                    payload.path.currentVertex().inverPdfEst = pdf_inverse; 
+                    curVertex.inverPdfEst = pdf_inverse;
                     /* 还是会继续追下去 */
                 } 
-                /* L -> D -> S 光子路 */
-                else if (payload.path.currentVertex().depth == 2 && Shift::glossy(payload.path.currentVertex())
-                        && !Shift::glossy(payload.path.currentVertex())) 
+                /* L -> D -> S 光子路，即 S - D - L，0b10 */
+                else if (curVertex.depth == 2 && curVertex.path_record == 0b10)
                 {
                     // TBD
+                    curVertex.inverPdfEst = 1;
                 }
 
-                float e = payload.path.currentVertex().contri_float();
+                float e = curVertex.contri_float();
                 /* 如果这条光子路很废，直接扔了（虽然不知道怎么采出来的） */
                 if (e < 0.00001) 
                     break;
                 /* 放进LVC里面，一次放一个顶点，注意lightVertexCount在函数内部加一 */
-                pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias); 
+                pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
             }
             ray_direction = payload.ray_direction;
