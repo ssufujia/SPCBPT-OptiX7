@@ -40,9 +40,11 @@
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
 #define RMIS_FLAG true
 #define CAUSTIC_SPECIAL
+#define PG_ENABLE
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
+#include"PG_common.h"
 struct Subspace
 {   
     int jump_bias;
@@ -157,8 +159,8 @@ RT_FUNCTION __host__ float3 uv2dir(float2 uv)
     phi = asinf(2 * v - 1.0);
     theta = u / (0.5 * M_1_PIf) - M_PIf;
 
-    dir.y = cos(M_PIf * 0.5f - phi);
     dir.x = cos(phi) * sin(theta);
+    dir.y = cos(M_PIf * 0.5f - phi);
     dir.z = cos(phi) * cos(theta);
     return dir;
 }
@@ -215,6 +217,7 @@ struct PTParams :whitted::LaunchParams
     envInfo sky;
     EstimationParams estimate_pr;
 
+    PG_params pg_params;
 };
 typedef PTParams MyParams;
 

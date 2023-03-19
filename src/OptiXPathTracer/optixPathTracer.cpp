@@ -67,6 +67,7 @@
 #include<thrust/host_vector.h>
 #include"cuda_thrust/device_thrust.h"
 #include"decisionTree/classTree_host.h"
+#include"PG_host.h"
 #include"frame_estimation.h"
 using namespace std;
  
@@ -599,6 +600,42 @@ int launchPretrace(sutil::Scene& scene)
         );
     return validSample;
 }
+void path_guiding_params_setup(sutil::Scene& scene)
+{
+    int pg_training_data_batch = 5;
+#ifndef PG_ENABLE
+    params.pg_params.pg_enable = 0;
+    return;
+#endif // PG_ENABLE 
+    std::vector<path_guiding::PG_training_mat> g_mats;
+    g_mats = MyThrustOp::get_data_for_path_guiding();
+    for (int i = 0; i < pg_training_data_batch; i++)
+    {
+        MyThrustOp::clear_training_set();
+        const int target_sample_count = 1000000;
+        int current_sample_count = 0;
+        while (current_sample_count < target_sample_count)
+        {
+            current_sample_count += launchPretrace(scene);
+            printf("regenerate data for pg %d %d\n", current_sample_count, g_mats.size());
+        }
+        auto n_mats = MyThrustOp::get_data_for_path_guiding();
+        g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
+        MyThrustOp::clear_training_set();
+    }
+    printf("get mats size %d\n", g_mats.size());
+    PGTrainer_api.set_training_set(g_mats); 
+    PGTrainer_api.init(scene.aabb());
+    //build the tree until we reach max iteration (and the function return false) 
+    while (PGTrainer_api.build_tree())  {} 
+
+    params.pg_params.spatio_trees = MyThrustOp::spatio_tree_to_device(PGTrainer_api.s_tree.nodes.data(), PGTrainer_api.s_tree.nodes.size());
+    params.pg_params.quad_trees = MyThrustOp::quad_tree_to_device(PGTrainer_api.q_tree_group.nodes.data(), PGTrainer_api.q_tree_group.nodes.size());
+    params.pg_params.pg_enable = 1;
+    params.pg_params.epsilon_lum = 0.001;
+    params.pg_params.guide_ratio = 0.5;
+    //printf("pg tree check %f %f %f\n", PGTrainer_api.s_tree.getNode(0).m_mid.x, PGTrainer_api.s_tree.getNode(0).m_mid.y, PGTrainer_api.s_tree.getNode(0).m_mid.z);
+}
 void preprocessing(sutil::Scene& scene)
 {
     printf("BDPTVertex Size %d\n", sizeof(BDPTVertex));
@@ -828,6 +865,8 @@ int main( int argc, char* argv[] )
         { 
             handleCameraUpdate(params);
             preprocessing(TScene);
+
+            path_guiding_params_setup(TScene);
         }
 
         if(false)

@@ -12,7 +12,7 @@
 #include"../../cuda/MaterialData.h"
 #include"../../cuda/BufferView.h"
 #include<thrust/host_vector.h>
-
+#include"../PG_common.h"
 void useCUDA();
 
 
@@ -140,6 +140,11 @@ namespace MyThrustOp
     thrust::device_ptr<float> envMapCMFBuild(float* pmf, int size);
     thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size); 
     thrust::host_vector<float4> copy_to_host(float4* data, int size);
+    std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas = -1);
+
+    path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size);
+    path_guiding::Spatio_tree_node* spatio_tree_to_device(path_guiding::Spatio_tree_node* a, int size);
+    void clear_training_set();
 }
 
 

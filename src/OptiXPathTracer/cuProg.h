@@ -1172,8 +1172,14 @@ namespace Tracer
         //printf("eval: %f,%f,%f\n", out.x, out.y, out.z);
         return out;
     }
-    RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed)
+    RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed, float3 position = make_float3(0.0), bool use_pg = false)
     {
+        if (use_pg && Tracer::params.pg_params.pg_enable)
+        {
+            //printf("A %f\n", Tracer::params.pg_params.guide_ratio);
+            if(rnd(seed) < Tracer::params.pg_params.guide_ratio)
+                return Tracer::params.pg_params.sample(seed, position);
+        }
 
         //float3 N = normal;
         //float3 V = in_dir;
@@ -1310,40 +1316,12 @@ namespace Tracer
         return dir;
     }
 
-    RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L, float3 position = make_float3(0.0), bool eye_side = false)
+    RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L, float3 position = make_float3(0.0), bool use_pg = false)
     {
 
         //return abs(dot(L, normal)) * (.5f / M_PIf);
 
-
-        if (false && mat.trans > .9)
-        {
-            float pdf = 0;
-            float3 reflect_half = normalize(V + L);
-            float cosTheta_reflect = abs(dot(reflect_half, normal));
-            float duv_dhalf_ref = GTR2(cosTheta_reflect, mat.roughness * 3) * cosTheta_reflect;
-            float dhalf_dwi = 1 / (4 * abs(dot(reflect_half, V)));
-
-            float reflect_rate = .5;
-            float eta = 1 / mat.eta;
-            if (dot(normal, V) < 0)eta = 1 / eta;
-
-            float cos_i = abs(dot(reflect_half, V));
-            float sin_i = sqrt(1 - cos_i * cos_i);
-            float sin_t2 = sin_i * eta * eta;
-            if (sin_t2 > 1) reflect_rate = 1;
-            pdf += duv_dhalf_ref * dhalf_dwi * reflect_rate;
-
-
-            float3 refract_half = Shift::refract_half_fine(V, L, normal, mat.eta);
-            float cosTheta_refract = abs(dot(refract_half, normal));
-            float duv_d_half_refract = GTR2(cosTheta_refract, mat.roughness * 3) * cosTheta_refract;
-            float dhalf_dwi_refract = (Shift::dwh_dwi_refract(refract_half, V, L, eta));
-            float dwo_dwi = dot(V, normal) > 0 ? mat.eta * mat.eta : 1 / (mat.eta * mat.eta);
-            pdf += duv_d_half_refract * dhalf_dwi_refract * .5 * dwo_dwi;
-
-            return pdf;
-        }
+         
 #ifdef BRDF
         if (mat.brdf)
             return 1.0f;// return abs(dot(L, normal));
@@ -1428,7 +1406,13 @@ namespace Tracer
                 pdf /= (mat.eta * mat.eta);
             }
         }
-        */
+        */ 
+
+        if (use_pg && Tracer::params.pg_params.pg_enable)
+        { 
+            pdf *= 1 - Tracer::params.pg_params.guide_ratio;
+            pdf += Tracer::params.pg_params.guide_ratio * Tracer::params.pg_params.pdf(position, L);
+        }
         return pdf;
     }
 RT_FUNCTION float3 Sample_shift_refract(const MaterialData::Pbr& mat, const float3& N, const float3& V, float r1, float r2, bool& refract_good)
