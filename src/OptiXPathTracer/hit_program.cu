@@ -73,16 +73,12 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
         return;
     }
 
-    
     const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
     float t_hit = optixGetRayTmax();
     float3 ray_direction = optixGetWorldRayDirection();
     float3 inver_ray_direction = -ray_direction;  
  
 
-    //printf("hit light source %d %f %f %f\n", hit_group_data->material_data.light_id,
-    //    hit_group_data->material_data.emissive_factor.x, hit_group_data->material_data.emissive_factor.y, hit_group_data->material_data.emissive_factor.z);
-      
     prd->path.push();
     BDPTVertex& MidVertex = prd->path.currentVertex();// prd.stackP->v[(prd.stackP->size) % STACKSIZE];
     BDPTVertex& LastVertex = prd->path.lastVertex();// prd.stackP->v[(prd.stackP->size - 1) % STACKSIZE];
@@ -96,7 +92,6 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     float lightPdf = light_sample.pdf;
      
     
-
     float pdf_G = abs(dot(MidVertex.normal, ray_direction) * dot(LastVertex.normal, ray_direction)) / (t_hit * t_hit);
     if (LastVertex.isOrigin)
     {
@@ -106,7 +101,6 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     {
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G * light_sample.emission;
     }
-
 
 
     MidVertex.lastPosition = LastVertex.position;
@@ -125,12 +119,9 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
 
     MidVertex.depth = LastVertex.depth + 1;
 
-
-
     if (MidVertex.depth == 1)
     {
-        MidVertex.RMIS_pointer = 1.0;
-         
+        MidVertex.RMIS_pointer = 1.0;         
         return;
     }
 
@@ -529,7 +520,7 @@ extern "C" __global__ void __closesthit__radiance()
     prd->glossy_bounce = Shift::glossy(currentPbr) ? prd->glossy_bounce : false;
 
     /*  prd->path_record 用二进制按LSB到MSB的顺序编码了当前路径，0 代表 D, 1 代表 S */
-    /* 比如 path_record 为 0010，depth 为 4，说明当前路径为 E - D - S - D - D*/
+    /* 比如 path_record 为 0010，depth 为 4，说明当前路径为 D - D - S - D - E */
     /* path_record 大小为 long long 以保证够用 */
     prd->path_record = (prd->path_record) | 
         ((long long) Shift::glossy(currentPbr) << prd->depth);

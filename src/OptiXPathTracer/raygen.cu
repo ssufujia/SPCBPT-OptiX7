@@ -725,7 +725,8 @@ extern "C" __global__ void __raygen__shift_combine()
                 const BDPTVertex& light_subpath = *light_subpath_p;
 
                 float final_pmf = guide_ratio * (pmf_firstStage * pmf_secondStage) + (1 - guide_ratio) * pmf_uniform; 
-               
+
+
                 if (
                     /* 光子路为 LS，视子路为 any */
                     ((LSAE_ENABLE && light_subpath.depth == 1) ||
@@ -738,9 +739,8 @@ extern "C" __global__ void __raygen__shift_combine()
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
                 {
                     // printf("here\n");
-                    float pmf = Tracer::params.sampler.path_count * final_pmf * caustic_connection_prob;
-
                     const BDPTVertex* light_ptr = &light_subpath;
+                    float pmf = Tracer::params.sampler.path_count * final_pmf * caustic_connection_prob;
 
                     if (light_subpath.depth < SHIFT_VALID_SIZE - 1)
                     {
@@ -750,28 +750,72 @@ extern "C" __global__ void __raygen__shift_combine()
 
                         float pdf_retrace;
                         finalPath.setSize(originPath.size());
+                        /* 这个编号0的顶点在glossy表面上,保持不动 */
                         finalPath.get(0) = originPath.get(0);
-                        BDPTVertex np;
 
-                        MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
-                        float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
-                        float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed); 
-                        bool suc_trace = 0;
-                        np = Tracer::FastTrace(finalPath.get(0), out_dir, suc_trace);
-                        if (suc_trace == false) continue;
-                        if (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
+                        /*  LS 光子路 */
+                        if (light_subpath.depth == 1) 
+                        {
+                            BDPTVertex np;
+                            MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
+                            float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
+                            float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed); 
 
-                        Light light = Tracer::params.lights[np.materialId];
-                        Tracer::lightSample light_sample;
-                        light_sample.ReverseSample(light, np.uv);
-                        init_vertex_from_lightSample(light_sample, np);
+                            bool trace_success = 0;
+                            np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
+                            /* 没打到 */
+                            if (trace_success == false) continue;
+                            /* 没打到光源 */
+                            if (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
 
-                        pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
-                            Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir,finalPath.get(0).normal)); 
+                            Light light = Tracer::params.lights[np.materialId];
+                            Tracer::lightSample light_sample;
+                            
+                           light_sample.ReverseSample(light, np.uv);
+                            init_vertex_from_lightSample(light_sample, np);
 
-                        finalPath.get(1) = np;
+                            pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
+                                 Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir,finalPath.get(0).normal)); 
+
+                            // pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir); 
+                            // printf("old: %f        new:   %f        ratio\n ", pdf_retrace_tmp, pdf_retrace);
+
+                            /* 新的光源点 */
+                            finalPath.get(1) = np;
+                        }
+                        /* LDS 光子路，即 S - D - L，0b10 */
+                        else if (light_subpath.depth == 2 && light_subpath.path_record == 0b10)
+                        {
+                            /* 光源不动 */
+                            finalPath.get(2) = originPath.get(2);
+                            finalPath.get(1) = originPath.get(1);
+                            finalPath.get(0) = originPath.get(0);
+                            pdf_retrace = 1;
+
+                            /* 带追踪的点np */
+                            //BDPTVertex np;
+                            //MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
+                            //float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
+                            //float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed);
+                            //bool trace_success = 0;
+                            //np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
+                            ///* 没打到 */
+                            //if (trace_success == false) continue;
+                            ///* 打到光源 */
+                            //if (np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
+                            ///* 打到glossy */
+                            //if (Shift::glossy(np)) continue;
+                            ///* 新的 D 顶点和 L 做可见性测试 */
+                            //if (!Tracer::visibilityTest(Tracer::params.handle, np, finalPath.get(2))) continue;
+
+                            //finalPath.get(1) = np;
+
+                            //pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
+                            //    Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal)); ;
+                        }
 
                         /* 下面这部分应该是通用的 */
+
                         for (int i = 0; i < finalPath.size(); i++)
                             pathBuffer[buffer_size + i] = finalPath.get(i);
                         float pdf = eye_vertex.pdf  * pdf_retrace;

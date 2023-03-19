@@ -68,7 +68,7 @@
 /* LSE */
 #define LSE_ENABLE       0
 /* LSDE 是主要的焦散来源 */
-#define LSDE_ENABLE     0
+#define LSDE_ENABLE     1
 
 
 #include"whitted.h"
