@@ -426,9 +426,9 @@ namespace Tracer {
         float3 result;
         float pdf;
         unsigned int seed;
-
         int depth;
         bool done;
+        long long path_record;
         RT_FUNCTION void clear()
         {
             path.clear();
@@ -436,6 +436,7 @@ namespace Tracer {
             done = false;
             throughput = make_float3(1);
             result = make_float3(0.0);
+            path_record = 0;
         }
     };
 
@@ -573,7 +574,8 @@ namespace Tracer {
             //RayType::RAY_TYPE_EYESUBPATH,        // SBT offset
             //RayType::RAY_TYPE_COUNT,           // SBT stride
             //RayType::RAY_TYPE_EYESUBPATH,        // missSBTIndex
-            u0, u1);
+            u0, u1
+        );
 
     }
 
@@ -723,6 +725,7 @@ namespace Tracer {
                 float r2 = uv_.y;
                 float r3 = 1 - r1 - r2;
                 //printf("random %f %f\n", r1, r2);
+                // 对四边形进行采样，已经经过验证
                 position = light.quad.u * r1 + light.quad.v * r2 + light.quad.corner * r3;
                 emission = light.quad.emission;
                 pdf = 1.0 / light.quad.area;
@@ -890,7 +893,6 @@ namespace Tracer {
     {
         return a + t * (b - a);
     }
-
 
     RT_FUNCTION float Lambda(const float3& w, const float3& n)
     {
@@ -1724,8 +1726,6 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
         }
         return pdf * float3weight(connectRate_SOL(eye_subspace_id, light_subspace_id, light_contri));
     }
-
-
     RT_FUNCTION float rrRate(float3 color)
     {
         float rr_rate = fmaxf(color);
@@ -1940,10 +1940,10 @@ RT_FUNCTION void init_EyeSubpath(BDPTPath& p, float3 origin, float3 direction)
     p.currentVertex().depth = 0;
     p.currentVertex().singlePdf = 1.0;
 
-
     p.nextVertex().singlePdf = 1.0f;
-
 }
+
+/* 把光采样信息装到一个bdpt顶点中 */
 RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample, BDPTVertex& v)
 {
     v.position = light_sample.position;
@@ -1970,7 +1970,7 @@ RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample,
 }
 namespace Tracer
 {
-
+    /* Latest Update! */
     RT_FUNCTION BDPTVertex FastTrace(BDPTVertex& a, float3 direction, bool& success)
     {
         Tracer::PayloadBDPTVertex payload;
@@ -1979,7 +1979,7 @@ namespace Tracer
         payload.ray_direction = direction;
         payload.origin = a.position;
         init_EyeSubpath(payload.path, payload.origin, payload.ray_direction);
-
+        
         float3 ray_direction = payload.ray_direction;
         float3 ray_origin = payload.origin;
         int begin_depth = payload.path.size;
@@ -2174,49 +2174,6 @@ namespace Shift
     {
         return v.type == BDPTVertex::Type::NORMALHIT && RefractionCase(Tracer::params.materials[v.materialId]);
     }
-
-
-    //RT_FUNCTION bool back_trace_tanScale(const BDPTVertex& midVertex, const BDPTVertex& originLast, float3 anchor, float tan_scale, BDPTVertex& new_vertex, float& pdf)
-    //{
-    //    float3 in_dir = normalize(anchor - midVertex.position);
-    //    float3 normal = midVertex.normal;
-    //    float3 reflect = 2.0f * dot(in_dir, normal) * normal - in_dir;
-    //    
-    //    float3 origin_out = normalize(originLast.position - midVertex.position); 
-    //    float cosTheta = dot(origin_out, reflect);
-    //    if (cosTheta < 0.0)return false;
-    //    float3 cosProject = cosTheta * reflect;
-    //    float3 biasVector = origin_out - cosProject; 
-    //    float3 new_out = cosProject + tan_scale * biasVector;
-    //    float3 new_dir = normalize(new_out); 
-    //    //MaterialData::Pbr mat = Tracer::params.materials[midVertex.materialId];
-    //    //mat.base_color = make_float4(midVertex.color, 1.0);
-    //    //float3 new_dir; //Tracer::Sample_shift_metallic(mat, midVertex.normal, in_dir, uv.x, uv.y);
-    //    Tracer::PayloadBDPTVertex payload;
-    //    payload.clear();
-    //    payload.seed = 0;
-    //    payload.ray_direction = new_dir;
-    //    payload.origin = midVertex.position;
-    //    init_EyeSubpath(payload.path, payload.origin, payload.ray_direction); 
-    //    float3 ray_direction = payload.ray_direction;
-    //    float3 ray_origin = payload.origin;
-    //    int begin_depth = payload.path.size;
-    //    Tracer::traceEyeSubPath(Tracer::params.handle, ray_origin, ray_direction,
-    //        SCENE_EPSILON,  // tmin
-    //        1e16f,  // tmax
-    //        &payload);
-    //    if (payload.path.size == begin_depth)
-    //    {
-    //        return false;
-    //    }
-    //    new_vertex = payload.path.currentVertex();
-    //    float3 dirVec = new_vertex.position - midVertex.position;
-    //    float3 originVec = originLast.position - midVertex.position; 
-    //    pdf = 1.0 / tan_scale / tan_scale * dot(new_out, new_out) / dot(origin_out, origin_out) * abs(dot(normal, origin_out)) / abs(dot(normal, new_dir));
-    //    pdf /= 1.0 / dot(originVec, originVec) * abs(dot(origin_out, originLast.normal));
-    //    pdf *= 1.0 / dot(dirVec, dirVec) * abs(dot(new_dir, new_vertex.normal));
-    //    return true;
-    //}
      
     RT_FUNCTION float3 SampleControlled(float& duv_dwi, const MaterialData::Pbr& mat, const float3& N, const float3& V, float2 uv, bool is_refract, bool& sample_good)
     {
@@ -3007,8 +2964,6 @@ namespace Shift
         return true;
     }
 
-
-
     //bounce次数为1的来自面光源的长度为2的光路，会适用本函数的uv随机数重演映射方案
     RT_FUNCTION bool path_shift_uvRemap_1bounce_old(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian)
     {
@@ -3467,7 +3422,6 @@ namespace Shift
         return pdf;
     }
 
-
     RT_FUNCTION float MISWeight_SPCBPT_pathShift_activate(const BDPTVertex* path, int path_size, int strategy_id)
     {
         if (strategy_id <= 1 || strategy_id == path_size)
@@ -3919,106 +3873,136 @@ namespace Shift
         return abs(dot(dir, light.quad.normal) ) / dot(diff, diff) * 1 / M_PI * cos_bound;
 
     }
+    
+    /* 计算残缺路径的pdf */
     RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed)
     {
+        /* 目前只支持顶点数量为2的情况 */
         if (path.size() != 2 || glossy(path.get(0)) == false)
         {
-           // printf("C %d %d\n", path.size(), glossy(path.get(0)));
             return 0;
         }
-        //printf("A");
-        Light light = Tracer::params.lights[path.get(1).materialId];
 
-//        light_sample.ReverseSample(light, path.get(1).uv);
-//        float pdf_ref = light_sample.pdf * tracingPdf(path.get(1),path.get(0));
+        Light light = Tracer::params.lights[path.get(1).materialId];
         float3 sP;
-        float upperbound = getClosestGeometry_upperBound(light, path.get(0).position, path.get(0).normal,sP);
+        /* 估计pdf上界 */
+        float upperbound = getClosestGeometry_upperBound(
+            light, 
+            path.get(0).position, 
+            path.get(0).normal,
+            sP
+        );
 
         float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
-        //if (pdf_ref_sum / upperbound > 1)
-            //printf("bound compute test %f %f %f\n", pdf_ref_sum / upperbound, length(sP - path.get(0).position),length(path.get(1).position - path.get(0).position));
         int pdf_ref_count = 1;
         float bound = pdf_ref_sum / pdf_ref_count * 2;
         bound = upperbound;
-        //bound += path.get(1).pdf; 
+        
         float ans = 0; 
 
         float variance_accumulate = 0;
         float average_accumulate = 0;
         int suc_int = 0;
+
+        /* 使用老方法还是用纯RR？ */
+        bool RR_option = 0;
+        float RR_rate = 0.8;
+
+        /* pdf估计的核心流程 */
         for (int i = 0; i < 50; i++)
         { 
             ans = 0; 
             suc_int++;
-            float times = 1;
-            int loop_time = 0;
+            float factor = 1;
+            int loop_cnt = 0;
+            // 
             while (true)
             {
-                loop_time += 1;
-                if (loop_time > 1000)break;
-                ans += times / bound;
+                loop_cnt += 1;
+                if (loop_cnt > 1000) {
+                    // printf("Break due to loop_cnt > 1000 \n");
+                    break;
+                }
+                ans += factor / bound;
                 BDPTVertex& v = path.get(0);
                 float ratio = 0.8;
                 BDPTVertex np;
-
-                if (rnd(seed) > ratio)//method choice
+                /* 使用哪种方法来采样残缺顶点？*/
+                if (rnd(seed) > ratio)
                 {
+                    /* 从glossy顶点采样 */
+                    /* 建立局部坐标系，onb代表orthonormal basis*/
                     Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal: -v.normal);
                     float3 dir;
+                    /* 半球空间采样 */
                     cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
                     onb.inverse_transform(dir);
+                    /* 从glossy顶点出发进行追踪 */
                     bool success_hit;
                     np = Tracer::FastTrace(v, dir, success_hit);
-                    if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)continue;
+                    /* 这里直接continue是正确的 */
+                    if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                        continue;
                     Light light = Tracer::params.lights[np.materialId];
                     Tracer::lightSample light_sample;
                     light_sample.ReverseSample(light, np.uv);
+                    /* 把信息装到np中 */
                     init_vertex_from_lightSample(light_sample, np);
                 } 
                 else
                 {  
+                    /* 从光源采样 */
                     float2 uv = make_float2(rnd(seed), rnd(seed));
                     Tracer::lightSample light_sample;
-                    light_sample.ReverseSample(light, uv); 
+                    light_sample.ReverseSample(light, uv);
+                    /* 把光源采样的信息装到np中 */
                     init_vertex_from_lightSample(light_sample, np);
                 }
-
-                float pdf = (np.pdf * tracingPdf(np, path.get(0))) / (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+                /* 计算f(x)/p(x) */
+                float pdf = (np.pdf * tracingPdf(np, path.get(0))) / 
+                                  (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
                 //float pdf = tracingPdf(np, path.get(0));
 
-                float q = pdf / bound;
-                float continue_rate = 1 - q;
-                float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
-                if (abs(continue_rate) > 1)
-                { 
-                    bound *= 2;
-                    ans = 0;
-                    suc_int -= 1;
-                    break;
-                };
+                if (RR_option) {
+                    /* 试一试纯RR效果如何 */
+                    if (rnd(seed) > RR_rate)
+                        break;
+                    factor *= (1 - pdf / bound) / RR_rate;
 
-                if (rnd(seed) > rr_rate)
-                {
-                    break;
+                } else {
+                    /* 老方法，sfj写的 */
+                    float continue_rate = 1 - pdf / bound;
+                    /* 测出来continue_rate都很接近于1 */
+                    // printf("c_rate: %f\n", continue_rate);
+                    /* 这一段在干嘛？ */
+                    if (abs(continue_rate) > 1)
+                    { 
+                        bound *= 2;
+                        ans = 0;
+                        suc_int -= 1;
+                        break;
+                    };
+
+                    float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                    if (rnd(seed) > rr_rate)
+                        break;
+                    factor *= continue_rate / rr_rate;
                 }
-                {
-                    times *= continue_rate / rr_rate;
-                }
-            }
-            
+                
+            }  // end while
+            // printf("loop_cnt: %d\n", loop_cnt);
             variance_accumulate += ans * ans;
             average_accumulate += ans;
-            if (suc_int == 1)break;
+            /* 提前退出了 */
+            if (suc_int == 1) 
+                break;
         }
         ans = average_accumulate / suc_int;
         variance_accumulate /= suc_int;
         variance_accumulate -= ans * ans;
-       // printf("average %f variance %f %d %d\n", ans, variance_accumulate, pdf_ref_count, suc_int);
-        
-        
-        //printf("compare pdf %f %f %d\n", ans, 1.0 / path.get(0).pdf, pdf_ref_count);
         return ans;
     }
+
     //test code 
     //can't ensure its performance
     RT_FUNCTION float get_duv_dwi(const MaterialData::Pbr& mat, const float3& N, const float3& V, const float3& L, bool is_refract)
@@ -4241,8 +4225,6 @@ namespace Shift
          //   s_it > 1 ? records[1] : 0, s_it > 2 ? records[2] : 0, s_it > 3 ? records[3] : 0);
         return ans;
     }
-
-
 
 }
 

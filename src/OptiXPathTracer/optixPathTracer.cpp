@@ -812,21 +812,22 @@ int main( int argc, char* argv[] )
 
     try
     {
-     //            string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //tring scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+       //          string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+       // string scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
         string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
 
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-//         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
-//         string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
+ //        string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
+           //string scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
+           string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
-
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
@@ -920,8 +921,6 @@ int main( int argc, char* argv[] )
                     render_time += t1 - t0;
                     t0 = t1;                    
                     
-
-
 
                     displaySubframe(output_buffer, gl_display, window);
                     t1 = std::chrono::steady_clock::now();

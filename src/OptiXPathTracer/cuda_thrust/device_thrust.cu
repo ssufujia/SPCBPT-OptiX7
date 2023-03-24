@@ -355,7 +355,7 @@ namespace MyThrustOp
             thrust::make_counting_iterator(0), thrust::make_counting_iterator(0) + countRange,
             is_path_begin(thrust::raw_pointer_cast(vertices), thrust::raw_pointer_cast(validState)));
         //sampler.path_count = 100000;
-        printf("path count %d\n", sampler.path_count);
+        // printf("path count %d\n", sampler.path_count);
         sampler.jump_buffer = thrust::raw_pointer_cast(ans_jump.data());
         sampler.cmfs = thrust::raw_pointer_cast(ans_cmf.data());
         sampler.subspace = thrust::raw_pointer_cast(ans_subspace.data());
@@ -428,7 +428,7 @@ namespace MyThrustOp
 
         static thrust_dev_int d_indexes;
         d_indexes = h_indexes_rearrange;
-        printf("glossy vertices number %d\n", h_indexes_rearrange.size());
+        // printf("glossy vertices number %d\n", h_indexes_rearrange.size());
         sampler.glossy_count = h_indexes_rearrange.size();
         sampler.glossy_index = thrust::raw_pointer_cast(d_indexes.data());
 

@@ -99,7 +99,7 @@ struct PayloadRadiance
     unsigned int seed;
     bool done;
     bool glossy_bounce;
-    short caustic_bounce_state;
+    long long path_record;
     RT_FUNCTION PayloadRadiance()
     {
         result = make_float3(0); 
@@ -107,7 +107,7 @@ struct PayloadRadiance
         depth = 0;
         done = false;
         glossy_bounce = true;
-        caustic_bounce_state = 0;
+        path_record = 0;
     }
 };
 

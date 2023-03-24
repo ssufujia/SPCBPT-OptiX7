@@ -39,8 +39,40 @@
 #define DIR_JUDGE 0
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
 #define RMIS_FLAG true
-#define CAUSTIC_SPECIAL
+
+/* BDPT ���ƣ�һ�����ã���ֻ����Ⱦָ����· */
+#define BDPT_CONTROL 1
+
+/* ֻ��Ⱦ���� S �Ĺ�·��LE���� */
+/* �� PT �����У����ȼ����� ALL_ENABLE */
+/* �� BDPT �����У����ѡ�����Ҫ�� */
+#define S_ONLY 1
+
+/* ���� PT ��Ⱦ��Щ·�� */
+/* L ����Դ��E Ϊ�����S ΪSpecular������ָglossy���� ������������������ */
+/* A ��� Any����ͨ��� */
+
+/* L - * - E�������й�· */
+#define LAE_ENABLE       0
+
+#define LE_ENABLE         1
+#define LDE_ENABLE       0
+#define LDSE_ENABLE     0
+
+/* LDSAE */
+#define LDSAE_ENABLE     0
+/* LDSDE */
+#define LDSDE_ENABLE     1
+/* LSAE */
+#define LSAE_ENABLE     0
+/* LSE */
+#define LSE_ENABLE       0
+/* LSDE ����Ҫ�Ľ�ɢ�Դ */
+#define LSDE_ENABLE     1
+
+
 #define PG_ENABLE
+
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
@@ -52,7 +84,6 @@ struct Subspace
     int size;
     float sum_pmf;
     float Q;
-
 };
 struct LightTraceParams
 {    
