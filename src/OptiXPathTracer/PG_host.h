@@ -386,9 +386,9 @@ namespace path_guiding
         }
         bool build_tree()
         {
-#ifndef PG_ENABLE
-            return false;
-#endif
+            if(!PG_ENABLE)
+                return false;
+
 
             int max_k = 12;
             int div_limit = 24000 * 8;
@@ -408,9 +408,9 @@ namespace path_guiding
             //traverse mats for training 
             s_tree_p->clear_count();
             q_tree_group_p->clear();
-            //mats:ÑµÁ·Ñù±¾£¬°üÀ¨Î»ÖÃ¡¢·½ÏòºÍÄÜÁ¿Ç¿¶ÈµÈ
+            //mats:è®­ç»ƒæ ·æœ¬ï¼ŒåŒ…æ‹¬ä½ç½®ã€æ–¹å‘å’Œèƒ½é‡å¼ºåº¦ç­‰
             //get_mats(context, path_num);
-            //°ÑmatsÈû½øPGÊ÷Àï
+            //æŠŠmatså¡žè¿›PGæ ‘é‡Œ
             sd_struct_train();
             //get_mats_light(context, path_num);
             sd_light_field_construct();
@@ -431,7 +431,7 @@ namespace path_guiding
             s_tree_p->subdivide_check(0, div_limit);
 
 
-            //ËÆºõÊÇµ÷ÊÔÓÃ
+            //ä¼¼ä¹Žæ˜¯è°ƒè¯•ç”¨
             q_tree_group_p->valid_check();
 
 

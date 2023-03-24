@@ -603,10 +603,12 @@ int launchPretrace(sutil::Scene& scene)
 void path_guiding_params_setup(sutil::Scene& scene)
 {
     int pg_training_data_batch = 5;
-#ifndef PG_ENABLE
-    params.pg_params.pg_enable = 0;
-    return;
-#endif // PG_ENABLE 
+    
+    if (!PG_ENABLE) {
+        params.pg_params.pg_enable = 0;
+        return;
+    }
+    
     std::vector<path_guiding::PG_training_mat> g_mats;
     g_mats = MyThrustOp::get_data_for_path_guiding();
     for (int i = 0; i < pg_training_data_batch; i++)
@@ -773,8 +775,6 @@ int main( int argc, char* argv[] )
 { 
     //Cthrust;
     //PathTracerState state;
-    //state.params.width                             = 1920;
-    //state.params.height                            = 1000;
     params.width = 1920;
     params.height = 1000;
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
@@ -822,7 +822,7 @@ int main( int argc, char* argv[] )
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
  //        string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
-           //string scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
+         // string scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
            string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");

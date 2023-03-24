@@ -40,38 +40,36 @@
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
 #define RMIS_FLAG true
 
-/* BDPT ���ƣ�һ�����ã���ֻ����Ⱦָ����· */
-#define BDPT_CONTROL 1
+/* 如果想要控制BDPT渲染哪些光路，需要打开这个开关 */
+static const bool BDPT_CONTROL = 1;
 
-/* ֻ��Ⱦ���� S �Ĺ�·��LE���� */
-/* �� PT �����У����ȼ����� ALL_ENABLE */
-/* �� BDPT �����У����ѡ�����Ҫ�� */
-#define S_ONLY 1
+/* 在PT中，打开这个只会渲染含有glossy顶点的路径 */
+/* 在BDPT中，打开这个会在光子路选择是只选择焦散光子路，
+    即末端是glossy顶点的光子路 */
+static const bool S_ONLY = 1;
 
-/* ���� PT ��Ⱦ��Щ·�� */
-/* L ����Դ��E Ϊ�����S ΪSpecular������ָglossy���� ������������������ */
-/* A ��� Any����ͨ��� */
+/* A 代表 Any*/
 
-/* L - * - E�������й�· */
-#define LAE_ENABLE       0
+/* L - * - E*/
+static const bool LAE_ENABLE = 0;
 
-#define LE_ENABLE         1
-#define LDE_ENABLE       0
-#define LDSE_ENABLE     0
+static const bool LE_ENABLE = 1;
+static const bool LDE_ENABLE = 0;
+static const bool LDSE_ENABLE = 0;
 
 /* LDSAE */
-#define LDSAE_ENABLE     0
+static const bool LDSAE_ENABLE = 0;
 /* LDSDE */
-#define LDSDE_ENABLE     1
+static const bool LDSDE_ENABLE = 0;
 /* LSAE */
-#define LSAE_ENABLE     0
+static const bool LSAE_ENABLE = 0;
 /* LSE */
-#define LSE_ENABLE       0
+static const bool LSE_ENABLE = 0;
 /* LSDE ����Ҫ�Ľ�ɢ�Դ */
-#define LSDE_ENABLE     1
+static const bool LSDE_ENABLE = 1;
 
-
-#define PG_ENABLE
+/* Path Guiding 开关 */
+static const bool PG_ENABLE = 0;
 
 #include"whitted.h"
 #include"BDPTVertex.h"

@@ -3792,6 +3792,7 @@ namespace Shift
             return 0;
         }
 
+        /* path 0是glossy 1是光 */
         Light light = Tracer::params.lights[path.get(1).materialId];
         float3 sP;
         /* 估计pdf上界 */

@@ -897,7 +897,6 @@ extern "C" __global__ void __raygen__shift_combine()
 
                     if (!ISINVALIDVALUE(res))
                     {
-                        printf("here3\n");
                         result += res / CONNECTION_N;
                     }
                 }
@@ -974,11 +973,11 @@ extern "C" __global__ void __raygen__lightTrace()
         float3 ray_direction = light_sample.trace_direction();
         float3 ray_origin = light_sample.position; 
         init_lightSubPath_from_lightSample(light_sample, payload.path);
-        /* lightVertexCount ÔÚ¾­¹ýÕâ¸öº¯Êýºó»á¼Ó1 */
+        /* lightVertexCount 在经过这个函数后会加 1 */
         pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias); 
         CheckLightBufferState;
 
-        /* Ò»´Î¹â×ÓÂ·Éú³¤µÄ¹ý³Ì */
+        /* 光子路追踪 */
         while (true)
         {
             int begin_depth = payload.path.size;
@@ -990,31 +989,29 @@ extern "C" __global__ void __raygen__lightTrace()
                 1e16f,  // tmax
                 &payload
             );
-            /* Èç¹û¹â×ÓÂ·×·×Ù´òµ½ÁËÃæÆ¬ */
+            /* 如果打中了面片 */
             if (payload.path.size > begin_depth) 
             {
                 BDPTVertex& curVertex = payload.path.currentVertex();
-                /* ¸üÐÂ¹â×ÓÂ·pathrecord */
+                /* 将历史信息记录进 pathrecord */
                 payload.path_record = (payload.path_record) |
                     ((long long)Shift::glossy(curVertex) << payload.depth);
                 curVertex.path_record = payload.path_record;
 
-                /* ½øÐÐ²ÐÈ±¹â×ÓÂ·pdfµÄ¼ÆËã£¬L -> S ³¤¶ÈÎª2µÄ¹â×ÓÂ· */
+                /* L -> S 光子路 */
                 if (curVertex.depth == 1 && curVertex.path_record)
                 {
                     BDPTVertex v[2];
-                    /* ÕâÊÇ¹âÔ´ÉÏµÄ¶¥µã */
+                    /* v[1] 是光源顶点 */
                     v[1] = payload.path.lastVertex();
-                    /* ÕâÊÇglossy±íÃæÉÏµÄ¶¥µã */
                     v[0] = curVertex;
-                    /* ²»ÖªÎªºÎ»»³ÉÁËpathContainerÕâ¸ö½á¹¹£¬²½³¤Îª1£¬´óÐ¡Îª2 */
-                    /* ×¢Òâ£¬pathÖÐ¹â×ÓÂ·µÄË³ÐòºÍvÖÐÊÇ·´µÄ£¡ */
+
                     Shift::PathContainer path(v, 1, 2);
                     float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed);
                     curVertex.inverPdfEst = pdf_inverse;
-                    /* »¹ÊÇ»á¼ÌÐø×·ÏÂÈ¥ */
                 } 
-                /* L -> D -> S ¹â×ÓÂ·£¬¼´ S - D - L£¬0b10 */
+
+                /* L -> D -> S 光子路，即 S - D - L， path_record 为 0b10 */
                 else if (curVertex.depth == 2 && curVertex.path_record == 0b10)
                 {
                     // TBD
@@ -1022,10 +1019,10 @@ extern "C" __global__ void __raygen__lightTrace()
                 }
 
                 float e = curVertex.contri_float();
-                /* Èç¹ûÕâÌõ¹â×ÓÂ·ºÜ·Ï£¬Ö±½ÓÈÓÁË£¨ËäÈ»²»ÖªµÀÔõÃ´²É³öÀ´µÄ£© */
+
                 if (e < 0.00001) 
                     break;
-                /* ·Å½øLVCÀïÃæ£¬Ò»´Î·ÅÒ»¸ö¶¥µã£¬×¢ÒâlightVertexCountÔÚº¯ÊýÄÚ²¿¼ÓÒ» */
+                /* lightVertexCount 在经过这个函数后会加 1 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
             }
