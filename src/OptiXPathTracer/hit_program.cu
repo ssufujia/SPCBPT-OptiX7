@@ -142,22 +142,22 @@ extern "C" __global__ void __closesthit__lightsource()
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
 
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
-    /* ´òµ½ÁËÄÄ¸ö¹âÔ´? */
+    /* æ‰“åˆ°äº†å“ªä¸ªå…‰æº? */
     const Light& light = Tracer::params.lights[hit_group_data->material_data.light_id];
     const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
-    /* ËãÒ»Ëã´òµ½µãµÄ²ÉÑù pdf£¨ÓÃÓÚMIS£© */
+    /* ç®—ä¸€ç®—æ‰“åˆ°ç‚¹çš„é‡‡æ · pdfï¼ˆç”¨äºŽMISï¼‰ */
     Tracer::lightSample light_sample;
     light_sample.ReverseSample(light, geom.texcoord->UV);
     float t_hit = optixGetRayTmax();
     float3 ray_direction = optixGetWorldRayDirection();
 
-    if ( /* ´òÖÐµÄ¹âÔ´·¨ÏòÒªÇóÓë¹âÏß·½ÏòÏà·´ */
+    if ( /* æ‰“ä¸­çš„å…‰æºæ³•å‘è¦æ±‚ä¸Žå…‰çº¿æ–¹å‘ç›¸å */
         (dot(prd->ray_direction, light_sample.normal()) <= 0 ) && (
-        /* ¹âÔ´Ö±»÷, L - E */
+        /* å…‰æºç›´å‡», L - E */
             (LE_ENABLE && prd->depth == 0) || (
-            /* ÊÇ·ñÊÇ S_ONLY */
+            /* æ˜¯å¦æ˜¯ S_ONLY */
                 (!S_ONLY || prd->path_record) && (
-                /* L - * - E£¬ËùÓÐ¹âÂ· */
+                /* L - * - Eï¼Œæ‰€æœ‰å…‰è·¯ */
                     LAE_ENABLE ||
                 /* L - D - E */
                     (LDE_ENABLE && prd->depth == 1 && prd->path_record == 0b0) || 
@@ -176,7 +176,7 @@ extern "C" __global__ void __closesthit__lightsource()
         )
     )
     {
-        /* PT ¼Ó NEE µÄ MIS */
+        /* PT åŠ  NEE çš„ MIS */
         float MIS_weight = 1;
         if (prd->depth != 0 )
         {
@@ -289,7 +289,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     BDPTVertex& NextVertex = prd->path.nextVertex();
     BDPTVertex& LastVertex = prd->path.lastVertex();
     MidVertex.position = geom.P;
-    MidVertex.normal = N;//Õâ¸öÔÚÕÛÉä³¡¾°ÀïÐèÒª½øÒ»²½ÌÖÂÛ
+    MidVertex.normal = N;//è¿™ä¸ªåœ¨æŠ˜å°„åœºæ™¯é‡Œéœ€è¦è¿›ä¸€æ­¥è®¨è®º
     MidVertex.type = BDPTVertex::Type::NORMALHIT;
     float pdf_G = abs(dot(MidVertex.normal, ray_direction) * dot(LastVertex.normal, ray_direction)) / (t_hit * t_hit);
  
@@ -301,7 +301,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     {
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
     }
-    NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction , -ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
+    NextVertex.flux = Tracer::Eval(currentPbr, N, inver_ray_direction, prd->ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
     NextVertex.singlePdf = prd->pdf;
 
     MidVertex.lastPosition = LastVertex.position;
@@ -410,7 +410,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     BDPTVertex& NextVertex = prd->path.nextVertex();
     BDPTVertex& LastVertex = prd->path.lastVertex();
     MidVertex.position = geom.P;
-    MidVertex.normal = N;//Õâ¸öÔÚÕÛÉä³¡¾°ÀïÐèÒª½øÒ»²½ÌÖÂÛ
+    MidVertex.normal = N;//è¿™ä¸ªåœ¨æŠ˜å°„åœºæ™¯é‡Œéœ€è¦è¿›ä¸€æ­¥è®¨è®º
     MidVertex.type = BDPTVertex::Type::NORMALHIT; 
     MidVertex.color = make_float3(currentPbr.base_color); 
 
@@ -450,7 +450,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
     BDPTVertex& NextVertex = prd->path.nextVertex();
     BDPTVertex& LastVertex = prd->path.lastVertex();
     MidVertex.position = geom.P;
-    MidVertex.normal = N;//Õâ¸öÔÚÕÛÉä³¡¾°ÀïÐèÒª½øÒ»²½ÌÖÂÛ
+    MidVertex.normal = N;//è¿™ä¸ªåœ¨æŠ˜å°„åœºæ™¯é‡Œéœ€è¦è¿›ä¸€æ­¥è®¨è®º
     MidVertex.type = BDPTVertex::Type::NORMALHIT;
     float pdf_G = abs(dot(MidVertex.normal, ray_direction) * dot(LastVertex.normal, ray_direction)) / (t_hit * t_hit);
 
@@ -461,7 +461,9 @@ extern "C" __global__ void __closesthit__lightSubpath()
     else
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
 
-    NextVertex.flux = Tracer::Eval(currentPbr, N, -ray_direction, prd->ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f); 
+    }
+    NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction, -ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
+
     NextVertex.singlePdf = prd->pdf;
      
     MidVertex.lastPosition = LastVertex.position;
@@ -500,7 +502,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
         NextVertex.singlePdf *= rr_rate;
     return;
 }
-/* Õâ¸öº¯ÊýÓ¦¸ÃÊÇ PT ÔÚ´òµ½ÆÕÍ¨ÃæÆ¬Ê±±»µ÷ÓÃ */
+/* è¿™ä¸ªå‡½æ•°åº”è¯¥æ˜¯ PT åœ¨æ‰“åˆ°æ™®é€šé¢ç‰‡æ—¶è¢«è°ƒç”¨ */
 extern "C" __global__ void __closesthit__radiance() 
 {
     // printf("__closesthit__radiance()\n");
@@ -519,13 +521,14 @@ extern "C" __global__ void __closesthit__radiance()
     float rr_rate = Tracer::rrRate(currentPbr);
     prd->glossy_bounce = Shift::glossy(currentPbr) ? prd->glossy_bounce : false;
 
-    /*  prd->path_record ÓÃ¶þ½øÖÆ°´LSBµ½MSBµÄË³Ðò±àÂëÁËµ±Ç°Â·¾¶£¬0 ´ú±í D, 1 ´ú±í S */
-    /* ±ÈÈç path_record Îª 0010£¬depth Îª 4£¬ËµÃ÷µ±Ç°Â·¾¶Îª D - D - S - D - E */
-    /* path_record ´óÐ¡Îª long long ÒÔ±£Ö¤¹»ÓÃ */
+
+    /*  prd->path_record ç”¨äºŒè¿›åˆ¶æŒ‰LSBåˆ°MSBçš„é¡ºåºç¼–ç äº†å½“å‰è·¯å¾„ï¼Œ0 ä»£è¡¨ D, 1 ä»£è¡¨ S */
+    /* æ¯”å¦‚ path_record ä¸º 0010ï¼Œdepth ä¸º 4ï¼Œè¯´æ˜Žå½“å‰è·¯å¾„ä¸º D - D - S - D - E */
+    /* path_record å¤§å°ä¸º long long ä»¥ä¿è¯å¤Ÿç”¨ */
     prd->path_record = (prd->path_record) | 
         ((long long) Shift::glossy(currentPbr) << prd->depth);
  
-    /* ¼ÆËã NEE */
+    /* è®¡ç®— NEE */
     int light_id = clamp(static_cast<int>(floorf(rnd(prd->seed) * Tracer::params.lights.count)), int(0), int(Tracer::params.lights.count - 1));
     Light light = Tracer::params.lights[light_id];
     if (light.type == Light::Type::QUAD)
@@ -558,7 +561,7 @@ extern "C" __global__ void __closesthit__radiance()
                 float MIS_weight = 1;
                 {
                     float pdf_area = light_sample.pdf;
-                    float pdf_hit = Tracer::Pdf(currentPbr, N, V, L) * abs(L_dot_LN) / (L_dist * L_dist) * rr_rate;
+                    float pdf_hit = Tracer::Pdf(currentPbr, N, V, L, geom.P, true) * abs(L_dot_LN) / (L_dist * L_dist) * rr_rate;
                     MIS_weight = pdf_area / (pdf_hit + pdf_area);
                 }
 #ifdef PT_BRDF_STRATEGY_ONLY 
@@ -599,8 +602,9 @@ extern "C" __global__ void __closesthit__radiance()
     //prd->depth += 1;  
     //prd->result += result;
 
-    if (prd->depth > 5) 
-        result *= 0;
+
+    //if (prd->depth > 5) result *= 0;
+
     prd->currentResult += result;
     prd->origin = geom.P;
 
@@ -610,12 +614,12 @@ extern "C" __global__ void __closesthit__radiance()
     }
     else
     {
-        prd->ray_direction = Tracer::Sample(currentPbr, N, in_dir, prd->seed); 
-        float pdf = Tracer::Pdf(currentPbr, N, in_dir, prd->ray_direction);
+        prd->ray_direction = Tracer::Sample(currentPbr, N, in_dir, prd->seed, geom.P, true); 
+        float pdf = Tracer::Pdf(currentPbr, N, in_dir, prd->ray_direction, geom.P, true);
 
         if (isRefract(N, in_dir, prd->ray_direction) && prd->depth == 1 && dot(in_dir, N) > 0 && Shift::glossy(currentPbr))
         {
-            float3 bsdf = Tracer::Eval(currentPbr, N, prd->ray_direction, in_dir);
+            float3 bsdf = Tracer::Eval(currentPbr, N, in_dir, prd->ray_direction);
             float cos_in = abs(dot(in_dir, N));
             float cos_out = abs(dot(prd->ray_direction, N));
             float sin_in = sqrt(1 - cos_in * cos_in);
@@ -623,7 +627,7 @@ extern "C" __global__ void __closesthit__radiance()
         }
         if (pdf > 0.0f)
         {
-            prd->throughput *= Tracer::Eval(currentPbr, N, prd->ray_direction, in_dir) * abs(dot(prd->ray_direction, N)) / pdf / rr_rate;
+            prd->throughput *= Tracer::Eval(currentPbr, N, in_dir, prd->ray_direction) * abs(dot(prd->ray_direction, N)) / pdf / rr_rate;
             prd->pdf = pdf * rr_rate;
         }
         else

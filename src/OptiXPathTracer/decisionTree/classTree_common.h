@@ -172,5 +172,6 @@ namespace classTree
         bool valid;
     };
 
-}
+
+} 
 #endif

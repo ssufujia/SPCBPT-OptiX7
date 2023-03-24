@@ -40,19 +40,19 @@
 #define TRAIN_CAUSTIC_WEIGHT 10.0f
 #define RMIS_FLAG true
 
-/* BDPT ¿ØÖÆ£¬Ò»µ©ÆôÓÃ£¬ÔòÖ»»áäÖÈ¾Ö¸¶¨¹âÂ· */
+/* BDPT ï¿½ï¿½ï¿½Æ£ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½È¾Ö¸ï¿½ï¿½ï¿½ï¿½Â· */
 #define BDPT_CONTROL 1
 
-/* Ö»äÖÈ¾º¬ÓÐ S µÄ¹âÂ·£¬LE³ýÍâ */
-/* ÔÚ PT ¿ØÖÆÖÐ£¬ÓÅÏÈ¼¶¸ßÓÚ ALL_ENABLE */
-/* ÔÚ BDPT ¿ØÖÆÖÐ£¬Õâ¸öÑ¡ÏîºÜÖØÒª£¡ */
+/* Ö»ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ S ï¿½Ä¹ï¿½Â·ï¿½ï¿½LEï¿½ï¿½ï¿½ï¿½ */
+/* ï¿½ï¿½ PT ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½ ALL_ENABLE */
+/* ï¿½ï¿½ BDPT ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ */
 #define S_ONLY 1
 
-/* ¿ØÖÆ PT äÖÈ¾ÄÄÐ©Â·¾¶ */
-/* L ´ú±í¹âÔ´£¬E ÎªÉãÏñ»ú£¬S ÎªSpecular£¬ÕâÀïÖ¸glossy±íÃæ £¬¼´°üÀ¨¾µÃæºÍÕÛÉäÃæ */
-/* A ´ú±í Any£¬¼´Í¨Åä·û */
+/* ï¿½ï¿½ï¿½ï¿½ PT ï¿½ï¿½È¾ï¿½ï¿½Ð©Â·ï¿½ï¿½ */
+/* L ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½E Îªï¿½ï¿½ï¿½ï¿½ï¿½S ÎªSpecularï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸glossyï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+/* A ï¿½ï¿½ï¿½ Anyï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ */
 
-/* L - * - E£¬¼´ËùÓÐ¹âÂ· */
+/* L - * - Eï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¹ï¿½Â· */
 #define LAE_ENABLE       0
 
 #define LE_ENABLE         1
@@ -67,13 +67,16 @@
 #define LSAE_ENABLE     0
 /* LSE */
 #define LSE_ENABLE       0
-/* LSDE ÊÇÖ÷ÒªµÄ½¹É¢À´Ô´ */
+/* LSDE ï¿½ï¿½ï¿½ï¿½Òªï¿½Ä½ï¿½É¢ï¿½Ô´ */
 #define LSDE_ENABLE     1
 
+
+#define PG_ENABLE
 
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
+#include"PG_common.h"
 struct Subspace
 {   
     int jump_bias;
@@ -187,8 +190,8 @@ RT_FUNCTION __host__ float3 uv2dir(float2 uv)
     phi = asinf(2 * v - 1.0);
     theta = u / (0.5 * M_1_PIf) - M_PIf;
 
-    dir.y = cos(M_PIf * 0.5f - phi);
     dir.x = cos(phi) * sin(theta);
+    dir.y = cos(M_PIf * 0.5f - phi);
     dir.z = cos(phi) * cos(theta);
     return dir;
 }
@@ -245,6 +248,7 @@ struct PTParams :whitted::LaunchParams
     envInfo sky;
     EstimationParams estimate_pr;
 
+    PG_params pg_params;
 };
 typedef PTParams MyParams;
 

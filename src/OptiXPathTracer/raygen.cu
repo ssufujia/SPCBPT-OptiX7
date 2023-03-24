@@ -66,10 +66,9 @@ __device__ inline float4 LinearToSrgb(const float4& c)
     return make_float4(powf(c.x, kInvGamma), powf(c.y, kInvGamma), powf(c.z, kInvGamma), c.w);
 }
 
-/* 这个函数应该是 PT */
+/* 脮芒赂枚潞炉脢媒脫娄赂脙脢脟 PT */
 extern "C" __global__ void __raygen__pinhole()
 {  
-    //printf("pinhole\n");
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -95,7 +94,7 @@ extern "C" __global__ void __raygen__pinhole()
     float3 ray_origin    = eye;
 
     /* Trace camera ray */
-    /* 这里 payload 在创建时被部分初始化了 */
+    /* 脮芒脌茂 payload 脭脷麓麓陆篓脢卤卤禄虏驴路脰鲁玫脢录禄炉脕脣 */
     Tracer::PayloadRadiance payload; 
     payload.seed          = seed; 
     payload.origin        = eye;
@@ -111,7 +110,7 @@ extern "C" __global__ void __raygen__pinhole()
             &payload
         );
 
-        /* 这里可见性测试似乎是对 NEE 做的 */
+        /* 脮芒脌茂驴脡录没脨脭虏芒脢脭脣脝潞玫脢脟露脭 NEE 脳枚碌脛 */
         if (float3weight(payload.currentResult)> 0.0)
         {
             const float  L_dist = length(payload.vis_pos_A- payload.vis_pos_B);
@@ -135,7 +134,7 @@ extern "C" __global__ void __raygen__pinhole()
         const float3 accum_color_prev = make_float3( Tracer::params.accum_buffer[image_index] );
         accum_color                   = lerp( accum_color_prev, accum_color, a );
     }
-    //if (subframe_index > 2000)return;
+    //if (subframe_index > 1000)return;
     Tracer::params.accum_buffer[image_index] = make_float4( accum_color, 1.0f );
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -158,7 +157,7 @@ RT_FUNCTION void init_lightSubPath_from_lightSample(Tracer::lightSample& light_s
     }
 
     init_vertex_from_lightSample(light_sample, v);
-     //其他光源的状况待补充
+     //脝盲脣没鹿芒脭麓碌脛脳麓驴枚麓媒虏鹿鲁盲
 }
 
 
@@ -198,8 +197,8 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
     float3 fa, fb;
     float3 ADcolor;
     MaterialData::Pbr mat_a = Tracer::params.materials[a.materialId];
-    mat_a.base_color = make_float4(a.color, 1.0); 
-    fa = Tracer::Eval(mat_a, a.normal, -connectDir, LA_DIR) / (mat_a.brdf ? abs(dot(a.normal, connectDir)) : 1.0f);
+    mat_a.base_color = make_float4(a.color, 1.0);  
+    fa = Tracer::Eval(mat_a, a.normal, LA_DIR, -connectDir) / (mat_a.brdf ? abs(dot(a.normal, connectDir)) : 1.0f);
 
     MaterialData::Pbr mat_b;
     if (!b.isOrigin)
@@ -570,7 +569,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
     Tracer::params.frame_buffer[image_index] = make_color(make_float3(val));
 }
 
-/* 目前算法使用的raygen，看这个就行 */
+/* 脛驴脟掳脣茫路篓脢鹿脫脙碌脛raygen拢卢驴麓脮芒赂枚戮脥脨脨 */
 extern "C" __global__ void __raygen__shift_combine()
 {
     const uint3  launch_idx = optixGetLaunchIndex();
@@ -601,7 +600,7 @@ extern "C" __global__ void __raygen__shift_combine()
     payload.seed = seed;
     payload.ray_direction = ray_direction;
     payload.origin = ray_origin;
-    /* 视子路初始化 */  
+    /* 脢脫脳脫脗路鲁玫脢录禄炉 */  
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
     BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
@@ -609,7 +608,7 @@ extern "C" __global__ void __raygen__shift_combine()
     pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
 
     unsigned first_hit_id;
-    /* 视子路追踪主循环 */
+    /* 脢脫脳脫脗路脳路脳脵脰梅脩颅禄路 */
     while (true)
     {
         ray_direction = payload.ray_direction;
@@ -617,28 +616,28 @@ extern "C" __global__ void __raygen__shift_combine()
         if (payload.done || payload.depth > 50)
             break;
         int begin_depth = payload.path.size;
-        /* 追视子路 */
+        /* 脳路脢脫脳脫脗路 */
         Tracer::traceEyeSubPath(
             Tracer::params.handle, ray_origin, ray_direction,
             SCENE_EPSILON,  // tmin
             1e16f,  // tmax
             &payload
         );
-        /* 没打到面片 */
+        /* 脙禄麓貌碌陆脙忙脝卢 */
         if (payload.path.size == begin_depth)
             break;
 
-        /* 记录一下视子路类型 */
+        /* 录脟脗录脪禄脧脗脢脫脳脫脗路脌脿脨脥 */
         payload.path_record = (payload.path_record) |
             ((long long)Shift::glossy(payload.path.currentVertex()) << payload.depth);
         payload.depth += 1;
         pathBuffer[buffer_size++] = payload.path.currentVertex(); 
 
-        /* 如果视子路击中了光源 */
+        /* 脠莽鹿没脢脫脳脫脗路禄梅脰脨脕脣鹿芒脭麓 */
         float3 res = make_float3(0.0);
         if (payload.path.hit_lightSource())
         {
-            if (RMIS_FLAG)
+            if (false&&RMIS_FLAG)
             {
                 res = lightStraghtHit(payload.path.currentVertex());
             }
@@ -653,10 +652,10 @@ extern "C" __global__ void __raygen__shift_combine()
                 pathBuffer[buffer_size - 1] = light_vertex;
                 res += eval_path(pathBuffer, buffer_size, buffer_size);
             } 
-            /* 如果启用BDPT control，则PT 策略只会渲染 LE 光路 */
+            /* 脠莽鹿没脝么脫脙BDPT control拢卢脭貌PT 虏脽脗脭脰禄禄谩盲脰脠戮 LE 鹿芒脗路 */
             if (BDPT_CONTROL)
             {
-                /* PT 策略只会渲染 LE */
+                /* PT 虏脽脗脭脰禄禄谩盲脰脠戮 LE */
                 if (LE_ENABLE)
                 {
                     if (payload.depth != 1)
@@ -664,6 +663,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 }
                 else
                     res *= 0;
+
             }
             // printf("here0");
             result += res;
@@ -674,7 +674,7 @@ extern "C" __global__ void __raygen__shift_combine()
             break;
 
         BDPTVertex& eye_vertex = payload.path.currentVertex();
-        /* 将视子路末端与光子路进行连接 */
+        /* 陆芦脢脫脳脫脗路脛漏露脣脫毛鹿芒脳脫脗路陆酶脨脨脕卢陆脫 */
         for (int it = 0; it < CONNECTION_N; it++)
         {
             float caustic_connection_prob;
@@ -690,7 +690,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 // caustic_connection_prob = .5;
             }
 
-            /* 焦散路径 */
+            /* 陆鹿脡垄脗路戮露 */
             if (rnd(payload.seed) < caustic_connection_prob)
             {
                 float pmf_firstStage = 1;
@@ -728,13 +728,13 @@ extern "C" __global__ void __raygen__shift_combine()
 
 
                 if (
-                    /* 光子路为 LS，视子路为 any */
+                    /* 鹿芒脳脫脗路脦陋 LS拢卢脢脫脳脫脗路脦陋 any */
                     ((LSAE_ENABLE && light_subpath.depth == 1) ||
-                    /* 光子路为LS，视子路为DE，整条路径为LSDE */
+                    /* 鹿芒脳脫脗路脦陋LS拢卢脢脫脳脫脗路脦陋DE拢卢脮没脤玫脗路戮露脦陋LSDE */
                     (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
-                    /* 光子路为LDS，视子路为DE，整条路径为LDSDE */
+                    /* 鹿芒脳脫脗路脦陋LDS拢卢脢脫脳脫脗路脦陋DE拢卢脮没脤玫脗路戮露脦陋LDSDE */
                     (LDSDE_ENABLE && light_subpath.depth == 2 && payload.depth == 1 && !payload.path_record)) &&
-                    /* 其他约束条件 */
+                    /* 脝盲脣没脭录脢酶脤玫录镁 */
                     (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
                 {
@@ -750,10 +750,10 @@ extern "C" __global__ void __raygen__shift_combine()
 
                         float pdf_retrace;
                         finalPath.setSize(originPath.size());
-                        /* 这个编号0的顶点在glossy表面上,保持不动 */
+                        /* 脮芒赂枚卤脿潞脜0碌脛露楼碌茫脭脷glossy卤铆脙忙脡脧,卤拢鲁脰虏禄露炉 */
                         finalPath.get(0) = originPath.get(0);
 
-                        /*  LS 光子路 */
+                        /*  LS 鹿芒脳脫脗路 */
                         if (light_subpath.depth == 1) 
                         {
                             BDPTVertex np;
@@ -763,9 +763,9 @@ extern "C" __global__ void __raygen__shift_combine()
 
                             bool trace_success = 0;
                             np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
-                            /* 没打到 */
+                            /* 脙禄麓貌碌陆 */
                             if (trace_success == false) continue;
-                            /* 没打到光源 */
+                            /* 脙禄麓貌碌陆鹿芒脭麓 */
                             if (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
 
                             Light light = Tracer::params.lights[np.materialId];
@@ -780,32 +780,32 @@ extern "C" __global__ void __raygen__shift_combine()
                             // pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir); 
                             // printf("old: %f        new:   %f        ratio\n ", pdf_retrace_tmp, pdf_retrace);
 
-                            /* 新的光源点 */
+                            /* 脨脗碌脛鹿芒脭麓碌茫 */
                             finalPath.get(1) = np;
                         }
-                        /* LDS 光子路，即 S - D - L，0b10 */
+                        /* LDS 鹿芒脳脫脗路拢卢录麓 S - D - L拢卢0b10 */
                         else if (light_subpath.depth == 2 && light_subpath.path_record == 0b10)
                         {
-                            /* 光源不动 */
+                            /* 鹿芒脭麓虏禄露炉 */
                             finalPath.get(2) = originPath.get(2);
                             finalPath.get(1) = originPath.get(1);
                             finalPath.get(0) = originPath.get(0);
                             pdf_retrace = 1;
 
-                            /* 带追踪的点np */
+                            /* 麓酶脳路脳脵碌脛碌茫np */
                             //BDPTVertex np;
                             //MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
                             //float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
                             //float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed);
                             //bool trace_success = 0;
                             //np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
-                            ///* 没打到 */
+                            ///* 脙禄麓貌碌陆 */
                             //if (trace_success == false) continue;
-                            ///* 打到光源 */
+                            ///* 麓貌碌陆鹿芒脭麓 */
                             //if (np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
-                            ///* 打到glossy */
+                            ///* 麓貌碌陆glossy */
                             //if (Shift::glossy(np)) continue;
-                            ///* 新的 D 顶点和 L 做可见性测试 */
+                            ///* 脨脗碌脛 D 露楼碌茫潞脥 L 脳枚驴脡录没脨脭虏芒脢脭 */
                             //if (!Tracer::visibilityTest(Tracer::params.handle, np, finalPath.get(2))) continue;
 
                             //finalPath.get(1) = np;
@@ -814,13 +814,34 @@ extern "C" __global__ void __raygen__shift_combine()
                             //    Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal)); ;
                         }
 
-                        /* 下面这部分应该是通用的 */
+                        /* 脧脗脙忙脮芒虏驴路脰脫娄赂脙脢脟脥篓脫脙碌脛 */
 
                         for (int i = 0; i < finalPath.size(); i++)
                             pathBuffer[buffer_size + i] = finalPath.get(i);
                         float pdf = eye_vertex.pdf  * pdf_retrace;
                         float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size());
                         float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
+
+
+                        //float pdf = eye_subpath.pdf  * light_subpath.pdf * shift_pdf;
+                        float pdf = eye_subpath.pdf  * pdf_regen;
+                        float3 fractFactor = make_float3(1);
+                        //if(finalPath.size() == 2)
+//                        fractFactor = Shift::evalFract(finalPath, eye_subpath.position, payload.seed);
+                        //fractFactor = make_float3(abs(fractFactor.x), abs(fractFactor.y), abs(fractFactor.z));
+                        //printf("factor %f %f %f\n", fractFactor.x, fractFactor.y, fractFactor.z);
+                        float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()) * fractFactor;
+
+ //                       float3 res = contri / pdf / pmf;
+                        float3 res = contri / pdf / pmf * light_subpath.inverPdfEst;// *1.225;
+                        //if (float3weight(res) > 1)printf("evalFactor ratio rate %f\n", float3weight(fractFactor));
+                        
+                        ///////////////////////////////////
+                        ////////// MIS computation ////////
+                        ///////////////////////////////////
+                        //float mis_weight = Shift::GeometryTerm(finalPath.get(0), finalPath.get(1));
+                        //float mis_weight2 = Shift::GeometryTerm(eye_subpath, finalPath.get(0));
+                        //res *=  mis_weight / (mis_weight + mis_weight2);
 
                         if (!ISINVALIDVALUE(res))
                             result += res / CONNECTION_N;
@@ -848,7 +869,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 }
             }
 
-            /* 非焦散路径 */
+            /* 路脟陆鹿脡垄脗路戮露 */
             else
             {
                 if (S_ONLY)
@@ -930,7 +951,7 @@ extern "C" __global__ void __raygen__shift_combine()
         accum_color = make_float3(0);
     }
 
-    //if (subframe_index > 200)return;
+    //if (subframe_index > 2000)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
@@ -1193,11 +1214,11 @@ extern "C" __global__ void __raygen__lightTrace()
         float3 ray_direction = light_sample.trace_direction();
         float3 ray_origin = light_sample.position; 
         init_lightSubPath_from_lightSample(light_sample, payload.path);
-        /* lightVertexCount 在经过这个函数后会加1 */
+        /* lightVertexCount 脭脷戮颅鹿媒脮芒赂枚潞炉脢媒潞贸禄谩录脫1 */
         pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias); 
         CheckLightBufferState;
 
-        /* 一次光子路生长的过程 */
+        /* 脪禄麓脦鹿芒脳脫脗路脡煤鲁陇碌脛鹿媒鲁脤 */
         while (true)
         {
             int begin_depth = payload.path.size;
@@ -1209,31 +1230,31 @@ extern "C" __global__ void __raygen__lightTrace()
                 1e16f,  // tmax
                 &payload
             );
-            /* 如果光子路追踪打到了面片 */
+            /* 脠莽鹿没鹿芒脳脫脗路脳路脳脵麓貌碌陆脕脣脙忙脝卢 */
             if (payload.path.size > begin_depth) 
             {
                 BDPTVertex& curVertex = payload.path.currentVertex();
-                /* 更新光子路pathrecord */
+                /* 赂眉脨脗鹿芒脳脫脗路pathrecord */
                 payload.path_record = (payload.path_record) |
                     ((long long)Shift::glossy(curVertex) << payload.depth);
                 curVertex.path_record = payload.path_record;
 
-                /* 进行残缺光子路pdf的计算，L -> S 长度为2的光子路 */
+                /* 陆酶脨脨虏脨脠卤鹿芒脳脫脗路pdf碌脛录脝脣茫拢卢L -> S 鲁陇露脠脦陋2碌脛鹿芒脳脫脗路 */
                 if (curVertex.depth == 1 && curVertex.path_record)
                 {
                     BDPTVertex v[2];
-                    /* 这是光源上的顶点 */
+                    /* 脮芒脢脟鹿芒脭麓脡脧碌脛露楼碌茫 */
                     v[1] = payload.path.lastVertex();
-                    /* 这是glossy表面上的顶点 */
+                    /* 脮芒脢脟glossy卤铆脙忙脡脧碌脛露楼碌茫 */
                     v[0] = curVertex;
-                    /* 不知为何换成了pathContainer这个结构，步长为1，大小为2 */
-                    /* 注意，path中光子路的顺序和v中是反的！ */
+                    /* 虏禄脰陋脦陋潞脦禄禄鲁脡脕脣pathContainer脮芒赂枚陆谩鹿鹿拢卢虏陆鲁陇脦陋1拢卢麓贸脨隆脦陋2 */
+                    /* 脳垄脪芒拢卢path脰脨鹿芒脳脫脗路碌脛脣鲁脨貌潞脥v脰脨脢脟路麓碌脛拢隆 */
                     Shift::PathContainer path(v, 1, 2);
                     float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed);
                     curVertex.inverPdfEst = pdf_inverse;
-                    /* 还是会继续追下去 */
+                    /* 禄鹿脢脟禄谩录脤脨酶脳路脧脗脠楼 */
                 } 
-                /* L -> D -> S 光子路，即 S - D - L，0b10 */
+                /* L -> D -> S 鹿芒脳脫脗路拢卢录麓 S - D - L拢卢0b10 */
                 else if (curVertex.depth == 2 && curVertex.path_record == 0b10)
                 {
                     // TBD
@@ -1241,10 +1262,10 @@ extern "C" __global__ void __raygen__lightTrace()
                 }
 
                 float e = curVertex.contri_float();
-                /* 如果这条光子路很废，直接扔了（虽然不知道怎么采出来的） */
+                /* 脠莽鹿没脮芒脤玫鹿芒脳脫脗路潞脺路脧拢卢脰卤陆脫脠脫脕脣拢篓脣盲脠禄虏禄脰陋碌脌脭玫脙麓虏脡鲁枚脌麓碌脛拢漏 */
                 if (e < 0.00001) 
                     break;
-                /* 放进LVC里面，一次放一个顶点，注意lightVertexCount在函数内部加一 */
+                /* 路脜陆酶LVC脌茂脙忙拢卢脪禄麓脦路脜脪禄赂枚露楼碌茫拢卢脳垄脪芒lightVertexCount脭脷潞炉脢媒脛脷虏驴录脫脪禄 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
             }

@@ -565,6 +565,11 @@ namespace MyThrustOp
     static int acc_num_nodes = 0;
     static int acc_num_samples = 0;
     thrust::device_vector<int> sample_bias_flag;
+    void clear_training_set()
+    {
+        acc_num_nodes = 0;
+        acc_num_samples = 0;
+    }
     int valid_sample_gather(thrust::device_ptr<preTracePath> raw_paths, int maxPathSize, 
         thrust::device_ptr<preTraceConnection> raw_conns,int maxConns)
     {
@@ -601,7 +606,7 @@ namespace MyThrustOp
 
          
         return sample_count; 
-    }
+    } 
     std::vector<classTree::divide_weight> get_weighted_point_for_tree_building(bool eye_side, int max_size)
     {
         thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
@@ -787,6 +792,42 @@ namespace MyThrustOp
         }
         d_frac = h_frac;
         frac = d_frac.data();
+    }
+
+    path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size)
+    {
+        thrust::host_vector<path_guiding::quad_tree_node> h_vec(a, a + size);
+        static thrust::device_vector<path_guiding::quad_tree_node> d_vec = h_vec;        
+        return thrust::raw_pointer_cast(d_vec.data());
+    }
+
+    path_guiding::Spatio_tree_node* spatio_tree_to_device(path_guiding::Spatio_tree_node* a, int size)
+    {
+        thrust::host_vector<path_guiding::Spatio_tree_node> h_vec(a, a + size);
+        static thrust::device_vector<path_guiding::Spatio_tree_node> d_vec = h_vec;
+        return thrust::raw_pointer_cast(d_vec.data());
+    }
+
+    std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas)
+    {
+        thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
+        thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+        std::vector<path_guiding::PG_training_mat> ans;
+        int slice_range = num_datas == -1 ? h_neat_conns.size() : (num_datas < h_neat_conns.size() ? num_datas : h_neat_conns.size());
+        for (int i = 0; i < h_neat_paths.size(); i++)
+        {
+            for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
+            { 
+                path_guiding::PG_training_mat mat;
+                mat.lum = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+                mat.position = h_neat_conns[j].A_position;
+                mat.uv = dir2uv(normalize(h_neat_conns[j].B_position - h_neat_conns[j].A_position));
+                mat.valid = true;
+                ans.push_back(mat);
+                if (ans.size() >= slice_range)return ans;
+            }
+        }
+        return ans;
     }
     void preprocess_getGamma(thrust::device_ptr<float>& Gamma, bool caustic_case)
     {

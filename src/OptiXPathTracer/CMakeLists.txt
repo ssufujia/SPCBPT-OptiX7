@@ -63,6 +63,9 @@ OPTIX_add_sample_executable( optixPathTracer target_name
   hit_program.cu
   rmis.h 
 
+  PG_common.h
+  PG_host.h
+
   decisionTree/classTree_common.h
   decisionTree/classTree_host.h
   decisionTree/classTree_device.h
