@@ -34,7 +34,8 @@
 #include <sutil/vec_math.h>
 #include "BDPTVertex.h"
 #include "cuProg.h"
-#include"rmis.h"
+#include "pathControl.h"
+#include "rmis.h"
 //------------------------------------------------------------------------------
 //
 //
