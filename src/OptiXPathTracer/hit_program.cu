@@ -461,7 +461,6 @@ extern "C" __global__ void __closesthit__lightSubpath()
     else
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
 
-    }
     NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction, -ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
 
     NextVertex.singlePdf = prd->pdf;
