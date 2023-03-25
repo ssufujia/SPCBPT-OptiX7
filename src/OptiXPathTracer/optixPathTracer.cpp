@@ -825,7 +825,8 @@ int main( int argc, char* argv[] )
 
     try
     {
-       //          string scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        string scenePath = " ";
+       // scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
        // string scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
@@ -836,7 +837,10 @@ int main( int argc, char* argv[] )
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
  //        string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
          // string scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
-           string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
+         scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
+            //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
+
+           //scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
