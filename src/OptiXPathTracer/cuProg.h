@@ -3801,7 +3801,7 @@ namespace Shift
     }
 
     /* calculate the absent path pdf */
-    RT_FUNCTION float inverPdfEstimate_dir(PathContainer& path, unsigned& seed)
+    RT_FUNCTION float another_inverPdfEstimate(PathContainer& path, unsigned& seed)
     {
         /* now we only work with path as light-glossy */
         if (path.size() != 2 || glossy(path.get(0)) == false)
