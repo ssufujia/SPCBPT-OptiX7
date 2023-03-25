@@ -65,7 +65,7 @@ static const bool LDSDE_ENABLE = 0;
 static const bool LSAE_ENABLE = 0;
 /* LSE */
 static const bool LSE_ENABLE = 0;
-/* LSDE ����Ҫ�Ľ�ɢ�Դ */
+/* LSDE  */
 static const bool LSDE_ENABLE = 1;
 
 /* Path Guiding 开关 */
