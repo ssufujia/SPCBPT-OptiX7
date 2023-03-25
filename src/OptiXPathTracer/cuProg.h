@@ -3710,6 +3710,7 @@ namespace Shift
         else
         {
             //TBD
+            //return GeometryTerm(a, b) * 1 / M_PI * Tracer::visibilityTest(Tracer::params.handle, a, b);
             return 0;
         }
     }
@@ -3782,23 +3783,16 @@ namespace Shift
         return abs(dot(dir, light.quad.normal) ) / dot(diff, diff) * 1 / M_PI * cos_bound;
 
     }
-    
-    /* 计算残缺路径的pdf */
-    RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed)
-    {
-        /* 目前只支持顶点数量为2的情况 */
-        if (path.size() != 2 || glossy(path.get(0)) == false)
-        {
-            return 0;
-        }
 
+    RT_FUNCTION float inverPdfEstimate_LS(PathContainer& path, unsigned& seed)
+    {
         /* path 0是glossy 1是光 */
         Light light = Tracer::params.lights[path.get(1).materialId];
         float3 sP;
         /* 估计pdf上界 */
         float upperbound = getClosestGeometry_upperBound(
-            light, 
-            path.get(0).position, 
+            light,
+            path.get(0).position,
             path.get(0).normal,
             sP
         );
@@ -3807,8 +3801,8 @@ namespace Shift
         int pdf_ref_count = 1;
         float bound = pdf_ref_sum / pdf_ref_count * 2;
         bound = upperbound;
-        
-        float ans = 0; 
+
+        float ans = 0;
 
         float variance_accumulate = 0;
         float average_accumulate = 0;
@@ -3820,8 +3814,8 @@ namespace Shift
 
         /* pdf估计的核心流程 */
         for (int i = 0; i < 50; i++)
-        { 
-            ans = 0; 
+        {
+            ans = 0;
             suc_int++;
             float factor = 1;
             int loop_cnt = 0;
@@ -3842,7 +3836,7 @@ namespace Shift
                 {
                     /* 从glossy顶点采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
-                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal: -v.normal);
+                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
                     float3 dir;
                     /* 半球空间采样 */
                     cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -3858,9 +3852,9 @@ namespace Shift
                     light_sample.ReverseSample(light, np.uv);
                     /* 把信息装到np中 */
                     init_vertex_from_lightSample(light_sample, np);
-                } 
+                }
                 else
-                {  
+                {
                     /* 从光源采样 */
                     float2 uv = make_float2(rnd(seed), rnd(seed));
                     Tracer::lightSample light_sample;
@@ -3869,8 +3863,8 @@ namespace Shift
                     init_vertex_from_lightSample(light_sample, np);
                 }
                 /* 计算f(x)/p(x) */
-                float pdf = (np.pdf * tracingPdf(np, path.get(0))) / 
-                                  (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+                float pdf = (np.pdf * tracingPdf(np, path.get(0))) /
+                    (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
                 //float pdf = tracingPdf(np, path.get(0));
 
                 if (RR_option) {
@@ -3879,14 +3873,15 @@ namespace Shift
                         break;
                     factor *= (1 - pdf / bound) / RR_rate;
 
-                } else {
+                }
+                else {
                     /* 老方法，sfj写的 */
                     float continue_rate = 1 - pdf / bound;
                     /* 测出来continue_rate都很接近于1 */
                     // printf("c_rate: %f\n", continue_rate);
                     /* 这一段在干嘛？ */
                     if (abs(continue_rate) > 1)
-                    { 
+                    {
                         bound *= 2;
                         ans = 0;
                         suc_int -= 1;
@@ -3898,13 +3893,13 @@ namespace Shift
                         break;
                     factor *= continue_rate / rr_rate;
                 }
-                
+
             }  // end while
             // printf("loop_cnt: %d\n", loop_cnt);
             variance_accumulate += ans * ans;
             average_accumulate += ans;
             /* 提前退出了 */
-            if (suc_int == 1) 
+            if (suc_int == 1)
                 break;
         }
         ans = average_accumulate / suc_int;
@@ -3912,6 +3907,151 @@ namespace Shift
         variance_accumulate -= ans * ans;
         return ans;
     }
+
+    RT_FUNCTION float inverPdfEstimate_LDS(PathContainer& path, unsigned& seed)
+    {
+        /* path 0是glossy 1是diffuse 2是光*/
+        Light light = Tracer::params.lights[path.get(2).materialId];
+        float3 sP;
+        /* 估计pdf上界 */
+        float upperbound = getClosestGeometry_upperBound(
+            light,
+            path.get(0).position,
+            path.get(0).normal,
+            sP
+        );
+
+        //float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
+        //int pdf_ref_count = 1;
+        //float bound = pdf_ref_sum / pdf_ref_count * 2;
+        float bound = upperbound;
+
+        float ans = 0;
+
+        float variance_accumulate = 0;
+        float average_accumulate = 0;
+        int suc_int = 0;
+
+        /* 使用老方法还是用纯RR？ */
+        bool RR_option = 0;
+        float RR_rate = 0.8;
+
+        /* pdf估计的核心流程 */
+        for (int i = 0; i < 50; i++)
+        {
+            ans = 0;
+            suc_int++;
+            float factor = 1;
+            int loop_cnt = 0;
+            // 
+            while (true)
+            {
+                loop_cnt += 1;
+                if (loop_cnt > 1000) {
+                    // printf("Break due to loop_cnt > 1000 \n");
+                    break;
+                }
+                ans += factor / bound;
+
+                /* glossy顶点 */
+                BDPTVertex& v = path.get(0);
+
+                float ratio = 0;
+                BDPTVertex np;
+                /* 使用哪种方法来采样残缺顶点？*/
+                if (rnd(seed) > ratio)
+                {
+                    /* 从glossy顶点采样 */
+                    /* 建立局部坐标系，onb代表orthonormal basis*/
+                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                    float3 dir;
+                    /* 半球空间采样 */
+                    cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                    onb.inverse_transform(dir);
+                    /* 从glossy顶点出发进行追踪 */
+                    bool success_hit;
+                    /* 此处np为中间的diffuse顶点 */
+                    np = Tracer::FastTrace(v, dir, success_hit);
+                    /* 这里直接continue是正确的 */
+                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                        continue;
+                    //Light light = Tracer::params.lights[np.materialId];
+                    //Tracer::lightSample light_sample;
+                    //light_sample.ReverseSample(light, np.uv);
+                    ///* 把信息装到np中 */
+                    //init_vertex_from_lightSample(light_sample, np);
+                }
+                else
+                {
+                    /* 从光源采样 */
+                    float2 uv = make_float2(rnd(seed), rnd(seed));
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, uv);
+                    /* 把光源采样的信息装到np中 */
+                    init_vertex_from_lightSample(light_sample, np);
+                }
+                /* 计算f(x)/p(x) */
+                float pdf = (path.get(2).pdf * tracingPdf(np, path.get(0))) /
+                    (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+                //float pdf = tracingPdf(np, path.get(0));
+
+                if (RR_option) {
+                    /* 试一试纯RR效果如何 */
+                    if (rnd(seed) > RR_rate)
+                        break;
+                    factor *= (1 - pdf / bound) / RR_rate;
+
+                }
+                else {
+                    /* 老方法，sfj写的 */
+                    float continue_rate = 1 - pdf / bound;
+                    /* 测出来continue_rate都很接近于1 */
+                    // printf("c_rate: %f\n", continue_rate);
+                    /* 这一段在干嘛？ */
+                    if (abs(continue_rate) > 1)
+                    {
+                        bound *= 2;
+                        ans = 0;
+                        suc_int -= 1;
+                        break;
+                    };
+
+                    float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                    if (rnd(seed) > rr_rate)
+                        break;
+                    factor *= continue_rate / rr_rate;
+                }
+
+            }  // end while
+            // printf("loop_cnt: %d\n", loop_cnt);
+            variance_accumulate += ans * ans;
+            average_accumulate += ans;
+            /* 提前退出了 */
+            if (suc_int == 1)
+                break;
+        }
+        ans = average_accumulate / suc_int;
+        variance_accumulate /= suc_int;
+        variance_accumulate -= ans * ans;
+        return ans;
+    }
+
+    /* 计算残缺路径的pdf */
+    RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed, const long long& path_record)
+    {
+        /* L-S */
+        if (path_record == 0b1)
+        {
+            return inverPdfEstimate_LS(path, seed);
+        }
+        /* L-D-S */
+        else if (path_record == 0b10)
+        {
+            return inverPdfEstimate_LDS(path, seed);
+        }
+        return 0;
+    }
+
 
     //test code 
     //can't ensure its performance
