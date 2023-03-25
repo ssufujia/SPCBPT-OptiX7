@@ -805,7 +805,7 @@ extern "C" __global__ void __raygen__shift_combine()
                             finalPath.get(1) = np;
 
                             pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
-                                Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal)) / 1000;
+                                Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal));
                             /*printf("pdf_retrace: %f\n", pdf_retrace);
                             printf("light pdf: %f\n", finalPath.get(2).pdf);*/
                         }

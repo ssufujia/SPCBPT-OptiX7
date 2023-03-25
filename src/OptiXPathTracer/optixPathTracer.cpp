@@ -824,8 +824,8 @@ int main( int argc, char* argv[] )
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
  //        string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
          // string scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
-         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
-            scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
+         scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
+            //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
 
            //scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
