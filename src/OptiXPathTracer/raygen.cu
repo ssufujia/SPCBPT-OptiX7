@@ -1008,7 +1008,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     v[0] = curVertex;
 
                     Shift::PathContainer path(v, 1, 2);
-                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed,curVertex.path_record);
+                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex.depth, curVertex.path_record);
                     curVertex.inverPdfEst = pdf_inverse;
                 } 
 
@@ -1022,7 +1022,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     v[0] = curVertex;
 
                     Shift::PathContainer path(v, 1, 3);
-                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex.path_record);
+                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex.depth, curVertex.path_record);
                     curVertex.inverPdfEst = pdf_inverse;
                 }
 

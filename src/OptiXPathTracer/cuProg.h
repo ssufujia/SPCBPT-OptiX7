@@ -3923,7 +3923,7 @@ namespace Shift
         //float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
         //int pdf_ref_count = 1;
         //float bound = pdf_ref_sum / pdf_ref_count * 2;
-        float bound = upperbound;
+        float bound = 10;//upperbound;
 
         float ans = 0;
 
@@ -3942,7 +3942,6 @@ namespace Shift
             suc_int++;
             float factor = 1;
             int loop_cnt = 0;
-            // 
             while (true)
             {
                 loop_cnt += 1;
@@ -3956,7 +3955,7 @@ namespace Shift
                 BDPTVertex& v = path.get(0);
                 /* 光顶点 */
                 BDPTVertex& l = path.get(2);
-                float ratio = 0.5;
+                float ratio = 0;
                 BDPTVertex np;
                 /* 使用哪种方法来采样残缺顶点？*/
                 if (rnd(seed) >= ratio)
@@ -3973,10 +3972,9 @@ namespace Shift
                     /* 此处np为中间的diffuse顶点 */
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
-                        Shift::glossy(np))
+                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE 
+                         || Shift::glossy(np))
                         continue;
-    
                 }
                 else
                 {
@@ -3992,17 +3990,18 @@ namespace Shift
                     /* 此处np为中间的diffuse顶点 */
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
-                        Shift::glossy(np))
+                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE 
+                         || Shift::glossy(np))
                         continue;
                 }
                 /* 计算f(x)/p(x) */
                 MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
                 float pdf = l.pdf * tracingPdf(l, np)
-                    * Tracer::Pdf(mat,np.normal,normalize(l.position - np.position),normalize(v.position - np.position))
+                /*  */
+                    * Tracer::Pdf(mat, np.normal,normalize(l.position - np.position), normalize(v.position - np.position))
                     * GeometryTerm(np, v)
                     * Tracer::visibilityTest(Tracer::params.handle, np, v)
-                    / (ratio * tracingPdf(v,np) + (1 - ratio) * tracingPdf(l,np));
+                    / (1-ratio * tracingPdf(v, np) + (ratio) * tracingPdf(l, np));
                 //float pdf = tracingPdf(np, path.get(0));
 
                 if (RR_option) {
@@ -4043,20 +4042,19 @@ namespace Shift
         ans = average_accumulate / suc_int;
         variance_accumulate /= suc_int;
         variance_accumulate -= ans * ans;
-        //printf("inverpdf %f\n", ans);
         return ans;
     }
 
     /* 计算残缺路径的pdf */
-    RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed, const long long& path_record)
+    RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed, const int depth, const long long path_record)
     {
         /* L-S */
-        if (path_record == 0b1)
+        if (depth== 1 && path_record == 0b1)
         {
             return inverPdfEstimate_LS(path, seed);
         }
         /* L-D-S */
-        else if (path_record == 0b10)
+        else if (depth == 2 && path_record == 0b10)
         {
             return inverPdfEstimate_LDS(path, seed);
         }
