@@ -34,7 +34,8 @@
 #include <sutil/vec_math.h>
 #include "BDPTVertex.h"
 #include "cuProg.h"
-#include"rmis.h"
+#include "pathControl.h"
+#include "rmis.h"
 //------------------------------------------------------------------------------
 //
 //
@@ -604,7 +605,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
     BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
     int buffer_size = 0;
-    pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
+    pathBuffer[buffer_size++] = payload.path.currentVertex();
 
     unsigned first_hit_id;
 
@@ -624,6 +625,7 @@ extern "C" __global__ void __raygen__shift_combine()
             &payload
         );
         
+        /* 没打中 */
         if (payload.path.size == begin_depth)
             break;
 
@@ -724,14 +726,13 @@ extern "C" __global__ void __raygen__shift_combine()
 
                 float final_pmf = guide_ratio * (pmf_firstStage * pmf_secondStage) + (1 - guide_ratio) * pmf_uniform; 
 
-
                 if (
                     /* LSAE，A 代表 any */
                     ((LSAE_ENABLE && light_subpath.depth == 1) ||
                     /* LSDE */
                     (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
-                    /* LDSDE */
-                    (LDSDE_ENABLE && light_subpath.depth == 2 && payload.depth == 1 && !payload.path_record)) &&
+                    /* LDSDE，光子路LDS，视子路DE */
+                    (LDSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b10 && payload.depth == 1 &&  !payload.path_record)) &&
                     /* 其他约束条件 */
                     (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
@@ -775,41 +776,35 @@ extern "C" __global__ void __raygen__shift_combine()
                             pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
                                  Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir,finalPath.get(0).normal)); 
 
-                            // pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir); 
-                            // printf("old: %f        new:   %f        ratio\n ", pdf_retrace_tmp, pdf_retrace);
-
                             /* 新的光源顶点 */
                             finalPath.get(1) = np;
                         }
                         /* LDS 光子路，即 S - D - L，path record 为 0b10 */
                         else if (light_subpath.depth == 2 && light_subpath.path_record == 0b10)
                         {
-                            /* ¹âÔ´²»¶¯ */
+                            /* 0号是glossy顶点，1号是diffuse顶点，2号是光源顶点 */
                             finalPath.get(2) = originPath.get(2);
-                            finalPath.get(1) = originPath.get(1);
-                            finalPath.get(0) = originPath.get(0);
                             pdf_retrace = 1;
 
-                            /* ´ø×·×ÙµÄµãnp */
-                            //BDPTVertex np;
-                            //MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
-                            //float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
-                            //float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed);
-                            //bool trace_success = 0;
-                            //np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
-                            ///* Ã»´òµ½ */
-                            //if (trace_success == false) continue;
-                            ///* ´òµ½¹âÔ´ */
-                            //if (np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
-                            ///* ´òµ½glossy */
-                            //if (Shift::glossy(np)) continue;
-                            ///* ÐÂµÄ D ¶¥µãºÍ L ×ö¿É¼ûÐÔ²âÊÔ */
-                            //if (!Tracer::visibilityTest(Tracer::params.handle, np, finalPath.get(2))) continue;
+                            BDPTVertex np;
+                            MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
+                            float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
+                            float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed);
+                            bool trace_success = 0;
+                            np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
+                            /* 没追到 */
+                            if (trace_success == false) continue;
+                            /* 追到了光源 */
+                            if (np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
+                            /* 追到了glossy */
+                            if (Shift::glossy(np)) continue;
+                            /* 可见性测试 */
+                            if (!Tracer::visibilityTest(Tracer::params.handle, np, finalPath.get(2))) continue;
 
-                            //finalPath.get(1) = np;
+                            finalPath.get(1) = np;
 
-                            //pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
-                            //    Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal)); ;
+                            pdf_retrace = 1;//Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
+                                //Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal)); ;
                         }
 
 
@@ -818,7 +813,9 @@ extern "C" __global__ void __raygen__shift_combine()
                         
                         float pdf = eye_vertex.pdf  * pdf_retrace;
 
-                        float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size());
+                        float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()); 
+                        //printf("contri:  %f %f %f\n", contri.x, contri.y, contri.z);
+                        //printf("pdf: %f", pdf);
                         float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;                        
 
                         if (!ISINVALIDVALUE(res))
@@ -838,9 +835,9 @@ extern "C" __global__ void __raygen__shift_combine()
                         buffer_size = origin_buffer_size;
                         float pdf = Tracer::pdfCompute(pathBuffer, n_buffer_size, origin_buffer_size);
                         float3 contri = Tracer::contriCompute(pathBuffer, n_buffer_size);
+                        
                         float3 res = contri / pdf / pmf;
 
-                        printf("here2\n");
                         if (!ISINVALIDVALUE(res))
                             result += res / CONNECTION_N;
                     }
