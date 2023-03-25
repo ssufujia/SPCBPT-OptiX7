@@ -31,6 +31,7 @@
 #define CUPROG_H
 
 #include <sutil/vec_math.h>
+#include <cmath>
 
 #include "whitted.h"
 #include"optixPathTracer.h"
@@ -550,7 +551,7 @@ namespace Tracer {
 
     }
     static __forceinline__ __device__ void traceEyeSubPath(
-        OptixTraversableHandle      handle,
+        OptixTraversableHandle      handle, 
         float3                      ray_origin,
         float3                      ray_direction,
         float                       tmin,
@@ -1422,7 +1423,6 @@ RT_FUNCTION float3 Sample_shift_refract(const MaterialData::Pbr& mat, const floa
 
     float3 dir;
     Onb onb(N); // basis
-
     {
         float a = max(0.001f, mat.roughness);
 
@@ -3023,6 +3023,7 @@ namespace Shift
 
         return true;
     }
+
     RT_FUNCTION bool path_shift_uvRemap_1bounce(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian)
     {
         if (originPath.size() != 2 || glossy(originPath.get(0)) == false || originPath.get(1).type != BDPTVertex::Type::QUAD)
@@ -3761,6 +3762,7 @@ namespace Shift
         } 
 
     };
+
     RT_FUNCTION float getClosestGeometry_upperBound(Light &light, float3 position,float3 normal,float3& sP)
     {
         Tracer::lightSample light_sample;
@@ -3810,8 +3812,8 @@ namespace Shift
         
         float ans = 0; 
 
-        float variance_accumulate = 0;
         float average_accumulate = 0;
+        float variance_accumulate = 0;
         int suc_int = 0;
 
         /* 使用老方法还是用纯RR？ */
@@ -3878,38 +3880,75 @@ namespace Shift
                     if (rnd(seed) > RR_rate)
                         break;
                     factor *= (1 - pdf / bound) / RR_rate;
+                        if (RR_option) {
+                            /* 试一试纯RR效果如何 */
+                            if (rnd(seed) > RR_rate)
+                                break;
+                            factor *= (1 - pdf / bound) / RR_rate;
 
-                } else {
-                    /* 老方法，sfj写的 */
-                    float continue_rate = 1 - pdf / bound;
-                    /* 测出来continue_rate都很接近于1 */
-                    // printf("c_rate: %f\n", continue_rate);
-                    /* 这一段在干嘛？ */
-                    if (abs(continue_rate) > 1)
-                    { 
-                        bound *= 2;
-                        ans = 0;
-                        suc_int -= 1;
-                        break;
-                    };
+                        }
+                        else {
+                            /* 老方法，sfj写的 */
+                            float continue_rate = 1 - pdf / bound;
+                            /* 测出来continue_rate都很接近于1 */
+                            // printf("c_rate: %f\n", continue_rate);
+                            /* 这一段在干嘛？ */
+                            if (abs(continue_rate) > 1)
+                            {
+                                bound *= 2;
+                                ans = 0;
+                                suc_int -= 1;
+                                break;
+                            };
 
-                    float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
-                    if (rnd(seed) > rr_rate)
-                        break;
-                    factor *= continue_rate / rr_rate;
+                            float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                            if (rnd(seed) > rr_rate)
+                            {
+                                break;
+                            }
+                            factor *= continue_rate / rr_rate;
+                        }
+
+                    }  // end while
+                    variance_accumulate += ans * ans;
+                    average_accumulate += ans;
                 }
-                
-            }  // end while
-            // printf("loop_cnt: %d\n", loop_cnt);
-            variance_accumulate += ans * ans;
-            average_accumulate += ans;
-            /* 提前退出了 */
-            if (suc_int == 1) 
-                break;
+                ans = average_accumulate / suc_int;
+                variance_accumulate /= suc_int;
+                variance_accumulate -= ans * ans;
+                if (!t)
+                    average_accumulate1 = ans;
+                else
+                    average_accumulate2 = ans;
+            }
         }
-        ans = average_accumulate / suc_int;
-        variance_accumulate /= suc_int;
-        variance_accumulate -= ans * ans;
+        else {
+            average_accumulate = 0;
+            suc_int = 0;
+            int count = 100;
+            int base1 = 2;
+            int base2 = 3;
+            int bias = rnd(seed) * 1000;//randomly,the num don't change the method
+            BDPTVertex np;
+            /* 从光源采样 均匀采样*/
+            for (int i = 0; i < count; i++)
+            {
+                suc_int++;
+                float x_cord = halton(i + bias, base1);
+                float y_cord = halton(i + bias, base2);
+                float2 uv = make_float2(x_cord, y_cord);
+                Tracer::lightSample light_sample;
+                light_sample.ReverseSample(light, uv);
+                /* 把光源采样的信息装到np中 */
+                init_vertex_from_lightSample(light_sample, np);
+                average_accumulate += tracingPdf(np, path.get(0));
+            }
+            ans = suc_int / average_accumulate;
+        }
+        //printf("old method %f\nnew method %f\n", average_accumulate1, ans);
+        //printf("old method %f\nlbx method %f\nnew method %f\n",average_accumulate1, average_accumulate2,ans);
+        // //printf("average %f variance %f %d %d\n", ans, variance_accumulate, pdf_ref_count, suc_int);
+        // //printf("compare pdf %f %f %d\n", ans, 1.0 / path.get(0).pdf, pdf_ref_count);
         return ans;
     }
 

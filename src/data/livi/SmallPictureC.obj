@@ -1,0 +1,17 @@
+# Blender v3.4.1 OBJ File: 'livingroom.blend'
+# www.blender.org
+mtllib SmallPictureC.mtl
+o SmallPictureC
+v -2.436209 1.662187 3.754145
+v -2.436209 1.662187 3.914942
+v -2.438700 1.426488 3.914942
+v -2.438700 1.426488 3.754145
+vt 0.984943 0.989385
+vt 0.013892 0.989385
+vt 0.013892 0.011015
+vt 0.984944 0.011015
+vn 0.9999 -0.0106 0.0000
+usemtl SmallPictureCBSDF
+s off
+f 1/1/1 2/2/1 3/3/1
+f 1/1/1 3/3/1 4/4/1

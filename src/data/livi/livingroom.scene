@@ -1,0 +1,1726 @@
+material _unnamed_87
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material _unnamed_95
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material AppleBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\apple.jpg
+}
+
+material BlackMarbleBSDF
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BlackRaughtIronBSDF
+{
+	 color 0.057461921125650406 0.04777578264474869 0.04330465570092201
+	 roughness 0.6324555277824402
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BlindEndsBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BlindMaterialBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 1.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BlindStringBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BlindStringKnobBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BlindWoodStripBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material BooksBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\book-spines.jpg
+}
+
+material BushLogoBSDF
+{
+	 color 0.9280475378036499 0.917804479598999 0.9189086556434631
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material CandleHoldersBSDF
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material CarpetBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\carpet-text3b.jpg
+}
+
+material CeilingLampshadeBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 1.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material CeilingShadeWireBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material CeramicBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material ChromeHandleBSDF
+{
+	 color 0.9280475378036499 0.917804479598999 0.9189086556434631
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material Cushion1BSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\cushion-stripe-purple.jpg
+}
+
+material Cushion3BSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\cushion-purple-yellow-stripe.jpg
+}
+
+material CushionBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\cushion-green-circles.jpg
+}
+
+material DishesBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material None
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.4000000059604645
+	 metallic 0.0
+	 specular 0.05
+}
+
+material DrawerHandlesBSDF
+{
+	 color 0.9280475378036499 0.917804479598999 0.9189086556434631
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material DullSteelBSDF
+{
+	 color 0.5369645953178406 0.5310379862785339 0.5316768288612366
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material FloorBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.3872983455657959
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+	 albedoTex livi\textures\wood4.jpg
+}
+
+material LampshadeInnerBSDF
+{
+	 color 0.6846150159835815 0.6846150159835815 0.6846150159835815
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material LampshaderOuterBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\shade-stripes.jpg
+}
+
+material LampStandBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material LargePictureBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\picure4-grey.jpg
+}
+
+material LightFittingBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material LoveLettersBackBSDF
+{
+	 color 0.0784313976764679 0.03921569883823395 0.03921569883823395
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material LoveLettersBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material MagazineBSDF
+{
+	 color 0.21763800084590912 0.21763800084590912 0.21763800084590912
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material PictureBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\picture11-vert.jpg
+}
+
+material PictureFrameBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadiatorBaseBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material RadiatorKnobCentreBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadiatorKnobOuterBSDF
+{
+	 color 0.4047844111919403 0.1835782378911972 0.22009678184986115
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadiatorPanelsEnamelBSDF
+{
+	 color 0.7931100130081177 0.7931100130081177 0.7931100130081177
+	 roughness 0.3872983455657959
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material RadioDialBackBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\radio-dial-idea.jpg
+}
+
+material RadioDialLineBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadioDialRedBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\radio-dial-idea.jpg
+}
+
+material RadioEdgesBSDF
+{
+	 color 0.9280475378036499 0.917804479598999 0.9189086556434631
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadioGlassBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadioHandleBSDF
+{
+	 color 0.389508992433548 0.37258899211883545 0.2937470078468323
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadioInsideBSDF
+{
+	 color 0.015077999792993069 0.015077999792993069 0.015077999792993069
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadioKnobBSDF
+{
+	 color 0.35837501287460327 0.3009360134601593 0.12861700356006622
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadioMetalRingBSDF
+{
+	 color 0.6405140161514282 0.6254169940948486 0.5801259875297546
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material RadioPlasticBSDF
+{
+	 color 0.6399999856948853 0.6001530289649963 0.43448999524116516
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material RadioSurroundBSDF
+{
+	 color 0.06682199984788895 0.028495000675320625 0.013826999813318253
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material SmallPictureABSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\Frame.jpg
+}
+
+material SmallPictureBBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\Frame.jpg
+}
+
+material SmallPictureCBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\Frame.jpg
+}
+
+material SmallPictureDBSDF
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex livi\textures\Frame.jpg
+}
+
+material SmallPictureFrameBSDF
+{
+	 color 0.009999999776482582 0.009999999776482582 0.009999999776482582
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material SocketBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material SofaLeatherBSDF
+{
+	 color 0.7931100130081177 0.7931100130081177 0.7931100130081177
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material SteelBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material TableBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+material TableLegsBSDF
+{
+	 color 0.5785959959030151 0.5785959959030151 0.5785959959030151
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material TvBevelBSDF
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material TvScreenBSDF
+{
+	 color 0.0 0.0 0.0
+	 roughness 0.22360679507255554
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material WallsBSDF
+{
+	 color 0.6000000238418579 0.6000000238418579 0.6000000238418579
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material WhitePaintBSDF
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.3872983455657959
+	 metallic 0.0
+	 specular 0.20000000298023224
+	 trans 0.0
+}
+
+cameraSetting
+{
+	 eye 2.2500898838043213 1.311710000038147 6.178719997406006
+	 lookat -0.43417567014694214 -0.03663051500916481 -0.9000831842422485
+	 fov 60
+}
+
+mesh
+{
+	 file livi\LampStand.obj
+	 material LampStandBSDF
+}
+
+mesh
+{
+	 file livi\Walls_0001.obj
+	 material WallsBSDF
+}
+
+mesh
+{
+	 file livi\CandleHolders_0001.obj
+	 material CandleHoldersBSDF
+}
+
+mesh
+{
+	 file livi\CandleHolders_0002.obj
+	 material CandleHoldersBSDF
+}
+
+mesh
+{
+	 file livi\CandleHolders_0003.obj
+	 material CandleHoldersBSDF
+}
+
+mesh
+{
+	 file livi\Magazine.obj
+	 material MagazineBSDF
+}
+
+mesh
+{
+	 file livi\LampshadeInner.obj
+	 material LampshadeInnerBSDF
+}
+
+mesh
+{
+	 file livi\Apple_0001.obj
+	 material AppleBSDF
+}
+
+mesh
+{
+	 file livi\Apple_0002.obj
+	 material AppleBSDF
+}
+
+mesh
+{
+	 file livi\Apple_0003.obj
+	 material AppleBSDF
+}
+
+mesh
+{
+	 file livi\Apple_0004.obj
+	 material AppleBSDF
+}
+
+mesh
+{
+	 file livi\Ceramic_0001.obj
+	 material CeramicBSDF
+}
+
+mesh
+{
+	 file livi\LoveLettersBack_0001.obj
+	 material LoveLettersBackBSDF
+}
+
+mesh
+{
+	 file livi\LoveLettersBack_0002.obj
+	 material LoveLettersBackBSDF
+}
+
+mesh
+{
+	 file livi\LoveLettersBack_0003.obj
+	 material LoveLettersBackBSDF
+}
+
+mesh
+{
+	 file livi\LoveLettersBack_0004.obj
+	 material LoveLettersBackBSDF
+}
+
+mesh
+{
+	 file livi\LoveLettersBack_0005.obj
+	 material LoveLettersBackBSDF
+}
+
+mesh
+{
+	 file livi\LoveLettersBack_0006.obj
+	 material LoveLettersBackBSDF
+}
+
+mesh
+{
+	 file livi\LoveLetters_0001.obj
+	 material LoveLettersBSDF
+}
+
+mesh
+{
+	 file livi\LoveLetters_0002.obj
+	 material LoveLettersBSDF
+}
+
+mesh
+{
+	 file livi\LoveLetters_0003.obj
+	 material LoveLettersBSDF
+}
+
+mesh
+{
+	 file livi\LoveLetters_0004.obj
+	 material LoveLettersBSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureC.obj
+	 material SmallPictureCBSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureFrame_0001.obj
+	 material SmallPictureFrameBSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureFrame_0002.obj
+	 material SmallPictureFrameBSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureB.obj
+	 material SmallPictureBBSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureA.obj
+	 material SmallPictureABSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureFrame_0003.obj
+	 material SmallPictureFrameBSDF
+}
+
+mesh
+{
+	 file livi\Cushion1_0001.obj
+	 material Cushion1BSDF
+}
+
+mesh
+{
+	 file livi\LightFitting_0001.obj
+	 material LightFittingBSDF
+}
+
+mesh
+{
+	 file livi\LightFitting_0002.obj
+	 material LightFittingBSDF
+}
+
+mesh
+{
+	 file livi\LightFitting_0003.obj
+	 material LightFittingBSDF
+}
+
+mesh
+{
+	 file livi\CeilingShadeWire.obj
+	 material CeilingShadeWireBSDF
+}
+
+mesh
+{
+	 file livi\CeilingLampshade.obj
+	 material CeilingLampshadeBSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureFrame_0004.obj
+	 material SmallPictureFrameBSDF
+}
+
+mesh
+{
+	 file livi\SmallPictureD.obj
+	 material SmallPictureDBSDF
+}
+
+mesh
+{
+	 file livi\Books_0001.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0002.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0003.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0004.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0005.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0006.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0007.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0008.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0009.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0010.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0011.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0012.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0013.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0014.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0015.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0016.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0017.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\Books_0018.obj
+	 material BooksBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0001.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0002.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0003.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\DrawerHandles_0001.obj
+	 material DrawerHandlesBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0004.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0005.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\TvBevel.obj
+	 material TvBevelBSDF
+}
+
+mesh
+{
+	 file livi\TvScreen.obj
+	 material TvScreenBSDF
+}
+
+mesh
+{
+	 file livi\Cushion3.obj
+	 material Cushion3BSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0001.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0002.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0003.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\Cushion.obj
+	 material CushionBSDF
+}
+
+mesh
+{
+	 file livi\LampshaderOuter.obj
+	 material LampshaderOuterBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0006.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0007.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0008.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\DrawerHandles_0002.obj
+	 material DrawerHandlesBSDF
+}
+
+mesh
+{
+	 file livi\Table_0001.obj
+	 material TableBSDF
+}
+
+mesh
+{
+	 file livi\Table_0002.obj
+	 material TableBSDF
+}
+
+mesh
+{
+	 file livi\Socket_0001.obj
+	 material SocketBSDF
+}
+
+mesh
+{
+	 file livi\Socket_0002.obj
+	 material SocketBSDF
+}
+
+mesh
+{
+	 file livi\PictureFrame_0001.obj
+	 material PictureFrameBSDF
+}
+
+mesh
+{
+	 file livi\LargePicture.obj
+	 material LargePictureBSDF
+}
+
+mesh
+{
+	 file livi\Socket_0003.obj
+	 material SocketBSDF
+}
+
+mesh
+{
+	 file livi\Socket_0004.obj
+	 material SocketBSDF
+}
+
+mesh
+{
+	 file livi\Picture.obj
+	 material PictureBSDF
+}
+
+mesh
+{
+	 file livi\PictureFrame_0002.obj
+	 material PictureFrameBSDF
+}
+
+mesh
+{
+	 file livi\BlindStringKnob_0001.obj
+	 material BlindStringKnobBSDF
+}
+
+mesh
+{
+	 file livi\BlindString_0001.obj
+	 material BlindStringBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0001.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0002.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0003.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindWoodStrip_0001.obj
+	 material BlindWoodStripBSDF
+}
+
+mesh
+{
+	 file livi\BlindMaterial_0001.obj
+	 material BlindMaterialBSDF
+}
+
+mesh
+{
+	 file livi\BlindMaterial_0002.obj
+	 material BlindMaterialBSDF
+}
+
+mesh
+{
+	 file livi\BlindMaterial_0003.obj
+	 material BlindMaterialBSDF
+}
+
+mesh
+{
+	 file livi\BlindMaterial_0004.obj
+	 material BlindMaterialBSDF
+}
+
+mesh
+{
+	 file livi\BlindWoodStrip_0002.obj
+	 material BlindWoodStripBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0004.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0005.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0006.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindString_0002.obj
+	 material BlindStringBSDF
+}
+
+mesh
+{
+	 file livi\BlindStringKnob_0002.obj
+	 material BlindStringKnobBSDF
+}
+
+mesh
+{
+	 file livi\BlindStringKnob_0003.obj
+	 material BlindStringKnobBSDF
+}
+
+mesh
+{
+	 file livi\BlindString_0003.obj
+	 material BlindStringBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0007.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0008.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindEnds_0009.obj
+	 material BlindEndsBSDF
+}
+
+mesh
+{
+	 file livi\BlindWoodStrip_0003.obj
+	 material BlindWoodStripBSDF
+}
+
+mesh
+{
+	 file livi\BlindMaterial_0005.obj
+	 material BlindMaterialBSDF
+}
+
+mesh
+{
+	 file livi\BlindMaterial_0006.obj
+	 material BlindMaterialBSDF
+}
+
+mesh
+{
+	 file livi\Steel_0001.obj
+	 material SteelBSDF
+}
+
+mesh
+{
+	 file livi\BlackRaughtIron_0001.obj
+	 material BlackRaughtIronBSDF
+}
+
+mesh
+{
+	 file livi\BlackRaughtIron_0002.obj
+	 material BlackRaughtIronBSDF
+}
+
+mesh
+{
+	 file livi\Steel_0002.obj
+	 material SteelBSDF
+}
+
+mesh
+{
+	 file livi\BlackRaughtIron_0003.obj
+	 material BlackRaughtIronBSDF
+}
+
+mesh
+{
+	 file livi\BlackRaughtIron_0004.obj
+	 material BlackRaughtIronBSDF
+}
+
+mesh
+{
+	 file livi\BlackRaughtIron_0005.obj
+	 material BlackRaughtIronBSDF
+}
+
+mesh
+{
+	 file livi\BlackRaughtIron_0006.obj
+	 material BlackRaughtIronBSDF
+}
+
+mesh
+{
+	 file livi\BlackRaughtIron_0007.obj
+	 material BlackRaughtIronBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0009.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0010.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\BlackMarble.obj
+	 material BlackMarbleBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0011.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0012.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0013.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\Walls_0002.obj
+	 material WallsBSDF
+}
+
+mesh
+{
+	 file livi\Floor.obj
+	 material FloorBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0014.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0015.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\Walls_0003.obj
+	 material WallsBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0016.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0017.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0018.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0019.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0020.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\WhitePaint_0021.obj
+	 material WhitePaintBSDF
+}
+
+mesh
+{
+	 file livi\Socket_0005.obj
+	 material SocketBSDF
+}
+
+mesh
+{
+	 file livi\Socket_0006.obj
+	 material SocketBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0004.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0005.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0006.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0007.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0008.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\SofaLeather_0009.obj
+	 material SofaLeatherBSDF
+}
+
+mesh
+{
+	 file livi\Cushion1_0002.obj
+	 material Cushion1BSDF
+}
+
+mesh
+{
+	 file livi\Carpet.obj
+	 material CarpetBSDF
+}
+
+mesh
+{
+	 file livi\Table_0003.obj
+	 material TableBSDF
+}
+
+mesh
+{
+	 file livi\DrawerHandles_0003.obj
+	 material DrawerHandlesBSDF
+}
+
+mesh
+{
+	 file livi\TableLegs.obj
+	 material TableLegsBSDF
+}
+
+mesh
+{
+	 file livi\Table_0004.obj
+	 material TableBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorBase_0001.obj
+	 material RadiatorBaseBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorBase_0002.obj
+	 material RadiatorBaseBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorKnobOuter.obj
+	 material RadiatorKnobOuterBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorKnobCentre.obj
+	 material RadiatorKnobCentreBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0001.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0002.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0003.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0004.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0005.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0006.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0007.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\RadiatorPanelsEnamel_0008.obj
+	 material RadiatorPanelsEnamelBSDF
+}
+
+mesh
+{
+	 file livi\Dishes_0001.obj
+	 material DishesBSDF
+}
+
+mesh
+{
+	 file livi\Dishes_0002.obj
+	 material DishesBSDF
+}
+
+mesh
+{
+	 file livi\DullSteel.obj
+	 material DullSteelBSDF
+}
+
+mesh
+{
+	 file livi\Ceramic_0002.obj
+	 material CeramicBSDF
+}
+
+mesh
+{
+	 file livi\Ceramic_0003.obj
+	 material CeramicBSDF
+}
+
+mesh
+{
+	 file livi\RadioHandle.obj
+	 material RadioHandleBSDF
+}
+
+mesh
+{
+	 file livi\RadioPlastic_0001.obj
+	 material RadioPlasticBSDF
+}
+
+mesh
+{
+	 file livi\BushLogo_0001.obj
+	 material BushLogoBSDF
+}
+
+mesh
+{
+	 file livi\BushLogo_0002.obj
+	 material BushLogoBSDF
+}
+
+mesh
+{
+	 file livi\RadioDialLine.obj
+	 material RadioDialLineBSDF
+}
+
+mesh
+{
+	 file livi\RadioDialBack.obj
+	 material RadioDialBackBSDF
+}
+
+mesh
+{
+	 file livi\RadioDialRed.obj
+	 material RadioDialRedBSDF
+}
+
+mesh
+{
+	 file livi\RadioMetalRing.obj
+	 material RadioMetalRingBSDF
+}
+
+mesh
+{
+	 file livi\RadioGlass.obj
+	 material RadioGlassBSDF
+}
+
+mesh
+{
+	 file livi\RadioPlastic_0002.obj
+	 material RadioPlasticBSDF
+}
+
+mesh
+{
+	 file livi\RadioPlastic_0003.obj
+	 material RadioPlasticBSDF
+}
+
+mesh
+{
+	 file livi\ChromeHandle.obj
+	 material ChromeHandleBSDF
+}
+
+mesh
+{
+	 file livi\RadioPlastic_0004.obj
+	 material RadioPlasticBSDF
+}
+
+mesh
+{
+	 file livi\RadioInside.obj
+	 material RadioInsideBSDF
+}
+
+mesh
+{
+	 file livi\RadioKnob.obj
+	 material RadioKnobBSDF
+}
+
+mesh
+{
+	 file livi\RadioSurround.obj
+	 material RadioSurroundBSDF
+}
+
+mesh
+{
+	 file livi\RadioEdges_0001.obj
+	 material RadioEdgesBSDF
+}
+
+mesh
+{
+	 file livi\RadioEdges_0002.obj
+	 material RadioEdgesBSDF
+}
+
+mesh
+{
+	 file livi\_unnamed_94.obj
+	 material _unnamed_95
+}
+
+light
+{
+	 position -1.2951829433441162 1.151494026184082 0.8046985268592834
+	 emission 25.0 25.0 25.0
+	 v1 -0.7670769095420837 1.151494026184082 0.5151374936103821
+	 v2 -1.2951829433441162 2.780345916748047 0.8046985268592834
+	 type Quad
+}
+
+light
+{
+	 position -0.18546032905578613 1.1780195236206055 0.38395100831985474
+	 emission 25.0 25.0 25.0
+	 v1 0.6126043200492859 1.1780195236206055 0.38395100831985474
+	 v2 -0.18546032905578613 2.7481203079223633 0.38395100831985474
+	 type Quad
+}
+
+light
+{
+	 position 1.206605315208435 1.1679924726486206 0.5243450403213501
+	 emission 25.0 25.0 25.0
+	 v1 1.7050747871398926 1.1679924726486206 0.7935270071029663
+	 v2 1.206605315208435 2.7638473510742188 0.5243450403213501
+	 type Quad
+}
+
