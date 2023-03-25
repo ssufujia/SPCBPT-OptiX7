@@ -1,5 +1,8 @@
 #pragma once
 
+#define PT_BRDF_STRATEGY_ONLY
+//#define PT_NEE_STRATEGY_ONLY
+
 /* 如果想要控制BDPT渲染哪些光路，需要打开这个开关 */
 static const bool BDPT_CONTROL = 1;
 
@@ -20,10 +23,14 @@ static const bool LDSE_ENABLE = 0;
 /* LDSAE */
 static const bool LDSAE_ENABLE = 0;
 /* LDSDE */
-static const bool LDSDE_ENABLE = 1;
+static const bool LDSDE_ENABLE = 0;
+
 /* LSAE */
 static const bool LSAE_ENABLE = 0;
 /* LSE */
 static const bool LSE_ENABLE = 0;
 /* LSDE */
 static const bool LSDE_ENABLE = 0;
+
+/* LSSDE */
+static const bool LSSDE_ENABLE = 1;

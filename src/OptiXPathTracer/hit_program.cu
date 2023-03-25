@@ -11,9 +11,6 @@
 #include "pathControl.h"
 #include "rmis.h"
 
-#define PT_BRDF_STRATEGY_ONLY
-//#define PT_NEE_STRATEGY_ONLY
-
 extern "C" __global__ void __anyhit__radiance()
 {
     //optixIgnoreIntersection();
@@ -171,7 +168,10 @@ extern "C" __global__ void __closesthit__lightsource()
                 /* L - S - E */
                     (LSE_ENABLE && prd->depth == 1 && prd->path_record == 0b1) ||
                 /* L - S - D - E */
-                    (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) 
+                    (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) ||
+                /* L - S - S - D - E */
+                    (LSSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b110)
+
                 )
             )
         )
