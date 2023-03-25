@@ -776,6 +776,7 @@ extern "C" __global__ void __raygen__shift_combine()
                             pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
                                  Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir,finalPath.get(0).normal)); 
 
+                            // printf("pdf_retrace: %f\n", pdf_retrace);
                             /* 新的光源顶点 */
                             finalPath.get(1) = np;
                         }
@@ -803,8 +804,10 @@ extern "C" __global__ void __raygen__shift_combine()
 
                             finalPath.get(1) = np;
 
-                            pdf_retrace = 1;//Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
-                                //Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal)); ;
+                            pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
+                                Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal)) / 1000;
+                            /*printf("pdf_retrace: %f\n", pdf_retrace);
+                            printf("light pdf: %f\n", finalPath.get(2).pdf);*/
                         }
 
 
@@ -816,7 +819,8 @@ extern "C" __global__ void __raygen__shift_combine()
                         float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()); 
                         //printf("contri:  %f %f %f\n", contri.x, contri.y, contri.z);
                         //printf("pdf: %f", pdf);
-                        float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;                        
+                        float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
+                        // printf("inverpdf: %f\n", light_subpath.inverPdfEst);            
 
                         if (!ISINVALIDVALUE(res))
                             result += res / CONNECTION_N;
@@ -1004,7 +1008,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     v[0] = curVertex;
 
                     Shift::PathContainer path(v, 1, 2);
-                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed);
+                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed,curVertex.path_record);
                     curVertex.inverPdfEst = pdf_inverse;
                 } 
 
