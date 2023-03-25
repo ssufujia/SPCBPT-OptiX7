@@ -1015,8 +1015,15 @@ extern "C" __global__ void __raygen__lightTrace()
                 /* L -> D -> S 光子路，即 S - D - L， path_record 为 0b10 */
                 else if (curVertex.depth == 2 && curVertex.path_record == 0b10)
                 {
-                    // TBD
-                    curVertex.inverPdfEst = 1;
+                    BDPTVertex v[3];
+                    /* v[1] 是光源顶点 */
+                    v[2] = payload.path(2);
+                    v[1] = payload.path(1);
+                    v[0] = curVertex;
+
+                    Shift::PathContainer path(v, 1, 3);
+                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex.path_record);
+                    curVertex.inverPdfEst = pdf_inverse;
                 }
 
                 float e = curVertex.contri_float();
