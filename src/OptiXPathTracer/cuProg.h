@@ -31,6 +31,7 @@
 #define CUPROG_H
 
 #include <sutil/vec_math.h>
+#include <cmath>
 
 #include "whitted.h"
 #include"optixPathTracer.h"
@@ -3079,6 +3080,7 @@ namespace Shift
 
         return true;
     }
+
     RT_FUNCTION bool path_shift_uvRemap_1bounce(PathContainer& originPath, PathContainer& newPath, float3 anchor, float& Jacobian)
     {
         if (originPath.size() != 2 || glossy(originPath.get(0)) == false || originPath.get(1).type != BDPTVertex::Type::QUAD)
@@ -3909,6 +3911,7 @@ namespace Shift
         } 
 
     };
+
     RT_FUNCTION float getClosestGeometry_upperBound(Light &light, float3 position,float3 normal,float3& sP)
     {
         Tracer::lightSample light_sample;
@@ -3930,106 +3933,189 @@ namespace Shift
         return abs(dot(dir, light.quad.normal) ) / dot(diff, diff) * 1 / M_PI * cos_bound;
 
     }
-    RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed)
+
+    /*use to genertate low_difference seq*/
+    RT_FUNCTION double halton(int index, int base) {
+        double result = 0;
+        double f = 1.0 / base;
+        int i = index;
+
+        while (i > 0) {
+            result += f * (i % base);
+            i /= base;
+            f /= base;
+        }
+
+        return result;
+    }
+
+    /* calculate the absent path pdf */
+    RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned& seed)
     {
+        /* now we only work with path as light-glossy */
         if (path.size() != 2 || glossy(path.get(0)) == false)
         {
-           // printf("C %d %d\n", path.size(), glossy(path.get(0)));
             return 0;
         }
-        //printf("A");
-        Light light = Tracer::params.lights[path.get(1).materialId];
 
-//        light_sample.ReverseSample(light, path.get(1).uv);
-//        float pdf_ref = light_sample.pdf * tracingPdf(path.get(1),path.get(0));
+        Light light = Tracer::params.lights[path.get(1).materialId];
+        //        light_sample.ReverseSample(light, path.get(1).uv);
+        //        float pdf_ref = light_sample.pdf * tracingPdf(path.get(1),path.get(0));
         float3 sP;
-        float upperbound = getClosestGeometry_upperBound(light, path.get(0).position, path.get(0).normal,sP);
+        /* estimate the upper bound */
+        float upperbound = getClosestGeometry_upperBound(
+            light,
+            path.get(0).position,
+            path.get(0).normal,
+            sP
+        );
 
         float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
-        //if (pdf_ref_sum / upperbound > 1)
-            //printf("bound compute test %f %f %f\n", pdf_ref_sum / upperbound, length(sP - path.get(0).position),length(path.get(1).position - path.get(0).position));
         int pdf_ref_count = 1;
         float bound = pdf_ref_sum / pdf_ref_count * 2;
         bound = upperbound;
-        //bound += path.get(1).pdf; 
-        float ans = 0; 
+        float ans = 0;
 
-        float variance_accumulate = 0;
         float average_accumulate = 0;
+        float variance_accumulate = 0;
         int suc_int = 0;
-        for (int i = 0; i < 50; i++)
-        { 
-            ans = 0; 
-            suc_int++;
-            float times = 1;
-            int loop_time = 0;
-            while (true)
+        float average_accumulate1, average_accumulate2;
+
+        bool methodChose=0;
+        if (methodChose) {
+            /* 使用老方法还是用纯RR？ */
+            bool RR_option = 0;
+            float RR_rate = 0.75;
+            for (int t = 0; t < 1; t++)
             {
-                loop_time += 1;
-                if (loop_time > 1000)break;
-                ans += times / bound;
-                BDPTVertex& v = path.get(0);
-                float ratio = 0.8;
-                BDPTVertex np;
-
-                if (rnd(seed) > ratio)//method choice
+                if (t) RR_option = true;
+                average_accumulate = 0;
+                suc_int = 0;
+                /* pdf估计的核心流程 */
+                for (int i = 0; i < 50; i++)
                 {
-                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal: -v.normal);
-                    float3 dir;
-                    cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
-                    onb.inverse_transform(dir);
-                    bool success_hit;
-                    np = Tracer::FastTrace(v, dir, success_hit);
-                    if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)continue;
-                    Light light = Tracer::params.lights[np.materialId];
-                    Tracer::lightSample light_sample;
-                    light_sample.ReverseSample(light, np.uv);
-                    init_vertex_from_lightSample(light_sample, np);
-                } 
-                else
-                {  
-                    float2 uv = make_float2(rnd(seed), rnd(seed));
-                    Tracer::lightSample light_sample;
-                    light_sample.ReverseSample(light, uv); 
-                    init_vertex_from_lightSample(light_sample, np);
-                }
-
-                float pdf = (np.pdf * tracingPdf(np, path.get(0))) / (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
-                //float pdf = tracingPdf(np, path.get(0));
-
-                float q = pdf / bound;
-                float continue_rate = 1 - q;
-                float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
-                if (abs(continue_rate) > 1)
-                { 
-                    bound *= 2;
                     ans = 0;
-                    suc_int -= 1;
-                    break;
-                };
+                    suc_int++;
+                    float factor = 1;
+                    int loop_cnt = 0;
+                    // 
+                    while (true)
+                    {
+                        loop_cnt += 1;
+                        if (loop_cnt > 1000)
+                            break;
+                        ans += factor / bound;
+                        BDPTVertex& v = path.get(0);
+                        float ratio = 0.8;
+                        BDPTVertex np;
+                        /* 使用哪种方法来采样残缺顶点？*/
+                        if (rnd(seed) > ratio)
+                        {
+                            /* 从glossy顶点采样 */
+                            /* 建立局部坐标系，onb代表orthonormal basis*/
+                            Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                            float3 dir;
+                            /* 半球空间采样 */
+                            cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                            onb.inverse_transform(dir);
+                            /* 从glossy顶点出发进行追踪 */
+                            bool success_hit;
+                            np = Tracer::FastTrace(v, dir, success_hit);
+                            /* 这里直接continue正确吗？ */
+                            if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                                continue;
+                            Light light = Tracer::params.lights[np.materialId];
+                            Tracer::lightSample light_sample;
+                            light_sample.ReverseSample(light, np.uv);
+                            /* 把信息装到np中 */
+                            init_vertex_from_lightSample(light_sample, np);
+                        }
+                        else
+                        {
+                            /* 从光源采样 */
+                            float2 uv = make_float2(rnd(seed), rnd(seed));
+                            Tracer::lightSample light_sample;
+                            light_sample.ReverseSample(light, uv);
+                            /* 把光源采样的信息装到np中 */
+                            init_vertex_from_lightSample(light_sample, np);
+                        }
+                        /* 计算f(x)/p(x) */
+                        float pdf = (np.pdf * tracingPdf(np, path.get(0))) /
+                            (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+                        //float pdf = tracingPdf(np, path.get(0));
 
-                if (rnd(seed) > rr_rate)
-                {
-                    break;
+                        if (RR_option) {
+                            /* 试一试纯RR效果如何 */
+                            if (rnd(seed) > RR_rate)
+                                break;
+                            factor *= (1 - pdf / bound) / RR_rate;
+
+                        }
+                        else {
+                            /* 老方法，sfj写的 */
+                            float continue_rate = 1 - pdf / bound;
+                            /* 测出来continue_rate都很接近于1 */
+                            // printf("c_rate: %f\n", continue_rate);
+                            /* 这一段在干嘛？ */
+                            if (abs(continue_rate) > 1)
+                            {
+                                bound *= 2;
+                                ans = 0;
+                                suc_int -= 1;
+                                break;
+                            };
+
+                            float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                            if (rnd(seed) > rr_rate)
+                            {
+                                break;
+                            }
+                            factor *= continue_rate / rr_rate;
+                        }
+
+                    }  // end while
+                    variance_accumulate += ans * ans;
+                    average_accumulate += ans;
                 }
-                {
-                    times *= continue_rate / rr_rate;
-                }
+                ans = average_accumulate / suc_int;
+                variance_accumulate /= suc_int;
+                variance_accumulate -= ans * ans;
+                if (!t)
+                    average_accumulate1 = ans;
+                else
+                    average_accumulate2 = ans;
             }
-            
-            variance_accumulate += ans * ans;
-            average_accumulate += ans;
-            if (suc_int == 1)break;
         }
-        ans = average_accumulate / suc_int;
-        variance_accumulate /= suc_int;
-        variance_accumulate -= ans * ans;
-       // printf("average %f variance %f %d %d\n", ans, variance_accumulate, pdf_ref_count, suc_int);
-        
-        
-        //printf("compare pdf %f %f %d\n", ans, 1.0 / path.get(0).pdf, pdf_ref_count);
+        else {
+            average_accumulate = 0;
+            suc_int = 0;
+            int count = 100;
+            int base1 = 2;
+            int base2 = 3;
+            int bias = rnd(seed) * 1000;//randomly,the num don't change the method
+            BDPTVertex np;
+            /* 从光源采样 均匀采样*/
+            for (int i = 0; i < count; i++)
+            {
+                suc_int++;
+                float x_cord = halton(i + bias, base1);
+                float y_cord = halton(i + bias, base2);
+                float2 uv = make_float2(x_cord, y_cord);
+                Tracer::lightSample light_sample;
+                light_sample.ReverseSample(light, uv);
+                /* 把光源采样的信息装到np中 */
+                init_vertex_from_lightSample(light_sample, np);
+                average_accumulate += tracingPdf(np, path.get(0));
+            }
+            ans = suc_int / average_accumulate;
+        }
+        //printf("old method %f\nnew method %f\n", average_accumulate1, ans);
+        //printf("old method %f\nlbx method %f\nnew method %f\n",average_accumulate1, average_accumulate2,ans);
+        // //printf("average %f variance %f %d %d\n", ans, variance_accumulate, pdf_ref_count, suc_int);
+        // //printf("compare pdf %f %f %d\n", ans, 1.0 / path.get(0).pdf, pdf_ref_count);
         return ans;
     }
+
     //test code 
     //can't ensure its performance
     RT_FUNCTION float get_duv_dwi(const MaterialData::Pbr& mat, const float3& N, const float3& V, const float3& L, bool is_refract)

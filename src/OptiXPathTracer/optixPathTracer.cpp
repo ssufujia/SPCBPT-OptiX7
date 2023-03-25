@@ -53,6 +53,7 @@
 
 #include <array>
 #include <cstring>
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -188,12 +189,24 @@ void img_save()
     outputbuffer.width = params.width;
     outputbuffer.height = params.height;
     outputbuffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
-    sutil::saveImage("image.png", outputbuffer, true);
+
+    // 获取当前时间
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // 将时间格式化为字符串
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_time_t), "%Y年%m月%d日%H_%M_%S");
+
+    // 获取格式化后的文件名
+    std::string filename = ss.str();
+
+    sutil::saveImage(("pic/"+filename+".png").c_str(), outputbuffer, true);
 
 
     auto p = MyThrustOp::copy_to_host(params.accum_buffer, params.height * params.width);
     std::ofstream outFile;
-    outFile.open("./standard.txt");
+    outFile.open(("data/" + filename + ".txt").c_str());
 
     outFile << params.width << " " << params.height << std::endl;
     for (int i = 0; i < params.width * params.height; i++)
@@ -783,8 +796,8 @@ int main( int argc, char* argv[] )
 
 //        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
-//         string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
-         string scenePath = string(SAMPLES_DIR) + string("/data/newlive/livingroom.scene");
+         string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
+//         string scenePath = string(SAMPLES_DIR) + string("/data/newlive/livingroom.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
