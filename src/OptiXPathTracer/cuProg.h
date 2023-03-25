@@ -3710,8 +3710,7 @@ namespace Shift
         else
         {
             //TBD
-            //return GeometryTerm(a, b) * 1 / M_PI * Tracer::visibilityTest(Tracer::params.handle, a, b);
-            return 0;
+            return GeometryTerm(a, b) * 1 / M_PI * Tracer::visibilityTest(Tracer::params.handle, a, b);
         }
     }
     struct getClosestPointFunction
@@ -3959,7 +3958,7 @@ namespace Shift
                 float ratio = 0;
                 BDPTVertex np;
                 /* 使用哪种方法来采样残缺顶点？*/
-                if (rnd(seed) > ratio)
+                if (rnd(seed) >= ratio)
                 {
                     /* 从glossy顶点采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
@@ -3991,8 +3990,12 @@ namespace Shift
                     init_vertex_from_lightSample(light_sample, np);
                 }
                 /* 计算f(x)/p(x) */
-                float pdf = (path.get(2).pdf * tracingPdf(np, path.get(0))) /
-                    (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+                MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
+                float pdf = path.get(2).pdf * tracingPdf(path.get(2), np)
+                    * Tracer::Pdf(mat,np.normal,normalize(path.get(2).position - np.position),normalize(v.position - np.position))
+                    * GeometryTerm(np, v)
+                    * Tracer::visibilityTest(Tracer::params.handle, np, v)
+                    / tracingPdf(np, v);
                 //float pdf = tracingPdf(np, path.get(0));
 
                 if (RR_option) {
