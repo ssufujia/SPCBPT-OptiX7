@@ -282,8 +282,6 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     if (!(prd->pdf > 0.0f))
         prd->done = true;
 
-
-
     //    prd->path.size += 1;
     prd->path.push();
     BDPTVertex& MidVertex = prd->path.currentVertex();
