@@ -3795,7 +3795,6 @@ namespace Shift
             path.get(0).normal,
             sP
         );
-
         float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
         int pdf_ref_count = 1;
         float bound = pdf_ref_sum / pdf_ref_count * 2;
@@ -3923,8 +3922,9 @@ namespace Shift
         //float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
         //int pdf_ref_count = 1;
         //float bound = pdf_ref_sum / pdf_ref_count * 2;
-        float bound = upperbound;
 
+
+        float bound = 10;//upperbound;
         float ans = 0;
 
         float variance_accumulate = 0;
@@ -3932,8 +3932,8 @@ namespace Shift
         int suc_int = 0;
 
         /* 使用老方法还是用纯RR？ */
-        bool RR_option = 0;
-        float RR_rate = 0.8;
+        bool RR_option = 1;
+        float RR_rate = 0.5;
 
         /* pdf估计的核心流程 */
         for (int i = 0; i < 50; i++)
@@ -3990,7 +3990,7 @@ namespace Shift
                     /* 从glossy顶点出发进行追踪 */
                     bool success_hit;
                     /* 此处np为中间的diffuse顶点 */
-                    np = Tracer::FastTrace(v, dir, success_hit);
+                    np = Tracer::FastTrace(l, dir, success_hit);
                     /* 这里直接continue是正确的 */
                     if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
                         Shift::glossy(np))
