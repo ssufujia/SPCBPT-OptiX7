@@ -3817,13 +3817,13 @@ namespace Shift
 
         float average_accumulate = 0;
         int suc_int = 0;
-        average_accumulate = 0;
-        suc_int = 0;
-        int count = 100;
+        float ratio = 1.0;
+        int count = 50;
         int base1 = 2;
         int base2 = 3;
         int bias = rnd(seed) * 1000;//randomly,the num don't change the method
         BDPTVertex np;
+        BDPTVertex& v = path.get(0);
         /* 从光源采样 均匀采样*/
         for (int i = 0; i < count; i++)
         {
@@ -3831,16 +3831,45 @@ namespace Shift
             float x_cord = halton(i + bias, base1);
             float y_cord = halton(i + bias, base2);
             float2 uv = make_float2(x_cord, y_cord);
-            Tracer::lightSample light_sample;
-            light_sample.ReverseSample(light, uv);
-            /* 把光源采样的信息装到np中 */
-            init_vertex_from_lightSample(light_sample, np);
-            average_accumulate += tracingPdf(np, path.get(0));
+            if (rnd(seed) > ratio)
+            {
+                /* 从glossy顶点采样 */
+                /* 建立局部坐标系，onb代表orthonormal basis*/
+                Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                float3 dir;
+                /* 半球空间采样 */
+                cosine_sample_hemisphere(uv.x, uv.y, dir);
+                onb.inverse_transform(dir);
+                /* 从glossy顶点出发进行追踪 */
+                bool success_hit;
+                np = Tracer::FastTrace(v, dir, success_hit);
+                /* 这里直接continue是正确的 */
+                if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                    continue;
+                Light light = Tracer::params.lights[np.materialId];
+                Tracer::lightSample light_sample;
+                light_sample.ReverseSample(light, np.uv);
+                /* 把信息装到np中 */
+                init_vertex_from_lightSample(light_sample, np);
+            }
+            else
+            {
+                /* 从光源采样 */
+                Tracer::lightSample light_sample;
+                light_sample.ReverseSample(light, uv);
+                /* 把光源采样的信息装到np中 */
+                init_vertex_from_lightSample(light_sample, np);
+            }
+            /* 计算f(x)/p(x) */
+            float pdf = (np.pdf * tracingPdf(np, path.get(0))) /
+                (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+            average_accumulate += pdf;
         }
         ans = suc_int / average_accumulate;
         
         return ans;
     }
+
     RT_FUNCTION float inverPdfEstimate_LS(PathContainer& path, unsigned& seed)
     {
         /* path 0是glossy 1是光 */
@@ -3854,23 +3883,18 @@ namespace Shift
             sP
         );
 
-        float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
-        int pdf_ref_count = 1;
-        float bound = pdf_ref_sum / pdf_ref_count * 2;
-        bound = upperbound;
-
+        float bound=upperbound/4;
         float ans = 0;
-
-        float variance_accumulate = 0;
         float average_accumulate = 0;
+        float sample_ratio = 0.8;
+        float rrs_ratio;
+
         int suc_int = 0;
-
-        /* 使用老方法还是用纯RR？ */
-        bool RR_option = 0;
-        float RR_rate = 0.8;
-
+        int bias = rnd(seed) * 1000;//randomly,the num don't change the method
+        BDPTVertex& v = path.get(0);
+        BDPTVertex np;
         /* pdf估计的核心流程 */
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 1; i++)
         {
             ans = 0;
             suc_int++;
@@ -3881,22 +3905,23 @@ namespace Shift
             {
                 loop_cnt += 1;
                 if (loop_cnt > 1000) {
-                    // printf("Break due to loop_cnt > 1000 \n");
+                    //printf("Break due to loop_cnt > 1000 \n");
                     break;
                 }
+
                 ans += factor / bound;
-                BDPTVertex& v = path.get(0);
-                float ratio = 0.8;
-                BDPTVertex np;
+                
+                float x_cord = halton(i + bias,2);
+                float y_cord = halton(i + bias, 3);
                 /* 使用哪种方法来采样残缺顶点？*/
-                if (rnd(seed) > ratio)
+                if (rnd(seed) > sample_ratio)
                 {
                     /* 从glossy顶点采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
                     Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
                     float3 dir;
                     /* 半球空间采样 */
-                    cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                    cosine_sample_hemisphere(x_cord, y_cord, dir);
                     onb.inverse_transform(dir);
                     /* 从glossy顶点出发进行追踪 */
                     bool success_hit;
@@ -3913,55 +3938,34 @@ namespace Shift
                 else
                 {
                     /* 从光源采样 */
-                    float2 uv = make_float2(rnd(seed), rnd(seed));
+                    float2 uv = make_float2(x_cord, y_cord);
                     Tracer::lightSample light_sample;
                     light_sample.ReverseSample(light, uv);
                     /* 把光源采样的信息装到np中 */
                     init_vertex_from_lightSample(light_sample, np);
                 }
+                
                 /* 计算f(x)/p(x) */
                 float pdf = (np.pdf * tracingPdf(np, path.get(0))) /
-                    (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
-                //float pdf = tracingPdf(np, path.get(0));
+                    (np.pdf * sample_ratio + tracingPdf(np, path.get(0)) * (1 - sample_ratio));
+ 
+                float continue_rate = 1 - pdf / bound;
+                if (abs(continue_rate) > 1)
+                {
+                    bound *= 2;
+                    ans = 0;
+                    suc_int -= 1;
+                    break;
+                };
 
-                if (RR_option) {
-                    /* 试一试纯RR效果如何 */
-                    if (rnd(seed) > RR_rate)
-                        break;
-                    factor *= (1 - pdf / bound) / RR_rate;
-
-                }
-                else {
-                    /* 老方法，sfj写的 */
-                    float continue_rate = 1 - pdf / bound;
-                    /* 测出来continue_rate都很接近于1 */
-                    // printf("c_rate: %f\n", continue_rate);
-                    /* 这一段在干嘛？ */
-                    if (abs(continue_rate) > 1)
-                    {
-                        bound *= 2;
-                        ans = 0;
-                        suc_int -= 1;
-                        break;
-                    };
-
-                    float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
-                    if (rnd(seed) > rr_rate)
-                        break;
-                    factor *= continue_rate / rr_rate;
-                }
-
-            }  // end while
-            // printf("loop_cnt: %d\n", loop_cnt);
-            variance_accumulate += ans * ans;
+                float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                if (rnd(seed) > rr_rate)
+                    break;
+                factor *= continue_rate / rr_rate;
+            }  
             average_accumulate += ans;
-            /* 提前退出了 */
-            if (suc_int == 1)
-                break;
-        }
+           }
         ans = average_accumulate / suc_int;
-        variance_accumulate /= suc_int;
-        variance_accumulate -= ans * ans;
         return ans;
     }
 
@@ -4103,7 +4107,10 @@ namespace Shift
         /* L-S */
         if (path_record == 0b1)
         {
-            return inverPdfEstimate_LS(path, seed);
+            //float x1= inverPdfEstimate_LS(path, seed);
+            float x1 = another_inverPdfEstimate(path, seed);
+            //printf("old:%f new%f\n", x1, x2);
+            return x1;
         }
         /* L-D-S */
         else if (path_record == 0b10)

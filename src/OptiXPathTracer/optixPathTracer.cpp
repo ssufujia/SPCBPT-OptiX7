@@ -58,6 +58,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <cstdlib>
 #include <string>
 #include<sutil/Scene.h> 
 #include"sceneLoader.h"
@@ -181,7 +182,7 @@ static void windowIconifyCallback( GLFWwindow* window, int32_t iconified )
 }
 
 
-void img_save()
+void img_save(double render_time=-1,int frame=0)
 {
     sutil::ImageBuffer outputbuffer;
 
@@ -197,18 +198,17 @@ void img_save()
 
     // 将时间格式化为字符串
     std::stringstream ss;
-    ss << std::put_time(std::localtime(&now_time_t), "%Y年%m月%d日%H_%M_%S");
+    ss << "./data/"<< std::put_time(std::localtime(&now_time_t), "%Y年%m月%d日%H_%M_%S");
 
     // 获取格式化后的文件名
     std::string filename = ss.str();
-
-    sutil::saveImage(("pic/"+filename+".png").c_str(), outputbuffer, true);
+    sutil::saveImage((filename+".png").c_str(), outputbuffer, true);
 
 
     auto p = MyThrustOp::copy_to_host(params.accum_buffer, params.height * params.width);
     std::ofstream outFile;
-    outFile.open(("data/" + filename + ".txt").c_str());
-
+    outFile.open((filename + ".txt").c_str());
+    outFile<<render_time<<" " <<frame<< std::endl;
     outFile << params.width << " " << params.height << std::endl;
     for (int i = 0; i < params.width * params.height; i++)
     {
@@ -826,25 +826,13 @@ int main( int argc, char* argv[] )
     try
     {
         string scenePath = " ";
-       // scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-       // string scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+           scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
+         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
+           //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
 
-//        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
-//        string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
-        //string scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
-
-
-//        string scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
- //        string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
-         // string scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
-         scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
-            //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
-
-           //scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
-//         string scenePath = string(SAMPLES_DIR) + string("/data/newlive/livingroom.scene");
 //         string scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
 //        string scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
@@ -922,7 +910,9 @@ int main( int argc, char* argv[] )
                 std::chrono::duration<double> state_update_time(0.0);
                 std::chrono::duration<double> render_time(0.0);
                 std::chrono::duration<double> display_time(0.0);
-
+                std::chrono::duration<double> sum_render_time(0.0);
+                std::chrono::duration<double> print_time(10.0);
+                bool print = false;
                 do
                 {
                     auto t0 = std::chrono::steady_clock::now();
@@ -939,6 +929,7 @@ int main( int argc, char* argv[] )
                     launchSubframe(output_buffer, TScene);
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
+                    sum_render_time += render_time;
                     t0 = t1;                    
                     
 
@@ -962,6 +953,11 @@ int main( int argc, char* argv[] )
                         printf("frame %d\n", params.subframe_index);
                     }
                     ++params.subframe_index;
+                    /*if (sum_render_time > print_time && !print) {
+                        img_save(sum_render_time.count(), params.subframe_index);
+                        print = true;
+                        exit(0);
+                     }*/
                 } while (!glfwWindowShouldClose(window));
                 CUDA_SYNC_CHECK();
             }
