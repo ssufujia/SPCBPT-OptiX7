@@ -3702,9 +3702,9 @@ namespace Shift
         float3 dir = normalize(diff);
         return abs(dot(dir, a.normal) * dot(dir, b.normal)) / dot(diff, diff);
     }
-    RT_FUNCTION float tracingPdf(BDPTVertex& a, BDPTVertex b)
+    RT_FUNCTION float tracingPdf(const BDPTVertex& a, const BDPTVertex& b)
     {
-        if (a.depth == 0&& a.type == BDPTVertex::Type::QUAD)
+        if (a.depth == 0&& a.type == BDPTVertex::Type::QUAD)// a为面光源，半球面采样
         {
             return GeometryTerm(a, b) * 1 / M_PI * Tracer::visibilityTest(Tracer::params.handle, a, b);
         }
@@ -3985,8 +3985,9 @@ namespace Shift
         //float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
         //int pdf_ref_count = 1;
         //float bound = pdf_ref_sum / pdf_ref_count * 2;
-        float bound = upperbound;
 
+
+        float bound = 10;//upperbound;
         float ans = 0;
 
         float variance_accumulate = 0;
@@ -3994,8 +3995,8 @@ namespace Shift
         int suc_int = 0;
 
         /* 使用老方法还是用纯RR？ */
-        bool RR_option = 0;
-        float RR_rate = 0.8;
+        bool RR_option = 1;
+        float RR_rate = 0.5;
 
         /* pdf估计的核心流程 */
         for (int i = 0; i < 50; i++)
@@ -4016,8 +4017,9 @@ namespace Shift
 
                 /* glossy顶点 */
                 BDPTVertex& v = path.get(0);
-
-                float ratio = 0;
+                /* 光顶点 */
+                BDPTVertex& l = path.get(2);
+                float ratio = 0.5;
                 BDPTVertex np;
                 /* 使用哪种方法来采样残缺顶点？*/
                 if (rnd(seed) >= ratio)
@@ -4034,22 +4036,28 @@ namespace Shift
                     /* 此处np为中间的diffuse顶点 */
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                        Shift::glossy(np))
                         continue;
-                    //Light light = Tracer::params.lights[np.materialId];
-                    //Tracer::lightSample light_sample;
-                    //light_sample.ReverseSample(light, np.uv);
-                    ///* 把信息装到np中 */
-                    //init_vertex_from_lightSample(light_sample, np);
+    
                 }
                 else
                 {
                     /* 从光源采样 */
-                    float2 uv = make_float2(rnd(seed), rnd(seed));
-                    Tracer::lightSample light_sample;
-                    light_sample.ReverseSample(light, uv);
-                    /* 把光源采样的信息装到np中 */
-                    init_vertex_from_lightSample(light_sample, np);
+                    /* 建立局部坐标系，onb代表orthonormal basis*/
+                    Onb onb(dot(l.normal, path.get(1).position - l.position) > 0 ? l.normal : -l.normal);
+                    float3 dir;
+                    /* 半球空间采样 */
+                    cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                    onb.inverse_transform(dir);
+                    /* 从glossy顶点出发进行追踪 */
+                    bool success_hit;
+                    /* 此处np为中间的diffuse顶点 */
+                    np = Tracer::FastTrace(l, dir, success_hit);
+                    /* 这里直接continue是正确的 */
+                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                        Shift::glossy(np))
+                        continue;
                 }
                 /* 计算f(x)/p(x) */
                 MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
@@ -4057,7 +4065,7 @@ namespace Shift
                     * Tracer::Pdf(mat, np.normal, normalize(path.get(2).position - np.position), normalize(v.position - np.position))
                     * GeometryTerm(np, v)
                     * Tracer::visibilityTest(Tracer::params.handle, np, v)
-                    / tracingPdf(np, v);
+                    / (ratio * tracingPdf(v,np) + (1 - ratio) * tracingPdf(l,np));
                 //float pdf = tracingPdf(np, path.get(0));
 
                 if (RR_option) {
@@ -4098,6 +4106,7 @@ namespace Shift
         ans = average_accumulate / suc_int;
         variance_accumulate /= suc_int;
         variance_accumulate -= ans * ans;
+        //printf("inverpdf %f\n", ans);
         return ans;
     }
 
