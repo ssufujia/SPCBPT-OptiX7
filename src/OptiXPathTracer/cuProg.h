@@ -4061,9 +4061,8 @@ namespace Shift
                 }
                 /* 计算f(x)/p(x) */
                 MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
-                float pdf = path.get(2).pdf * tracingPdf(path.get(2), np)
-                    * Tracer::Pdf(mat, np.normal, normalize(path.get(2).position - np.position), normalize(v.position - np.position))
-                    * GeometryTerm(np, v)
+                float pdf = l.pdf * tracingPdf(l, np)
+                    * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))* GeometryTerm(np, v)
                     * Tracer::visibilityTest(Tracer::params.handle, np, v)
                     / (ratio * tracingPdf(v,np) + (1 - ratio) * tracingPdf(l,np));
                 //float pdf = tracingPdf(np, path.get(0));
@@ -4116,8 +4115,8 @@ namespace Shift
         /* L-S */
         if (path_record == 0b1)
         {
-            //float x1= inverPdfEstimate_LS(path, seed);
-            float x1 = another_inverPdfEstimate(path, seed);
+            float x1= inverPdfEstimate_LS(path, seed);
+            //float x1 = another_inverPdfEstimate(path, seed);
             //printf("old:%f new%f\n", x1, x2);
             return x1;
         }

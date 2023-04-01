@@ -23,14 +23,14 @@ static const bool LDSE_ENABLE = 0;
 /* LDSAE */
 static const bool LDSAE_ENABLE = 0;
 /* LDSDE */
-static const bool LDSDE_ENABLE = 0;
+static const bool LDSDE_ENABLE = 1;
 
 /* LSAE */
 static const bool LSAE_ENABLE = 0;
 /* LSE */
 static const bool LSE_ENABLE = 0;
 /* LSDE */
-static const bool LSDE_ENABLE = 1;
+static const bool LSDE_ENABLE = 0;
 
 /* LSSDE */
 static const bool LSSDE_ENABLE = 0;
