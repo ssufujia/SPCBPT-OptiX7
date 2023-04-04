@@ -2986,7 +2986,7 @@ namespace Shift
         //float bound = pdf_ref_sum / pdf_ref_count * 2;
 
 
-        float bound = 10;//upperbound;
+        float bound = 5 ;//upperbound;
         float ans = 0;
 
         float variance_accumulate = 0;
@@ -2994,7 +2994,7 @@ namespace Shift
         int suc_int = 0;
 
         /* 使用老方法还是用纯RR？ */
-        bool RR_option = 1;
+        bool RR_option = 0;
         float RR_rate = 0.5;
 
         /* pdf估计的核心流程 */
