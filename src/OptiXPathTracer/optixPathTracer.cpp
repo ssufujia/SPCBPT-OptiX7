@@ -873,7 +873,7 @@ int main( int argc, char* argv[] )
         //pre tracing
         { 
             handleCameraUpdate(params);
-            //preprocessing(TScene);
+            preprocessing(TScene);
 
             path_guiding_params_setup(TScene);
         }
