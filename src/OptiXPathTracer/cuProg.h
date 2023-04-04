@@ -2746,7 +2746,7 @@ namespace Shift
         return ans;
     }
 
-    RT_FUNCTION float inverPdfEstimate_LS(PathContainer& path, unsigned& seed)
+    RT_FUNCTION float TEST_1_inverPdfEstimate_LS(PathContainer& path, unsigned& seed)
     {
         /* path 0是glossy 1是光 */
         Light light = Tracer::params.lights[path.get(1).materialId];
@@ -2759,7 +2759,7 @@ namespace Shift
             sP
         );
 
-        float bound=upperbound/4;
+        float bound = upperbound / 4;
         float ans = 0;
         float average_accumulate = 0;
         float sample_ratio = 0.8;
@@ -2786,8 +2786,8 @@ namespace Shift
                 }
 
                 ans += factor / bound;
-                
-                float x_cord = halton(i + bias,2);
+
+                float x_cord = halton(i + bias, 2);
                 float y_cord = halton(i + bias, 3);
                 /* 使用哪种方法来采样残缺顶点？*/
                 if (rnd(seed) > sample_ratio)
@@ -2820,11 +2820,11 @@ namespace Shift
                     /* 把光源采样的信息装到np中 */
                     init_vertex_from_lightSample(light_sample, np);
                 }
-                
+
                 /* 计算f(x)/p(x) */
                 float pdf = (np.pdf * tracingPdf(np, path.get(0))) /
                     (np.pdf * sample_ratio + tracingPdf(np, path.get(0)) * (1 - sample_ratio));
- 
+
                 float continue_rate = 1 - pdf / bound;
                 if (abs(continue_rate) > 1)
                 {
@@ -2838,10 +2838,133 @@ namespace Shift
                 if (rnd(seed) > rr_rate)
                     break;
                 factor *= continue_rate / rr_rate;
-            }  
+            }
             average_accumulate += ans;
-           }
+        }
         ans = average_accumulate / suc_int;
+        return ans;
+    }
+
+    RT_FUNCTION float inverPdfEstimate_LS(PathContainer& path, unsigned& seed)
+    {
+        /* path 0是glossy 1是光 */
+        Light light = Tracer::params.lights[path.get(1).materialId];
+        float3 sP;
+        /* 估计pdf上界 */
+        float upperbound = getClosestGeometry_upperBound(
+            light,
+            path.get(0).position,
+            path.get(0).normal,
+            sP
+        );
+        float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
+        int pdf_ref_count = 1;
+        float bound = pdf_ref_sum / pdf_ref_count * 2;
+        bound = upperbound;
+
+        float ans = 0;
+
+        float variance_accumulate = 0;
+        float average_accumulate = 0;
+        int suc_int = 0;
+
+        /* 使用老方法还是用纯RR？ */
+        bool RR_option = 0;
+        float RR_rate = 0.8;
+
+        /* pdf估计的核心流程 */
+        for (int i = 0; i < 50; i++)
+        {
+            ans = 0;
+            suc_int++;
+            float factor = 1;
+            int loop_cnt = 0;
+            // 
+            while (true)
+            {
+                loop_cnt += 1;
+                if (loop_cnt > 1000) {
+                    // printf("Break due to loop_cnt > 1000 \n");
+                    break;
+                }
+                ans += factor / bound;
+                BDPTVertex& v = path.get(0);
+                float ratio = 0.8;
+                BDPTVertex np;
+                /* 使用哪种方法来采样残缺顶点？*/
+                if (rnd(seed) > ratio)
+                {
+                    /* 从glossy顶点采样 */
+                    /* 建立局部坐标系，onb代表orthonormal basis*/
+                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                    float3 dir;
+                    /* 半球空间采样 */
+                    cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                    onb.inverse_transform(dir);
+                    /* 从glossy顶点出发进行追踪 */
+                    bool success_hit;
+                    np = Tracer::FastTrace(v, dir, success_hit);
+                    /* 这里直接continue是正确的 */
+                    if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                        continue;
+                    Light light = Tracer::params.lights[np.materialId];
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, np.uv);
+                    /* 把信息装到np中 */
+                    init_vertex_from_lightSample(light_sample, np);
+                }
+                else
+                {
+                    /* 从光源采样 */
+                    float2 uv = make_float2(rnd(seed), rnd(seed));
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, uv);
+                    /* 把光源采样的信息装到np中 */
+                    init_vertex_from_lightSample(light_sample, np);
+                }
+                /* 计算f(x)/p(x) */
+                float pdf = (np.pdf * tracingPdf(np, path.get(0))) /
+                    (np.pdf * ratio + tracingPdf(np, path.get(0)) * (1 - ratio));
+                //float pdf = tracingPdf(np, path.get(0));
+
+                if (RR_option) {
+                    /* 试一试纯RR效果如何 */
+                    if (rnd(seed) > RR_rate)
+                        break;
+                    factor *= (1 - pdf / bound) / RR_rate;
+
+                }
+                else {
+                    /* 老方法，sfj写的 */
+                    float continue_rate = 1 - pdf / bound;
+                    /* 测出来continue_rate都很接近于1 */
+                    // printf("c_rate: %f\n", continue_rate);
+                    /* 这一段在干嘛？ */
+                    if (abs(continue_rate) > 1)
+                    {
+                        bound *= 2;
+                        ans = 0;
+                        suc_int -= 1;
+                        break;
+                    };
+
+                    float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                    if (rnd(seed) > rr_rate)
+                        break;
+                    factor *= continue_rate / rr_rate;
+                }
+
+            }  // end while
+            // printf("loop_cnt: %d\n", loop_cnt);
+            variance_accumulate += ans * ans;
+            average_accumulate += ans;
+            /* 提前退出了 */
+            if (suc_int == 1)
+                break;
+        }
+        ans = average_accumulate / suc_int;
+        variance_accumulate /= suc_int;
+        variance_accumulate -= ans * ans;
         return ans;
     }
 
