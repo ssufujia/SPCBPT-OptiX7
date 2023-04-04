@@ -192,15 +192,15 @@ void img_save(double render_time=-1,int frame=0)
     outputbuffer.height = params.height;
     outputbuffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
 
-    // »ñÈ¡µ±Ç°Ê±¼ä
+    // è·å–å½“å‰æ—¶é—´
     auto now = std::chrono::system_clock::now();
     std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
 
-    // ½«Ê±¼ä¸ñÊ½»¯Îª×Ö·û´®
+    // å°†æ—¶é—´æ ¼å¼åŒ–ä¸ºå­—ç¬¦ä¸²
     std::stringstream ss;
-    ss << "./data/"<< std::put_time(std::localtime(&now_time_t), "%YÄê%mÔÂ%dÈÕ%H_%M_%S");
+    ss << "./data/"<< std::put_time(std::localtime(&now_time_t), "%Yå¹´%mæœˆ%dæ—¥%H_%M_%S");
 
-    // »ñÈ¡¸ñÊ½»¯ºóµÄÎÄ¼şÃû
+    // è·å–æ ¼å¼åŒ–åçš„æ–‡ä»¶å
     std::string filename = ss.str();
     sutil::saveImage((filename+".png").c_str(), outputbuffer, true);
 
