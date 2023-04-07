@@ -3907,24 +3907,70 @@ namespace Shift
     }
 
     RT_FUNCTION float inverPdfEstimate_LDS(PathContainer& path, unsigned& seed)
-    {
+    {        
         /* path 0是glossy 1是diffuse 2是光*/
         Light light = Tracer::params.lights[path.get(2).materialId];
         float3 sP;
+
         /* 估计pdf上界 */
-        float upperbound = getClosestGeometry_upperBound(
-            light,
-            path.get(0).position,
-            path.get(0).normal,
-            sP
-        );
-
-        //float pdf_ref_sum = tracingPdf(path.get(1), path.get(0));
-        //int pdf_ref_count = 1;
-        //float bound = pdf_ref_sum / pdf_ref_count * 2;
-
-
         float bound = 10;//upperbound;
+        /* glossy顶点 */
+        BDPTVertex& v = path.get(0);
+        /* 光顶点 */
+        BDPTVertex& l = path.get(2);
+        float ratio = 0.5;
+        BDPTVertex np;
+        const int simulate_num = 50;
+        for (int i = 0; i < simulate_num; i++)
+        {
+            /* 使用哪种方法来采样残缺顶点？*/
+            if (rnd(seed) >= ratio)
+            {
+                /* 从glossy顶点采样 */
+                /* 建立局部坐标系，onb代表orthonormal basis*/
+                Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                float3 dir;
+                /* 半球空间采样 */
+                cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                onb.inverse_transform(dir);
+                /* 从glossy顶点出发进行追踪 */
+                bool success_hit;
+                /* 此处np为中间的diffuse顶点 */
+                np = Tracer::FastTrace(v, dir, success_hit);
+                /* 这里直接continue是正确的 */
+                if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                    Shift::glossy(np))
+                    continue;
+
+            }
+            else
+            {
+                /* 从光源采样 */
+                /* 建立局部坐标系，onb代表orthonormal basis*/
+                Onb onb(dot(l.normal, path.get(1).position - l.position) > 0 ? l.normal : -l.normal);
+                float3 dir;
+                /* 半球空间采样 */
+                cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                onb.inverse_transform(dir);
+                /* 从glossy顶点出发进行追踪 */
+                bool success_hit;
+                /* 此处np为中间的diffuse顶点 */
+                np = Tracer::FastTrace(l, dir, success_hit);
+                /* 这里直接continue是正确的 */
+                if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                    Shift::glossy(np))
+                    continue;
+            }
+            /* 计算f(x)/p(x) */
+            MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
+            float pdf = l.pdf * tracingPdf(l, np)
+                * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))
+                * GeometryTerm(np, v)
+                * Tracer::visibilityTest(Tracer::params.handle, np, v)
+                / (ratio * tracingPdf(v, np) + (1 - ratio) * tracingPdf(l, np));
+            bound = max(1.1 * pdf, bound);
+        }
+
         float ans = 0;
 
         float variance_accumulate = 0;
@@ -3932,7 +3978,7 @@ namespace Shift
         int suc_int = 0;
 
         /* 使用老方法还是用纯RR？ */
-        bool RR_option = 1;
+        bool RR_option = 0;
         float RR_rate = 0.5;
 
         /* pdf估计的核心流程 */
