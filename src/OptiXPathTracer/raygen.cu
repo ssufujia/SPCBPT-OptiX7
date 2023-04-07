@@ -733,10 +733,10 @@ extern "C" __global__ void __raygen__shift_combine()
                     ((LSAE_ENABLE && light_subpath.depth == 1) ||
                     /* LDSDE，光子路LDS，视子路DE */
                     (LDSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b10 && payload.depth == 1 &&  !payload.path_record) ||
-                    /* L(S)*SDE，光子路L(S)*S，视子路DE */
-                    (L_S_SDE_ENABLE && (light_subpath.path_record == ((1<< light_subpath.depth)-1)) && payload.depth == 1 && !payload.path_record) ||
                     /* LSDE，光子路LS，视子路DE */
                     (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
+                    /* L(S)*SDE，光子路L(S)*S，视子路DE */
+                    (L_S_SDE_ENABLE && light_subpath.depth > 1 && (light_subpath.path_record == ((1 << light_subpath.depth) - 1)) && payload.depth == 1 && !payload.path_record) ||
                     /* LSSDE，光子路LSS，视子路DE */
                     (LSSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b11 && payload.depth == 1 && !payload.path_record) ||
                     /* LSSSDE，光子路LSSS，视子路DE */
@@ -761,7 +761,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         /* 0 号是 glossy 顶点*/
                         finalPath.get(0) = originPath.get(0);
 
-                        /*  L(S)*S 光子路 */
+                        /*  LS 光子路 */
                         if (light_subpath.depth == 1) 
                         {
                             BDPTVertex np;
@@ -818,7 +818,38 @@ extern "C" __global__ void __raygen__shift_combine()
                             /*printf("pdf_retrace: %f\n", pdf_retrace);
                             printf("light pdf: %f\n", finalPath.get(2).pdf);*/
                         }
+                        /*  L(S)*S 光子路 */
+                        else if (light_subpath.depth > 1 && (light_subpath.path_record == ((1 << light_subpath.depth) - 1)))
+                        {
+                            short d = light_subpath.depth;
+                            /* 0 ~ d-1 号是glossy顶点，d号是光源顶点，要动除了0号外的d个顶点 */
+                            pdf_retrace = 1;
+                            BDPTVertex np[SHIFT_VALID_SIZE];
+                            float3 in_dir = normalize(eye_vertex.position - originPath.get(0).position);
+                            bool retrace_state = true;
+                            /* d 个glossy顶点 */
+                            for (int i = 0; i < d; ++i)
+                            {
+                                MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(i));
+                                float3 out_dir = Tracer::Sample(mat, finalPath.get(i).normal, in_dir, seed);
+                                bool trace_success = 0;
+                                finalPath.get(i+1) = Tracer::FastTrace(finalPath.get(i), out_dir, trace_success);
 
+                                /* 没追到 */
+                                if (trace_success == false) { retrace_state = 0; break; }
+                                /* 追到了光源 */
+                                if (finalPath.get(i+1).type == BDPTVertex::Type::HIT_LIGHT_SOURCE) { retrace_state = 0; break; }
+                                /* 追到了非glossy */
+                                if (!Shift::glossy(finalPath.get(i + 1))) { retrace_state = 0; break; }
+                                
+                                pdf_retrace *= Tracer::Pdf(mat, finalPath.get(i).normal, in_dir, out_dir) *
+                                    Shift::GeometryTerm(finalPath.get(i), finalPath.get(i+1)) / abs(dot(out_dir, finalPath.get(i).normal));
+
+                                in_dir = -out_dir;
+                            }
+                            if (!retrace_state) continue;
+                            
+                        }
 
                         for (int i = 0; i < finalPath.size(); i++)
                             pathBuffer[buffer_size + i] = finalPath.get(i);
