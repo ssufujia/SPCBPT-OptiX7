@@ -1,0 +1,223 @@
+cameraSetting
+{
+	up      0.000000 1.000000 0.000000
+	eye     -0.010037 2.433548 19.307549
+	lookat  0.192617 2.433598 -3.916733
+}
+
+material Rightwall
+{
+   color 0.1 0.1 0.1
+   roughness 0.5
+   metallic 0.0
+}
+
+material Leftwall
+{
+   color 0.1 0.1 0.1
+   roughness 0.5
+   metallic 0.0
+}
+
+material Frontwall
+{
+   color 1 1 1
+   roughness 0.5
+   metallic 0.0
+}
+
+material Backdrop
+{
+   color 1 1 1
+   roughness 0.5
+   metallic 0.0
+}
+
+material Ceil
+{
+   color 1 1 1
+   roughness 0.5
+   metallic 0.0
+}
+
+material Floor
+{
+   color 0.578596 0.578596 0.578596
+   roughness 0.1
+   metallic 1.0
+}
+
+material WaterAir
+{
+   color 0.341 0.980 1.0
+   roughness 0.0
+   metallic 1.0
+   trans 1.0
+   eta 1.33
+}
+
+material WaterAirFloor
+{
+   color 1.0 1.0 1.0
+   roughness 0.0
+   metallic 1.0
+   trans 1.0
+   eta 1.33
+}
+
+material IceAir
+{
+   color 1.0 1.0 1.0
+   roughness 0.0
+   metallic 1.0
+   trans 1.0
+   eta 1.31
+}
+
+material Glass
+{
+   color 1.0 1.0 1.0
+   roughness 0.0
+   metallic 1.0
+   trans 1.0
+   eta 1.5
+}
+
+material AirIce
+{
+   color 1.0 1.0 1.0
+   roughness 0.0
+   metallic 1.0
+   trans 1.0
+   eta 0.763
+}
+
+
+mesh
+{
+	file glass/Mesh008.obj
+	material WaterAirFloor
+}
+
+mesh
+{
+	file glass/Mesh005.obj
+	material WaterAirFloor
+}
+
+mesh
+{
+	file glass/Mesh004.obj
+	material IceAir
+}
+
+mesh
+{
+	file glass/Mesh003.obj
+	material AirIce
+}
+
+mesh
+{
+	file glass/Mesh010.obj
+	material IceAir
+}
+
+mesh
+{
+	file glass/Mesh009.obj
+	material AirIce
+}
+
+mesh
+{
+	file glass/Mesh012.obj
+	material AirIce
+}
+
+mesh
+{
+	file glass/Mesh014.obj
+	material IceAir
+}
+
+mesh
+{
+	file glass/Mesh015.obj
+	material AirIce
+}
+
+mesh
+{
+	file glass/Mesh006.obj
+	material IceAir
+}
+
+mesh
+{
+	file glass/Mesh002.obj
+	material AirIce
+}
+
+mesh
+{
+	file glass/Mesh001.obj
+	material IceAir
+}
+
+mesh
+{
+	file glass/Mesh007.obj
+	material Backdrop
+}
+
+mesh
+{
+	file glass/Mesh016.obj
+	material Leftwall
+}
+
+mesh
+{
+	file glass/Mesh017.obj
+	material Rightwall
+}
+
+mesh
+{
+	file glass/Mesh018.obj
+	material Frontwall
+}
+
+mesh
+{
+	file glass/Mesh019.obj
+	material Ceil
+}
+
+mesh
+{
+	file glass/Mesh011.obj
+	material Floor
+}
+
+mesh
+{
+	file glass/Mesh013.obj
+	material Glass
+}
+
+mesh
+{
+	file glass/Mesh000.obj
+	material WaterAir
+}
+
+light
+{
+	position 10 5 30
+	emission 190 254 254
+	v1 15 5 30
+	v2 10 10 30
+	type Quad
+}

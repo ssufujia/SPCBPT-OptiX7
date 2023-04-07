@@ -1026,6 +1026,14 @@ extern "C" __global__ void __raygen__lightTrace()
                     curVertex.inverPdfEst = pdf_inverse;
                 }
 
+                //章之写的,负责分块S (D | S)* L 路径 
+                //{
+                //    bool chose = 0;
+                //    if (chose)
+                //    {
+                // 
+                //    }
+                //}
                 float e = curVertex.contri_float();
 
                 if (e < 0.00001) 

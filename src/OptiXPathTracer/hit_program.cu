@@ -67,29 +67,29 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     prd->done = true;
     const Light& light = Tracer::params.lights[hit_group_data->material_data.light_id];
     if (dot(prd->ray_direction, light.quad.normal) > 0)
-    { 
+    {
         return;
     }
 
     const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
     float t_hit = optixGetRayTmax();
     float3 ray_direction = optixGetWorldRayDirection();
-    float3 inver_ray_direction = -ray_direction;  
- 
+    float3 inver_ray_direction = -ray_direction;
+
 
     prd->path.push();
     BDPTVertex& MidVertex = prd->path.currentVertex();// prd.stackP->v[(prd.stackP->size) % STACKSIZE];
     BDPTVertex& LastVertex = prd->path.lastVertex();// prd.stackP->v[(prd.stackP->size - 1) % STACKSIZE];
-    
+
     MidVertex.position = geom.P;
-    MidVertex.normal = light.quad.normal; 
+    MidVertex.normal = light.quad.normal;
     MidVertex.type = BDPTVertex::Type::HIT_LIGHT_SOURCE;
     MidVertex.uv = geom.texcoord->UV;
     Tracer::lightSample light_sample;
     light_sample.ReverseSample(light, MidVertex.uv);
     float lightPdf = light_sample.pdf;
-     
-    
+
+
     float pdf_G = abs(dot(MidVertex.normal, ray_direction) * dot(LastVertex.normal, ray_direction)) / (t_hit * t_hit);
     if (LastVertex.isOrigin)
     {
@@ -105,7 +105,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     MidVertex.lastNormalProjection = abs(dot(LastVertex.normal, ray_direction));
 
     //MidVertex.zoneId = SUBSPACE_NUM - lightMaterialId - 1;
-    MidVertex.subspaceId = light_sample.subspaceId;  
+    MidVertex.subspaceId = light_sample.subspaceId;
     MidVertex.lastZoneId = LastVertex.subspaceId;
 
 
@@ -119,7 +119,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
 
     if (MidVertex.depth == 1)
     {
-        MidVertex.RMIS_pointer = 1.0;         
+        MidVertex.RMIS_pointer = 1.0;
         return;
     }
 
@@ -133,7 +133,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     virtual_light.subspaceId = MidVertex.subspaceId;
     virtual_light.isBrdf = false;
     //rtPrintf("%f %f\n", 1.0 / MidVertex.d, light_hit(LastVertex, virtual_light)); 
-    MidVertex.RMIS_pointer = 1.0 / rmis::light_hit(LastVertex, virtual_light);   
+    MidVertex.RMIS_pointer = 1.0 / rmis::light_hit(LastVertex, virtual_light);
 }
 extern "C" __global__ void __closesthit__lightsource()
 {
@@ -150,38 +150,38 @@ extern "C" __global__ void __closesthit__lightsource()
     float3 ray_direction = optixGetWorldRayDirection();
 
     if ( /* 打中的光源法向要求与光线方向相反 */
-        (dot(prd->ray_direction, light_sample.normal()) <= 0 ) && (
-        /* 光源直击, L - E */
+        (dot(prd->ray_direction, light_sample.normal()) <= 0) && (
+            /* 光源直击, L - E */
             (LE_ENABLE && prd->depth == 0) || (
-            /* 是否是 S_ONLY */
+                /* 是否是 S_ONLY */
                 (!S_ONLY || prd->path_record) && (
-                /* L - * - E，所有光路 */
+                    /* L - * - E，所有光路 */
                     LAE_ENABLE ||
-                /* L - D - E */
-                    (LDE_ENABLE && prd->depth == 1 && prd->path_record == 0b0) || 
-                /* L - D - S - E */
+                    /* L - D - E */
+                    (LDE_ENABLE && prd->depth == 1 && prd->path_record == 0b0) ||
+                    /* L - D - S - E */
                     (LDSE_ENABLE && prd->depth == 2 && prd->path_record == 0b01) ||
-                /* L - D - S - D - E */
+                    /* L - D - S - D - E */
                     (LDSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b010) ||
-                /* L - S - * - E */
-                    (LSAE_ENABLE && prd->depth > 0 && (prd->path_record & (1ll << (prd->depth-1)))) ||
-                /* L - S - E */
+                    /* L - S - * - E */
+                    (LSAE_ENABLE && prd->depth > 0 && (prd->path_record & (1ll << (prd->depth - 1)))) ||
+                    /* L - S - E */
                     (LSE_ENABLE && prd->depth == 1 && prd->path_record == 0b1) ||
-                /* L - S - D - E */
+                    /* L - S - D - E */
                     (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) ||
-                /* L - S - S - D - E */
+                    /* L - S - S - D - E */
                     (LSSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b110)
 
+                    )
                 )
             )
         )
-    )
     {
         /* PT 加 NEE 的 MIS */
         float MIS_weight = 1;
-        if (prd->depth != 0 )
+        if (prd->depth != 0)
         {
-            float pdf_hit = prd->pdf * abs(dot(ray_direction,light_sample.normal())) / (t_hit * t_hit);
+            float pdf_hit = prd->pdf * abs(dot(ray_direction, light_sample.normal())) / (t_hit * t_hit);
 
             float pdf_area = light_sample.pdf;
             MIS_weight = pdf_hit / (pdf_area + pdf_hit);
@@ -220,7 +220,7 @@ RT_FUNCTION void RoughnessAndMetallicTexSample(const LocalGeometry& geom, Materi
     //float  metallic  = hit_group_data->material_data.pbr.metallic;
     //float  roughness = hit_group_data->material_data.pbr.roughness;
     float4 mr_tex = make_float4(1.0f);
-    if (pbr.metallic_roughness_tex) 
+    if (pbr.metallic_roughness_tex)
         mr_tex = sampleTexture<float4>(pbr.metallic_roughness_tex, geom);
     pbr.roughness *= mr_tex.y;
     pbr.metallic *= mr_tex.z;
@@ -274,8 +274,8 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
-//    if (dot(N, ray_direction) > 0.f)
-//        N = -N;
+    //    if (dot(N, ray_direction) > 0.f)
+    //        N = -N;
     prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed);
     prd->pdf = Tracer::Pdf(currentPbr, N, inver_ray_direction, prd->ray_direction);
     prd->origin = geom.P;
@@ -291,7 +291,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     MidVertex.normal = N;//这个在折射场景里需要进一步讨论
     MidVertex.type = BDPTVertex::Type::NORMALHIT;
     float pdf_G = abs(dot(MidVertex.normal, ray_direction) * dot(LastVertex.normal, ray_direction)) / (t_hit * t_hit);
- 
+
     if (LastVertex.isOrigin)
     {
         MidVertex.flux = LastVertex.flux * pdf_G;
@@ -323,7 +323,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
 
     MidVertex.singlePdf = MidVertex.singlePdf * pdf_G / abs(dot(LastVertex.normal, ray_direction));
     MidVertex.pdf = LastVertex.pdf * MidVertex.singlePdf;
-     
+
     //MidVertex.last_lum = Tracer::float3sum(LastVertex.flux / LastVertex.pdf);
 
     {
@@ -385,7 +385,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource_simple()
 
 }
 extern "C" __global__ void __closesthit__eyeSubpath_simple()
-{ 
+{
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
     const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
     Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
@@ -396,9 +396,9 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
-//    if (dot(N, ray_direction) > 0.f)
-//        N = -N;
-    //prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
+    //    if (dot(N, ray_direction) > 0.f)
+    //        N = -N;
+        //prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
     prd->origin = geom.P;
     if (!(prd->pdf > 0.0f))
         prd->done = true;
@@ -410,16 +410,16 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     BDPTVertex& LastVertex = prd->path.lastVertex();
     MidVertex.position = geom.P;
     MidVertex.normal = N;//这个在折射场景里需要进一步讨论
-    MidVertex.type = BDPTVertex::Type::NORMALHIT; 
-    MidVertex.color = make_float3(currentPbr.base_color); 
+    MidVertex.type = BDPTVertex::Type::NORMALHIT;
+    MidVertex.color = make_float3(currentPbr.base_color);
 
     MidVertex.materialId = hit_group_data->material_data.id;
-      
+
     MidVertex.depth = LastVertex.depth + 1;
     MidVertex.uv = geom.texcoord[0].UV;
-     
+
     //MidVertex.last_lum = Tracer::float3sum(LastVertex.flux / LastVertex.pdf);
-     
+
 }
 extern "C" __global__ void __closesthit__lightSubpath()
 {
@@ -437,13 +437,13 @@ extern "C" __global__ void __closesthit__lightSubpath()
     // NormalTexSample(geom, hit_group_data->material_data);
     // if (dot(N, ray_direction) > 0.f)
     // N = -N;
-    prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
-    prd->pdf           = Tracer::Pdf(currentPbr, N, inver_ray_direction, prd->ray_direction);
-    prd->origin        = geom.P;
+    prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed);
+    prd->pdf = Tracer::Pdf(currentPbr, N, inver_ray_direction, prd->ray_direction);
+    prd->origin = geom.P;
     if (!(prd->pdf > 0.0f))
         prd->done = true;
-    
-//    prd->path.size += 1;
+
+    //    prd->path.size += 1;
     prd->path.push();
     BDPTVertex& MidVertex = prd->path.currentVertex();
     BDPTVertex& NextVertex = prd->path.nextVertex();
@@ -463,7 +463,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
     NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction, -ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
 
     NextVertex.singlePdf = prd->pdf;
-     
+
     MidVertex.lastPosition = LastVertex.position;
     if (LastVertex.is_DIRECTION())
         MidVertex.lastPosition = MidVertex.position - ray_direction;
@@ -501,11 +501,11 @@ extern "C" __global__ void __closesthit__lightSubpath()
     return;
 }
 /* 这个函数应该是 PT 在打到普通面片时被调用 */
-extern "C" __global__ void __closesthit__radiance() 
+extern "C" __global__ void __closesthit__radiance()
 {
     // printf("__closesthit__radiance()\n");
-    const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>( optixGetSbtDataPointer() );
-    const LocalGeometry          geom           = getLocalGeometry( hit_group_data->geometry_data );
+    const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
+    const LocalGeometry          geom = getLocalGeometry(hit_group_data->geometry_data);
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
 
     /* Retrieve material data */
@@ -514,7 +514,7 @@ extern "C" __global__ void __closesthit__radiance()
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.N;
     float3 in_dir = -prd->ray_direction;
-    float3 result = make_float3( 0.0f );
+    float3 result = make_float3(0.0f);
 
     float rr_rate = Tracer::rrRate(currentPbr);
     prd->glossy_bounce = Shift::glossy(currentPbr) ? prd->glossy_bounce : false;
@@ -523,9 +523,9 @@ extern "C" __global__ void __closesthit__radiance()
     /*  prd->path_record 用二进制按LSB到MSB的顺序编码了当前路径，0 代表 D, 1 代表 S */
     /* 比如 path_record 为 0010，depth 为 4，说明当前路径为 D - D - S - D - E */
     /* path_record 大小为 long long 以保证够用 */
-    prd->path_record = (prd->path_record) | 
-        ((long long) Shift::glossy(currentPbr) << prd->depth);
- 
+    prd->path_record = (prd->path_record) |
+        ((long long)Shift::glossy(currentPbr) << prd->depth);
+
     /* 计算 NEE */
     int light_id = clamp(static_cast<int>(floorf(rnd(prd->seed) * Tracer::params.lights.count)), int(0), int(Tracer::params.lights.count - 1));
     Light light = Tracer::params.lights[light_id];
@@ -543,8 +543,8 @@ extern "C" __global__ void __closesthit__radiance()
         const float  L_dot_LN = dot(-L, LN);
         const float  N_dot_L = abs(dot(N, L));
         const float  N_dot_V = abs(dot(N, V));
-        const float  N_dot_H  = dot(N, H);
-        const float  V_dot_H  = dot(V, H);
+        const float  N_dot_H = dot(N, H);
+        const float  V_dot_H = dot(V, H);
         if (N_dot_L > 0.0f && N_dot_V > 0.0f && L_dot_LN > 0.0f)
         {
             const float tmin = 0.001f;           // TODO
@@ -569,8 +569,8 @@ extern "C" __global__ void __closesthit__radiance()
 #ifdef PT_NEE_STRATEGY_ONLY 
                 MIS_weight = 1;
 #endif // PT_BRDF_STRATEGY_ONLY 
-                result += prd->throughput * light_sample.emission * attenuation / light_sample.pdf 
-                    * N_dot_L * L_dot_LN / L_dist / L_dist * eval * MIS_weight ;// *make_float3(1.0, 0.0, 1.0);
+                result += prd->throughput * light_sample.emission * attenuation / light_sample.pdf
+                    * N_dot_L * L_dot_LN / L_dist / L_dist * eval * MIS_weight;// *make_float3(1.0, 0.0, 1.0);
             }
         }
     }
@@ -582,11 +582,11 @@ extern "C" __global__ void __closesthit__radiance()
         const float3 V = -normalize(optixGetWorldRayDirection());
         const float3 L = light_sample.direction;
         float L_dot_N = dot(light_sample.direction, N);
-        if ( L_dot_N > 0.0)
+        if (L_dot_N > 0.0)
         {
             prd->vis_pos_A = geom.P;
             prd->vis_pos_B = geom.P + light_sample.direction * SKY.r * 10;
-//            printf("light_sample dir %f %f %f\n", light_sample.direction.x, light_sample.direction.y, light_sample.direction.z);
+            //            printf("light_sample dir %f %f %f\n", light_sample.direction.x, light_sample.direction.y, light_sample.direction.z);
             float3 eval = Tracer::Eval(currentPbr, N, L, V);
             result += prd->throughput * light_sample.emission / light_sample.pdf * eval * L_dot_N;
         }
@@ -595,7 +595,7 @@ extern "C" __global__ void __closesthit__radiance()
     //const LocalGeometry geom = getLocalGeometry(hit_group_data->geometry_data);
     //result = make_float3(geom.texcoord[1].UV.x, geom.texcoord[0].UV.y ,0.0) + make_float3(1.0,1.0,0);
     //result = make_float3(currentPbr.base_color);  
-     
+
     //prd->done = true;
     //prd->depth += 1;  
     //prd->result += result;
@@ -612,7 +612,7 @@ extern "C" __global__ void __closesthit__radiance()
     }
     else
     {
-        prd->ray_direction = Tracer::Sample(currentPbr, N, in_dir, prd->seed, geom.P, true); 
+        prd->ray_direction = Tracer::Sample(currentPbr, N, in_dir, prd->seed, geom.P, true);
         float pdf = Tracer::Pdf(currentPbr, N, in_dir, prd->ray_direction, geom.P, true);
 
         if (isRefract(N, in_dir, prd->ray_direction) && prd->depth == 1 && dot(in_dir, N) > 0 && Shift::glossy(currentPbr))
@@ -633,6 +633,6 @@ extern "C" __global__ void __closesthit__radiance()
             prd->done = true;
         }
     }
-     
+
     //Tracer::setPayloadResult( result );
 }

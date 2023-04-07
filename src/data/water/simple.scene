@@ -76,8 +76,8 @@ material Water
 	color 1 1 1
 	roughness 0.1
 	metallic 1.0
-	trans 1.0
-	eta .75
+	trans 1
+	eta 1.3
 }
 material Water2
 {
@@ -147,5 +147,6 @@ light
     v2 0.2 1.98 0.1
     emission 150 150 110
     type Quad
-	divLevel 10
+	divLevel 4
 }
+
