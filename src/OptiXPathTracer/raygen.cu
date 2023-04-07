@@ -731,10 +731,17 @@ extern "C" __global__ void __raygen__shift_combine()
                 if (
                     /* LSAE，A 代表 any */
                     ((LSAE_ENABLE && light_subpath.depth == 1) ||
-                    /* LSDE */
-                    (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
                     /* LDSDE，光子路LDS，视子路DE */
-                    (LDSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b10 && payload.depth == 1 &&  !payload.path_record)) &&
+                    (LDSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b10 && payload.depth == 1 &&  !payload.path_record) ||
+                    /* L(S)*SDE，光子路L(S)*S，视子路DE */
+                    (L_S_SDE_ENABLE && (light_subpath.path_record == ((1<< light_subpath.depth)-1)) && payload.depth == 1 && !payload.path_record) ||
+                    /* LSDE，光子路LS，视子路DE */
+                    (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
+                    /* LSSDE，光子路LSS，视子路DE */
+                    (LSSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b11 && payload.depth == 1 && !payload.path_record) ||
+                    /* LSSSDE，光子路LSSS，视子路DE */
+                    (LSSSDE_ENABLE && light_subpath.depth == 3 && light_subpath.path_record == 0b111 && payload.depth == 1 && !payload.path_record)
+                        ) &&
                     /* 其他约束条件 */
                     (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
@@ -754,7 +761,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         /* 0 号是 glossy 顶点*/
                         finalPath.get(0) = originPath.get(0);
 
-                        /*  LS 光子路 */
+                        /*  L(S)*S 光子路 */
                         if (light_subpath.depth == 1) 
                         {
                             BDPTVertex np;
