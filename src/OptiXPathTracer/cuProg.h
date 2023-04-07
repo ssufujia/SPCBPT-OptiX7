@@ -2884,7 +2884,7 @@ namespace Shift
             {
                 loop_cnt += 1;
                 if (loop_cnt > 1000) {
-                    // printf("Break due to loop_cnt > 1000 \n");
+                    //printf("Break due to loop_cnt > 1000 \n");
                     break;
                 }
                 ans += factor / bound;
@@ -2896,7 +2896,7 @@ namespace Shift
                 {
                     /* 从glossy顶点采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
-                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                    Onb onb((dot(v.normal, path.get(1).position - v.position) > 0) ? v.normal : -v.normal);
                     float3 dir;
                     /* 半球空间采样 */
                     cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -2955,7 +2955,7 @@ namespace Shift
                 }
 
             }  // end while
-            // printf("loop_cnt: %d\n", loop_cnt);
+            //printf("loop_cnt: %d\n", loop_cnt);
             variance_accumulate += ans * ans;
             average_accumulate += ans;
             /* 提前退出了 */
@@ -2971,7 +2971,7 @@ namespace Shift
     RT_FUNCTION float inverPdfEstimate_LDS(PathContainer& path, unsigned& seed)
     {        
         /* path 0是glossy 1是diffuse 2是光*/
-        Light light = Tracer::params.lights[path.get(2).materialId];
+        Light light = Tracer::params.lights[path.get(2).materialId]; 
         float3 sP;
 
         /* 估计pdf上界 */
@@ -3157,6 +3157,7 @@ namespace Shift
     /* 计算残缺路径的pdf */
     RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed, const long long& path_record)
     {
+
         /* L-S */
         if (path_record == 0b1)
         {

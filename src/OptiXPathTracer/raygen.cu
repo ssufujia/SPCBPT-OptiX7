@@ -69,7 +69,8 @@ __device__ inline float4 LinearToSrgb(const float4& c)
 
 /* Õâ¸öº¯ÊýÓ¦¸ÃÊÇ PT */
 extern "C" __global__ void __raygen__pinhole()
-{  
+{
+    printf("666\n");
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -572,6 +573,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
 
 extern "C" __global__ void __raygen__shift_combine()
 {
+
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
