@@ -14,7 +14,7 @@ static const bool S_ONLY = 1;
 /* A 代表 Any*/
 
 /* L - * - E*/
-static const bool LAE_ENABLE = 0;
+static const bool LAE_ENABLE = 1;
 
 static const bool LE_ENABLE = 1;
 static const bool LDE_ENABLE = 0;
