@@ -47,6 +47,7 @@ static const bool PG_ENABLE = 0;
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
 #include"PG_common.h"
+#include"dropOutTracing_common.h"
 struct Subspace
 {   
     int jump_bias;
@@ -219,6 +220,7 @@ struct PTParams :whitted::LaunchParams
     EstimationParams estimate_pr;
 
     PG_params pg_params;
+    DropOutTracing_params dot_params;
 };
 typedef PTParams MyParams;
 

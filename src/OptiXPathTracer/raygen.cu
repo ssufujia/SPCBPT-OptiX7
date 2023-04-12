@@ -67,10 +67,10 @@ __device__ inline float4 LinearToSrgb(const float4& c)
     return make_float4(powf(c.x, kInvGamma), powf(c.y, kInvGamma), powf(c.z, kInvGamma), c.w);
 }
 
-/* Õâ¸öº¯ÊýÓ¦¸ÃÊÇ PT */
+
 extern "C" __global__ void __raygen__pinhole()
 {
-    printf("666\n");
+
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -96,7 +96,7 @@ extern "C" __global__ void __raygen__pinhole()
     float3 ray_origin    = eye;
 
     /* Trace camera ray */
-    /* ÕâÀï payload ÔÚ´´½¨Ê±±»²¿·Ö³õÊ¼»¯ÁË */
+
     Tracer::PayloadRadiance payload; 
     payload.seed          = seed; 
     payload.origin        = eye;
@@ -112,7 +112,7 @@ extern "C" __global__ void __raygen__pinhole()
             &payload
         );
 
-        /* ÕâÀï¿É¼ûÐÔ²âÊÔËÆºõÊÇ¶Ô NEE ×öµÄ */
+
         if (float3weight(payload.currentResult)> 0.0)
         {
             const float  L_dist = length(payload.vis_pos_A- payload.vis_pos_B);
@@ -676,7 +676,7 @@ extern "C" __global__ void __raygen__shift_combine()
             break;
 
         BDPTVertex& eye_vertex = payload.path.currentVertex();
-
+         
         /* 视子路和光子路连接 */
         for (int it = 0; it < CONNECTION_N; it++)
         {
@@ -888,7 +888,6 @@ extern "C" __global__ void __raygen__shift_combine()
                 }
             }
 
-            /* ·Ç½¹É¢Â·¾¶ */
             else
             {
                 if (S_ONLY)
@@ -984,6 +983,20 @@ RT_FUNCTION void pushVertexToLVC(BDPTVertex& v, unsigned int& putId, int bufferB
     lt_params.ans[putId + bufferBias] = v;
     lt_params.validState[putId + bufferBias] = true;
     putId++;
+} 
+
+RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId, int bufferBias)
+{
+    const DropOutTracing_params& dot_params = Tracer::params.dot_params;
+    if (putId > dot_params.record_buffer_padding)
+    {
+        printf("error in drop out tracing: pushing more record than the record buffer padding\n \
+            will discord the over-flowing record\n \
+            consider to increase record_buffer_width in dropOutTracing_common.h to assign more memory for record buffer\n");
+        return;
+    }
+    dot_params.record_buffer[putId + bufferBias] = record; 
+    putId++;
 }
 extern "C" __global__ void __raygen__lightTrace()
 {
@@ -1000,6 +1013,9 @@ extern "C" __global__ void __raygen__lightTrace()
     unsigned int bufferBias = lt_params.core_padding * launch_index;
     unsigned int lightVertexCount = 0;
     unsigned int lightPathCount = 0;
+
+    unsigned int DOT_record_count = 0;
+    unsigned int DOT_buffer_bias = Tracer::params.dot_params.record_buffer_padding * launch_index;
      
     while (true)
     {
@@ -1050,6 +1066,27 @@ extern "C" __global__ void __raygen__lightTrace()
                     Shift::PathContainer path(v, 1, 2);
                     float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed,curVertex.path_record);
                     curVertex.inverPdfEst = pdf_inverse;
+
+
+                    /////////////////////////////////////////////////////////////////////
+                    //////////Drop Out Tracing Statistics Record Create//////////////////
+                    /////////////////////////////////////////////////////////////////////
+                    DropOutTracing_params& dot_params = Tracer::params.dot_params;
+                    int specular_id = dot_params.get_specular_label(curVertex.position, curVertex.normal);
+                    int surface_id = 0;
+                    DOT_record dot_record(DOT_type::LS, specular_id, surface_id, DOT_usage::Average);
+                    dot_record = pdf_inverse;
+                    DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
+
+                    /////////////////////////////////////////////////////////////////////
+                    //////////Drop Out Tracing Statistics Record Finish//////////////////
+                    /////////////////////////////////////////////////////////////////////
+
+                    if (dot_params.statistics_iteration_count > 0)
+                    {
+                        // one example for you to Access the average pdf reciprocal in the corresponding specular subspace of the LS path type
+                        float average = dot_params.get_statistic_data(DOT_type::LS, specular_id, surface_id, DOT_usage::Average);
+                    }                        
                 } 
 
                 /* L -> D -> S 光子路，即 S - D - L， path_record 为 0b10 */

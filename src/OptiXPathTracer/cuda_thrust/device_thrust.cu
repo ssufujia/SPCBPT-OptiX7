@@ -607,6 +607,44 @@ namespace MyThrustOp
          
         return sample_count; 
     } 
+
+    std::vector<classTree::divide_weight> getCausticCentroidCandidate(bool eye_side, int max_size)
+    {
+        thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
+        thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+        std::vector<classTree::divide_weight> ans;
+        float weights = 0;
+
+        int sizeLimit = max_size == 0 ? h_neat_paths.size() : (h_neat_paths.size() > max_size ? max_size : h_neat_paths.size());
+        for (int i = 0; i < sizeLimit; i++)
+        {
+            if (h_neat_paths[i].is_caustic == false)continue;
+            int j = h_neat_paths[i].begin_ind + h_neat_paths[i].caustic_id;
+
+             
+            classTree::divide_weight t;
+            if (eye_side)
+            {
+                t.dir = h_neat_conns[j].A_dir();
+                t.normal = h_neat_conns[j].A_normal();
+                t.position = h_neat_conns[j].A_position;
+                t.weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+            }
+            else if (h_neat_conns[j].light_source == false)
+            {
+                t.dir = h_neat_conns[j].B_dir();
+                t.normal = h_neat_conns[j].B_normal();
+                t.position = h_neat_conns[j].B_position;
+                t.weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+            }
+
+            ans.push_back(t);
+                 
+        }
+        printf("get %d caustic subpaths\n",ans.size());
+        return ans;
+    }
+
     std::vector<classTree::divide_weight> get_weighted_point_for_tree_building(bool eye_side, int max_size)
     {
         thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
@@ -668,6 +706,92 @@ namespace MyThrustOp
         return thrust::raw_pointer_cast(d_v.data());
     }
 
+
+    thrust::device_vector<classTree::tree_node> dropout_tracing_specular_tree;
+    classTree::tree_node* DOT_specular_tree_to_device(classTree::tree_node* a, int size)
+    {
+        thrust::host_vector<classTree::tree_node> h_v(a, a + size);
+        thrust::device_vector<classTree::tree_node>& d_v = dropout_tracing_specular_tree;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+     
+    thrust::device_vector<classTree::tree_node> dropout_tracing_surface_tree;
+    classTree::tree_node* DOT_surface_tree_to_device(classTree::tree_node* a, int size)
+    {
+        thrust::host_vector<classTree::tree_node> h_v(a, a + size);
+        thrust::device_vector<classTree::tree_node>& d_v = dropout_tracing_surface_tree;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+
+    thrust::device_vector<float> DOT_statistics_data;
+    float* DOT_statistics_data_to_device(float* a, int size)
+    {
+        thrust::host_vector<float> h_v(a, a + size);
+        thrust::device_vector<float>& d_v = DOT_statistics_data;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+
+    float* DOT_statistics_data_to_device(thrust::host_vector<float> h_v)
+    { 
+        thrust::device_vector<float>& d_v = DOT_statistics_data;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+
+    thrust::host_vector<float> DOT_statistics_data_to_host()
+    {
+        thrust::device_vector<float>& d_v = DOT_statistics_data;
+        thrust::host_vector<float> h_v = d_v;
+        return h_v;
+    }
+     
+    thrust::device_vector<dropOut_tracing::statistic_record> DOT_statistics_record_buffer;
+    dropOut_tracing::statistic_record* DOT_get_statistic_record_buffer(int size)
+    {
+        if (size > 0)
+        {
+            dropOut_tracing::statistic_record temp(DOT_type::LS, 0, 0, DOT_usage::Average);
+            temp = 0;
+            temp.valid = false;
+            DOT_statistics_record_buffer.resize(size);
+            thrust::fill(DOT_statistics_record_buffer.begin(), DOT_statistics_record_buffer.end(), temp);
+        }
+        return thrust::raw_pointer_cast(DOT_statistics_record_buffer.data());
+    }
+
+    thrust::host_vector<dropOut_tracing::statistic_record> DOT_get_host_statistic_record_buffer(bool valid_only)
+    {
+        thrust::host_vector<dropOut_tracing::statistic_record> h_v;
+        thrust::host_vector<dropOut_tracing::statistic_record> h_v_filter;
+        h_v = DOT_statistics_record_buffer; 
+
+        dropOut_tracing::statistic_record temp(DOT_type::LS, 0, 0, DOT_usage::Average);
+        temp = 0;
+        temp.valid = false; 
+        thrust::fill(DOT_statistics_record_buffer.begin(), DOT_statistics_record_buffer.end(), temp);
+
+        if (valid_only)
+        {
+            for (int i = 0; i < h_v.size(); i++)
+            {
+                if (valid_op<dropOut_tracing::statistic_record>()(h_v[i]))
+                {
+                    h_v_filter.push_back(h_v[i]);
+                }
+            } 
+        } 
+        else
+        {
+            h_v_filter = h_v;
+        }
+        return h_v_filter;
+    }
+
+
+
     thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size)
     {
         thrust::device_vector<uchar4> d_vec(data, data + size);
@@ -681,6 +805,9 @@ namespace MyThrustOp
         thrust::host_vector<float4> h_vec = d_vec;
         return h_vec;
     }
+    
+
+
     struct tree_label_op
     {
         classTree::tree_node* eye_tree;
