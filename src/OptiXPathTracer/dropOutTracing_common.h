@@ -12,9 +12,14 @@ namespace dropOut_tracing
     const int default_specularSubSpaceNumber = 20;
     const int default_surfaceSubSpaceNumber = 100; 
     const int record_buffer_width = 1;
+#define DOT_EMPTY_SURFACEID 0
     enum class DropOutType
     {
-        LS, LDS, LSS, DropOutTypeNumber
+        LS,
+        LDS=LS,
+        LSS,
+        LSSS,
+        DropOutTypeNumber
     };
 
     /*
@@ -26,6 +31,7 @@ namespace dropOut_tracing
     {
         Average, SlotUsageNumber
     };
+
     struct statistics_data
     {
         float* host_data;
@@ -93,33 +99,44 @@ namespace dropOut_tracing
         statistics_data data; 
 
         RT_FUNCTION int get_specular_label(float3 position, float3 normal) { return specularSubSpace ? classTree::tree_index(specularSubSpace, position, normal) : 0; }
-        RT_FUNCTION int get_surface_label(float3 position, float3 normal) { return surfaceSubSpace? classTree::tree_index(surfaceSubSpace, position, normal) : 0; }
+        RT_FUNCTION int get_surface_label(float3 position, float3 normal,float3 dir = make_float3(0.0))
+        { return surfaceSubSpace? classTree::tree_index(surfaceSubSpace, position, normal, dir) : 0; }
         RT_FUNCTION __host__ int spaceId2DataId(int specular_id, int surface_id) { return surface_id * specularSubSpaceNumber + specular_id; }
         RT_FUNCTION __host__ int2 dataId2SpaceId(int data_id) { return make_int2(data_id % specularSubSpaceNumber, int(data_id / specularSubSpaceNumber)); }
-        RT_FUNCTION __host__ float& get_statistic_data(DropOutType type, int specular_id, int surface_id, int data_slot)
+        RT_FUNCTION __host__ float& get_statistic_data(int type, int specular_id, int surface_id, int data_slot)
         {
             if (record_buffer == nullptr)
             {
                 printf("dot params is Not Initialized Yet\n");
             }
-
+             
             if (statistics_iteration_count == 0 && data.on_GPU == true)
             {
                 printf("warn: you are using the statistic data in DEVICE WITHOUT ANY data collected\n");
             }
 
             int slot_bias = 0;
-            if (type == DropOutType::LS)
-            {
-                return data[slot_bias + specular_id * slot_number + data_slot];
-            } 
-            slot_bias += specularSubSpaceNumber * slot_number;
-            slot_bias += (int(type) - 1) * specularSubSpaceNumber * surfaceSubSpaceNumber * slot_number;
+            //if (type == DropOutType::LS)
+            //{
+            //    return data[slot_bias + specular_id * slot_number + data_slot];
+            //} 
+            //slot_bias += specularSubSpaceNumber * slot_number;
+            slot_bias += type * specularSubSpaceNumber * surfaceSubSpaceNumber * slot_number;
              
             int one_dim_id = spaceId2DataId(specular_id, surface_id);
             return data[one_dim_id * slot_number + data_slot + slot_bias];
         } 
         RT_FUNCTION __host__ float& get_statistic_data(DropOutType type, int specular_id, int surface_id, SlotUsage data_slot)
+        {
+            return get_statistic_data(type, specular_id, surface_id, int(data_slot));
+        }
+
+        RT_FUNCTION __host__ float& get_statistic_data(DropOutType type, int specular_id, int surface_id, int data_slot)
+        {
+            return get_statistic_data(int(type), specular_id, surface_id, data_slot);
+        }
+
+        RT_FUNCTION __host__ float& get_statistic_data(int type, int specular_id, int surface_id, SlotUsage data_slot)
         {
             return get_statistic_data(type, specular_id, surface_id, int(data_slot));
         }

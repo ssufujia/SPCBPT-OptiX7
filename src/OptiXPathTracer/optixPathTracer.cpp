@@ -680,7 +680,8 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
      
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
-    auto normalsurfaceSubspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.surfaceSubSpaceNumber, 0);
+    // surface Id 0 is remain for EMPTY SURFACEID
+    auto normalsurfaceSubspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.surfaceSubSpaceNumber - 1, 1);
     dot_params.surfaceSubSpace = MyThrustOp::DOT_surface_tree_to_device(normalsurfaceSubspace.v, normalsurfaceSubspace.size);
 
     /////////////////////////////////////////////////////////
@@ -730,26 +731,27 @@ void updateDropOutTracingParams()
     // Create temporary vectors to store the counter and data for each subspace
     std::vector<std::vector<int>> tempVector_counter(dot_params.specularSubSpaceNumber, std::vector<int>(dot_params.surfaceSubSpaceNumber, 0));
     std::vector<std::vector<float>> tempVector(dot_params.specularSubSpaceNumber, std::vector<float>(dot_params.surfaceSubSpaceNumber, 0));
-    // Iterate through each record and update the corresponding subspace in tempVector
+    // Iterate through each record compute the summary reciprocal
     for (int i = 0; i < records.size(); i++)
     {
         auto& record = records[i];
         if (record.data_slot == DOT_usage::Average)
         { 
-            tempVector[record.specular_subspaceId][0] += float(record); 
-            tempVector_counter[record.specular_subspaceId][0]++;
+            tempVector[record.specular_subspaceId][DOT_EMPTY_SURFACEID] += float(record); 
+            tempVector_counter[record.specular_subspaceId][DOT_EMPTY_SURFACEID]++;
         }
     }
     for (int i = 0; i < dot_params.specularSubSpaceNumber; i++)
     {  
-        if (tempVector_counter[i][0] != 0)
+        if (tempVector_counter[i][DOT_EMPTY_SURFACEID] != 0)
         {
-            tempVector[i][0] /= tempVector_counter[i][0];
-            printf("average pdf reciprocal for specular subspace %d is %f , this data comes from %d samples\n", i, tempVector[i][0], tempVector_counter[i][0]);
+            // Compute Average reciprocal
+            tempVector[i][DOT_EMPTY_SURFACEID] /= tempVector_counter[i][DOT_EMPTY_SURFACEID];
+            printf("average pdf reciprocal for specular subspace %d is %f , this data comes from %d samples\n", i, tempVector[i][DOT_EMPTY_SURFACEID], tempVector_counter[i][DOT_EMPTY_SURFACEID]);
         }
         // Linearly interpolate the data in dot_params with the new data from tempVector
-        dot_params.get_statistic_data(DOT_type::LS, i, 0, DOT_usage::Average) =
-            lerp(dot_params.get_statistic_data(DOT_type::LS, i, 0, DOT_usage::Average), tempVector[i][0], 1.0 / float(dot_params.statistics_iteration_count + 1));
+        dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average) =
+            lerp(dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average), tempVector[i][DOT_EMPTY_SURFACEID], 1.0 / float(dot_params.statistics_iteration_count + 1));
     }
     
 

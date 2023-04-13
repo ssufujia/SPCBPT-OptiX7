@@ -1073,7 +1073,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     /////////////////////////////////////////////////////////////////////
                     DropOutTracing_params& dot_params = Tracer::params.dot_params;
                     int specular_id = dot_params.get_specular_label(curVertex.position, curVertex.normal);
-                    int surface_id = 0;
+                    int surface_id = DOT_EMPTY_SURFACEID;
                     DOT_record dot_record(DOT_type::LS, specular_id, surface_id, DOT_usage::Average);
                     dot_record = pdf_inverse;
                     DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
