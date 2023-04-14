@@ -2586,7 +2586,7 @@ namespace Shift
         }
         else
         {
-            //TBD
+            //TBD 
             return GeometryTerm(a, b) * 1 / M_PI * Tracer::visibilityTest(Tracer::params.handle, a, b);
         }
     }

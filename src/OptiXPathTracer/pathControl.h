@@ -30,7 +30,7 @@ static const bool LSAE_ENABLE = 0;
 /* LSE */
 static const bool LSE_ENABLE = 0;
 /* LSDE */
-static const bool LSDE_ENABLE = 0;
+static const bool LSDE_ENABLE = 1;
 
 /* LSSDE */
 static const bool LSSDE_ENABLE = 1;

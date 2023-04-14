@@ -13,6 +13,7 @@
 #include"../../cuda/BufferView.h"
 #include<thrust/host_vector.h>
 #include"../PG_common.h"
+#include"../dropOutTracing_common.h"
 void useCUDA();
 
 
@@ -120,8 +121,7 @@ namespace MyThrustOp
 
     std::vector<classTree::divide_weight> get_weighted_point_for_tree_building(bool eye_side = false, int max_size = 0);
 
-    classTree::tree_node* light_tree_to_device(classTree::tree_node* a, int size);
-    classTree::tree_node* eye_tree_to_device(classTree::tree_node* a, int size);
+
     int preprocess_getQ(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange, thrust::device_ptr<float>& Q);
 
     void preprocess_getGamma(thrust::device_ptr<float>& Gamma, bool caustic_case = false);
@@ -138,13 +138,28 @@ namespace MyThrustOp
     void get_caustic_frac(thrust::device_ptr<float>& frac);
 
     thrust::device_ptr<float> envMapCMFBuild(float* pmf, int size);
-    thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size); 
-    thrust::host_vector<float4> copy_to_host(float4* data, int size);
     std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas = -1);
+
+    void clear_training_set();
+    std::vector<classTree::divide_weight> getCausticCentroidCandidate(bool eye_side, int max_size);
+
+
+
+    thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size);
+    thrust::host_vector<float4> copy_to_host(float4* data, int size);
+    classTree::tree_node* light_tree_to_device(classTree::tree_node* a, int size);
+    classTree::tree_node* eye_tree_to_device(classTree::tree_node* a, int size);
+    classTree::tree_node* DOT_specular_tree_to_device(classTree::tree_node* a, int size);
+    classTree::tree_node* DOT_surface_tree_to_device(classTree::tree_node* a, int size);
+    float* DOT_statistics_data_to_device(float* a, int size);
+    thrust::host_vector<float> DOT_statistics_data_to_host();
+    float* DOT_statistics_data_to_device(thrust::host_vector<float> h_v);
+    dropOut_tracing::statistic_record* DOT_get_statistic_record_buffer(int size = -1);
+    thrust::host_vector<dropOut_tracing::statistic_record> DOT_get_host_statistic_record_buffer(bool valid_only = true);
+
 
     path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size);
     path_guiding::Spatio_tree_node* spatio_tree_to_device(path_guiding::Spatio_tree_node* a, int size);
-    void clear_training_set();
 }
 
 
