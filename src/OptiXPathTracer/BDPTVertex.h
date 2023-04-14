@@ -93,7 +93,7 @@ struct BDPTVertex
 
 struct BDPTPath
 {
-#define MAX_VERTEX_NUMBER 3
+#define MAX_VERTEX_NUMBER 6
     BDPTVertex v[MAX_VERTEX_NUMBER];
     int size;
     RT_FUNCTION BDPTVertex& operator()(int i=0)

@@ -3157,6 +3157,7 @@ namespace Shift
 
     RT_FUNCTION float inverPdfEstimate_L_S_S(PathContainer& path, unsigned& seed)
     {
+        //return 0;
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
         Light light = Tracer::params.lights[path.get(d).materialId];
@@ -3254,11 +3255,8 @@ namespace Shift
                 pdf *= tracingPdf(np2, np1);
                 
        
-                /* 老方法，sfj写的 */
                 float continue_rate = 1 - pdf / bound;
 
-                /* 测出来continue_rate都很接近于1 */
-                // printf("c_rate: %f\n", continue_rate);
                 if (abs(continue_rate) > 1)
                 {
                     bound *= 2;
@@ -3306,7 +3304,7 @@ namespace Shift
         /* L - (S)* - S */
         else if (curVertex.depth >1 && (curVertex.path_record == (1 << curVertex.depth) - 1))
         {
-            return 100;// inverPdfEstimate_L_S_S(path, seed);
+            return inverPdfEstimate_L_S_S(path, seed);
         }
         return 0;
     }
