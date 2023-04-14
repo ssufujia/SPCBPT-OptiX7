@@ -969,30 +969,41 @@ extern "C" __global__ void __raygen__shift_combine()
                             short d = light_subpath.depth;
                             /* 0 ~ d-1 号是glossy顶点，d号是光源顶点，要动除了0号外的d个顶点 */
                             pdf_retrace = 1;
-                            // BDPTVertex np[SHIFT_VALID_SIZE];
+                            BDPTVertex np[SHIFT_VALID_SIZE];
+                            np[0] = originPath.get(0);
                             float3 in_dir = normalize(eye_vertex.position - originPath.get(0).position);
                             bool retrace_state = true;
                             /* d 个glossy顶点 */
                             for (int i = 0; i < d; ++i)
                             {
-                                MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(i));
-                                float3 out_dir = Tracer::Sample(mat, finalPath.get(i).normal, in_dir, seed);
+                                MaterialData::Pbr mat = VERTEX_MAT(np[i]);
+                                float3 out_dir = Tracer::Sample(mat, np[i].normal, in_dir, seed);
                                 bool trace_success = 0;
-                                finalPath.get(i+1) = Tracer::FastTrace(finalPath.get(i), out_dir, trace_success);
+                                np[i+1] = Tracer::FastTrace(np[i], out_dir, trace_success);
 
                                 /* 没追到 */
                                 if (trace_success == false) { retrace_state = 0; break; }
-                                /* 追到了光源 */
-                                if (finalPath.get(i+1).type == BDPTVertex::Type::HIT_LIGHT_SOURCE) { retrace_state = 0; break; }
-                                /* 追到了非glossy */
-                                if (!Shift::glossy(finalPath.get(i + 1))) { retrace_state = 0; break; }
+                                if (i < d - 1) 
+                                {
+                                     /* 追到了光源 */
+                                     if (np[i+1].type == BDPTVertex::Type::HIT_LIGHT_SOURCE) { retrace_state = 0; break; }
+                                     /* 追到了非glossy */
+                                     if (!Shift::glossy(np[i + 1])) { retrace_state = 0; break; }
+                                }
+                                else 
+                                {
+                                    /* 没追到光源 */
+                                    if (np[i + 1].type != BDPTVertex::Type::HIT_LIGHT_SOURCE) { retrace_state = 0; break; }
+                                }
                                 
-                                pdf_retrace *= Tracer::Pdf(mat, finalPath.get(i).normal, in_dir, out_dir) *
-                                    Shift::GeometryTerm(finalPath.get(i), finalPath.get(i+1)) / abs(dot(out_dir, finalPath.get(i).normal));
-                                
+                                pdf_retrace *= Tracer::Pdf(mat, np[i].normal, in_dir, out_dir) *
+                                    Shift::GeometryTerm(np[i], np[i+1]) / abs(dot(out_dir, np[i].normal));
+
                                 in_dir = -out_dir;
                             }
                             if (!retrace_state) continue;
+                            for (int i = 1; i <= d; ++i)
+                                finalPath.get(i) = np[i];
                             
                         }
 
@@ -1250,9 +1261,9 @@ extern "C" __global__ void __raygen__lightTrace()
                     curVertex.inverPdfEst = pdf_inverse;
                 }
                 /* L -> (S)* -> S 光子路 */
-                else if (curVertex.depth > 1 && (curVertex.path_record == (1<< curVertex.depth) - 1))
+                else if (curVertex.depth > 1 && (curVertex.path_record == (1<< curVertex.depth) - 1) && (curVertex.depth< SHIFT_VALID_SIZE-1))
                 {
-                    BDPTVertex v[SHIFT_VALID_SIZE+1];
+                    BDPTVertex v[SHIFT_VALID_SIZE];
                     /* v[1] 是光源顶点 */
                     v[0] = curVertex;
                     for (int i = 1; i <= curVertex.depth; ++i)
@@ -1261,7 +1272,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     Shift::PathContainer path(v, 1, curVertex.depth+1);
 
                     float pdf_inverse = 100000;
-                    //pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex);
+                    pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex);
                     curVertex.inverPdfEst = pdf_inverse;
                 }
 

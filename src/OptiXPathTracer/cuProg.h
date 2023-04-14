@@ -3157,18 +3157,12 @@ namespace Shift
 
     RT_FUNCTION float inverPdfEstimate_L_S_S(PathContainer& path, unsigned& seed)
     {
-        //return 0;
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
         Light light = Tracer::params.lights[path.get(d).materialId];
 
         /* 估计pdf上界 */
-        float bound = 10;
-
-        /* glossy顶点 */
-        BDPTVertex& v = path.get(0);
-        /* 光顶点 */
-        BDPTVertex& l = path.get(d);
+        float bound = 1;
 
         float ans = 0;
         float variance_accumulate = 0;
