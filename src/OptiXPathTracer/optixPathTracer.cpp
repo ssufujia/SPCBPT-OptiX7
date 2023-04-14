@@ -711,6 +711,7 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
 
     //initial finished
     dot_params.is_init = true;
+    dot_params.selection_const = 0.0;
 }
 void updateDropOutTracingParams()
 {
@@ -747,11 +748,13 @@ void updateDropOutTracingParams()
         {
             // Compute Average reciprocal
             tempVector[i][DOT_EMPTY_SURFACEID] /= tempVector_counter[i][DOT_EMPTY_SURFACEID];
-            printf("average pdf reciprocal for specular subspace %d is %f , this data comes from %d samples\n", i, tempVector[i][DOT_EMPTY_SURFACEID], tempVector_counter[i][DOT_EMPTY_SURFACEID]);
         }
         // Linearly interpolate the data in dot_params with the new data from tempVector
         dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average) =
             lerp(dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average), tempVector[i][DOT_EMPTY_SURFACEID], 1.0 / float(dot_params.statistics_iteration_count + 1));
+        printf("average pdf reciprocal for specular subspace %d is %f , this data comes from %d samples\n", i, dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average)
+            , 0);
+
     }
     
 
@@ -768,6 +771,9 @@ void updateDropOutTracingParams()
 
     dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(statics_data);
     dot_params.data.on_GPU = true;
+
+
+    dot_params.selection_const = lt_params.M_per_core * lt_params.num_core / params.sampler.glossy_count;
 }
 
 

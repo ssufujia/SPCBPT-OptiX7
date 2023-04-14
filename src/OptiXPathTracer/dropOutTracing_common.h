@@ -32,6 +32,12 @@ namespace dropOut_tracing
         Average, SlotUsageNumber
     };
 
+    RT_FUNCTION __host__ DropOutType pathLengthToDropOutType(int num) {
+        if (num < 1)printf("warn: pathLength for drop out type must be larger than 1\n");
+        return static_cast<DropOutType>(num - 1);
+    }
+
+
     struct statistics_data
     {
         float* host_data;
@@ -94,6 +100,8 @@ namespace dropOut_tracing
         // It is important not to use statistics data for other operations when the count is 0, as all statistics data will be set to 0 at this time.
         // 当计数为0时，说明尚未有任何的统计数据被统计，注意不要在此时使用统计数据来做别的操作，所有的统计数据在此时都会被设为0
         int statistics_iteration_count;
+        float selection_const;
+       
 
 
         statistics_data data; 
@@ -110,7 +118,7 @@ namespace dropOut_tracing
                 printf("dot params is Not Initialized Yet\n");
             }
              
-            if (statistics_iteration_count == 0 && data.on_GPU == true)
+            if (!statistic_available() && data.on_GPU == true)
             {
                 printf("warn: you are using the statistic data in DEVICE WITHOUT ANY data collected\n");
             }
@@ -139,6 +147,14 @@ namespace dropOut_tracing
         RT_FUNCTION __host__ float& get_statistic_data(int type, int specular_id, int surface_id, SlotUsage data_slot)
         {
             return get_statistic_data(type, specular_id, surface_id, int(data_slot));
+        }
+        RT_FUNCTION __host__ bool statistic_available()
+        {
+            return statistics_iteration_count != 0;
+        }
+        RT_FUNCTION __host__ float selection_ratio(DropOutType type, int specular_id, int surface_id)
+        {
+            return selection_const;
         }
     };
 

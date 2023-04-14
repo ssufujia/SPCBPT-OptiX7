@@ -374,6 +374,135 @@ extern "C" __global__ void __raygen__SPCBPT()
     Tracer::params.frame_buffer[image_index] = make_color(make_float3(val));  
 }
 
+RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path, int path_size)
+{
+    int specular_index = -1;
+    int surface_index = -1;
+    int u = 1;
+    for (int i = 1; i < path_size - 1; i++)
+    {
+        if (Shift::glossy(path[i]))
+        {
+            specular_index = i;
+            break;
+        }
+    }
+    if (specular_index == -1)
+    {
+        printf("Error: non-caustic path is cast to the drop out tracing computation\n"); 
+        return 0;
+    }
+    for (int i = specular_index + 1; i < path_size - 1; i++)
+    {
+        if (!Shift::glossy(path[i]))
+        {
+            surface_index = i + 1;
+            break;
+        }
+        else
+        {
+            u += 1;
+        }
+    }
+    DropOutTracing_params& dot_params = Tracer::params.dot_params;
+    int specular_subspace = dot_params.get_specular_label(path[specular_index].position, path[specular_index].normal);
+    int surface_subspace = surface_index  == -1? DOT_EMPTY_SURFACEID: 
+        dot_params.get_surface_label(path[surface_index].position, path[surface_index].normal, 
+        normalize( path[surface_index+1].position - path[surface_index].position));
+    
+    float pdf = 1;
+    int eye_subpath_end_index = surface_index == -1 ? path_size: surface_index;
+    int h_star = surface_index;
+
+    // Eye sub-path Pdf Computation
+    // Retracing pdf is also computed
+    {
+        for (int i = 1; i < eye_subpath_end_index; i++)
+        {
+            if (i == specular_index)continue;
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            float3 line = midPoint.position - lastPoint.position;
+            float3 lineDirection = normalize(line);
+            pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+        } 
+        for (int i = 1; i < eye_subpath_end_index - 1; i++)
+        {
+            if (i == specular_index - 1)continue;
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            const BDPTVertex& nextPoint = path[i + 1];
+            float3 lastDirection = normalize(lastPoint.position - midPoint.position);
+            float3 nextDirection = normalize(nextPoint.position - midPoint.position);
+
+            MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
+            mat.base_color = make_float4(midPoint.color, 1.0);
+            float rr_rate = fmaxf(midPoint.color);
+            pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
+        }
+    }
+    // Light sub-path Pdf Computation
+    {
+        int lightPathLength = path_size - eye_subpath_end_index;
+
+        if (lightPathLength > 0)
+        {
+            const BDPTVertex& light = path[path_size - 1];
+            pdf *= light.pdf;
+        }
+        if (lightPathLength > 1)
+        {
+            const BDPTVertex& light = path[path_size - 1];
+            const BDPTVertex& lastMidPoint = path[path_size - 2];
+            float3 lightLine = lastMidPoint.position - light.position;
+            float3 lightDirection = normalize(lightLine);
+            pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
+             
+            for (int i = 1; i < lightPathLength; i++)
+            {
+                const BDPTVertex& midPoint = path[path_size - i - 1];
+                const BDPTVertex& lastPoint = path[path_size - i];
+                float3 line = midPoint.position - lastPoint.position;
+                float3 lineDirection = normalize(line);
+                pdf *= 1.0 / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+            }
+
+            for (int i = 1; i < lightPathLength - 1; i++)
+            {
+                const BDPTVertex& midPoint = path[path_size - i - 1];
+                const BDPTVertex& lastPoint = path[path_size - i];
+                const BDPTVertex& nextPoint = path[path_size - i - 2];
+                float3 lastDirection = normalize(lastPoint.position - midPoint.position);
+                float3 nextDirection = normalize(nextPoint.position - midPoint.position);
+
+                MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
+                mat.base_color = make_float4(midPoint.color, 1.0);
+                float rr_rate = fmaxf(midPoint.color);
+                pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
+            } 
+        }
+    }
+
+    float dropOutTracingPdf = dot_params.statistics_iteration_count == 0 ? 0.0 :
+        1.0 / dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace, DOT_usage::Average);
+    if (isinf(dropOutTracingPdf))dropOutTracingPdf = 0.0;
+
+
+    return pdf * dropOutTracingPdf * dot_params.selection_ratio(dropOut_tracing::pathLengthToDropOutType(u), specular_index, surface_index);
+}
+
+RT_FUNCTION float dropOutTracing_MISWeight(const BDPTVertex* path, int path_size)
+{
+    if (Shift::IsCausticPath(path, path_size))
+    { 
+        float upt_pdf = Tracer::pdfCompute(path, path_size, path_size);
+        float MIS_weight_not_normalize = dropOutTracing_MISWeight_non_normalize(path, path_size);
+        float MIS_weight_dominator = upt_pdf + MIS_weight_not_normalize;
+        //printf("%f %f %f\n", upt_pdf, MIS_weight_not_normalize, MIS_weight_not_normalize / MIS_weight_dominator);
+        return MIS_weight_not_normalize / MIS_weight_dominator;
+    }
+    return 0;    
+} 
 RT_FUNCTION float3 eval_path(const BDPTVertex* path, int path_size, int strategy_id)
 {
     //return Tracer::contriCompute(path,path_size);
@@ -572,8 +701,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
 }
 
 extern "C" __global__ void __raygen__shift_combine()
-{
-
+{ 
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -654,10 +782,25 @@ extern "C" __global__ void __raygen__shift_combine()
                 BDPTVertex light_vertex;
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
-                res += eval_path(pathBuffer, buffer_size, buffer_size);
+                
+                
+                //res += eval_path(pathBuffer, buffer_size, buffer_size);
+                if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 4 && LSDE_ENABLE))
+                {
+
+                    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
+                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
+                    res += contri / pdf;
+                    res *= (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
+                }
+                else
+                {
+                    res *= 0;
+                }
             } 
-            /* 下 BDPT control 只有光源直击会被保留*/
-            if (BDPT_CONTROL)
+            /* BDPT control 下只有光源直击会被保留 */
+            /* 引入MIS时，注释该代码段 */
+            if (false&&BDPT_CONTROL)
             {
                 if (LE_ENABLE)
                 {
@@ -861,6 +1004,9 @@ extern "C" __global__ void __raygen__shift_combine()
                         //printf("pdf: %f", pdf);
                         float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
                         // printf("inverpdf: %f\n", light_subpath.inverPdfEst);            
+                        
+                        if(LSDE_ENABLE && buffer_size + finalPath.size() == 4)
+                            res *= dropOutTracing_MISWeight(pathBuffer, buffer_size + finalPath.size());
 
                         if (!ISINVALIDVALUE(res))
                             result += res / CONNECTION_N;
@@ -968,7 +1114,7 @@ extern "C" __global__ void __raygen__shift_combine()
         accum_color = make_float3(0);
     }
 
-    //if (subframe_index > 2000)return;
+    //if (subframe_index > 100)return;
     Tracer::params.accum_buffer[image_index] = make_float4(accum_color, 1.0f);
 
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
