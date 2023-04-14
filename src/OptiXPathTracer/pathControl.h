@@ -14,7 +14,7 @@ static const bool S_ONLY = 1;
 /* A 代表 Any*/
 
 /* L - * - E*/
-static const bool LAE_ENABLE = 1;
+static const bool LAE_ENABLE = 0;
 
 static const bool LE_ENABLE = 1;
 static const bool LDE_ENABLE = 0;
@@ -33,10 +33,10 @@ static const bool LSE_ENABLE = 0;
 static const bool LSDE_ENABLE = 0;
 
 /* LSSDE */
-static const bool LSSDE_ENABLE = 0;
+static const bool LSSDE_ENABLE = 1;
 
 /* LSSSDE */
 static const bool LSSSDE_ENABLE = 0;
 
 /* L(S)*SDE */
-static const bool L_S_SDE_ENABLE = 1;
+static const bool L_S_SDE_ENABLE = 0;
