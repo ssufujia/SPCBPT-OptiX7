@@ -121,8 +121,10 @@ extern "C" __global__ void __raygen__pinhole()
                 payload.result += payload.currentResult; 
             payload.currentResult = make_float3(0);
         }
-        if (payload.done || payload.depth > 30)
+        if (payload.done || payload.depth > 30) {
+            //printf("%d\n", payload.depth);
             break;
+        }
         payload.depth += 1;
     }
 
