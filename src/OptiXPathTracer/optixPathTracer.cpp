@@ -86,6 +86,7 @@ MyParams   params = {};
 LightTraceParams& lt_params = params.lt;
 PreTraceParams& pr_params = params.pre_tracer;
 subspaceMacroInfo& subspaceInfo = params.subspace_info;
+DropOutTracing_params& dot_params = params.dot_params;
 int32_t                 width = 1920;
 int32_t                 height = 1000; 
 // Mouse state
@@ -651,9 +652,136 @@ void path_guiding_params_setup(sutil::Scene& scene)
     params.pg_params.guide_ratio = 0.5;
     //printf("pg tree check %f %f %f\n", PGTrainer_api.s_tree.getNode(0).m_mid.x, PGTrainer_api.s_tree.getNode(0).m_mid.y, PGTrainer_api.s_tree.getNode(0).m_mid.z);
 }
-void preprocessing(sutil::Scene& scene)
+void dropOutTracingParamsInit()
 {
-    printf("BDPTVertex Size %d\n", sizeof(BDPTVertex));
+    dot_params.is_init = false;
+    dot_params.specularSubSpace = nullptr;
+    dot_params.surfaceSubSpace = nullptr;
+    dot_params.record_buffer = nullptr;
+}
+void dropOutTracingParamsSetup(sutil::Scene& scene)
+{
+    dot_params.specularSubSpaceNumber = dropOut_tracing::default_specularSubSpaceNumber;
+    dot_params.surfaceSubSpaceNumber = dropOut_tracing::default_surfaceSubSpaceNumber;
+    dot_params.data.on_GPU = false;
+    ///////////////////////////////////////
+    ///////Build Small Subspace////////////
+    ///////////////////////////////////////
+    MyThrustOp::clear_training_set();
+    const int target_sample_count = 100000;
+    int current_sample_count = 0;
+    while (current_sample_count < target_sample_count)
+    {
+        current_sample_count += launchPretrace(scene);
+    }
+
+    auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000);
+    auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber, 0);
+    dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
+     
+    unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
+    // surface Id 0 is remain for EMPTY SURFACEID
+    auto normalsurfaceSubspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.surfaceSubSpaceNumber - 1, 1);
+    dot_params.surfaceSubSpace = MyThrustOp::DOT_surface_tree_to_device(normalsurfaceSubspace.v, normalsurfaceSubspace.size);
+
+    /////////////////////////////////////////////////////////
+    ////////////Subspace Build Finish////////////////////////
+    /////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////
+    ////////////Assign the Memory For Statistics/////////////
+    /////////////////////////////////////////////////////////
+    dot_params.data.size = 
+        dot_params.specularSubSpaceNumber * dot_params.surfaceSubSpaceNumber * dropOut_tracing::slot_number * int(dropOut_tracing::DropOutType::DropOutTypeNumber);
+    thrust::host_vector<float> DOT_statics_data(dot_params.data.size);
+    thrust::fill(DOT_statics_data.begin(), DOT_statics_data.end(), 0);
+    dot_params.data.host_data = DOT_statics_data.data();
+    dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(dot_params.data.host_data, dot_params.data.size);
+    dot_params.data.on_GPU = true; 
+
+
+    //thrust::host_vector<dropOut_tracing::statistic_record> h_record(lt_params.get_element_count());
+    dot_params.record_buffer_core = lt_params.num_core;
+    dot_params.record_buffer_padding = lt_params.core_padding * dropOut_tracing::record_buffer_width;
+    dot_params.record_buffer = MyThrustOp::DOT_get_statistic_record_buffer(dot_params.record_buffer_core * dot_params.record_buffer_padding);
+    dot_params.statistics_iteration_count = 0;
+
+
+
+    //initial finished
+    dot_params.is_init = true;
+    dot_params.selection_const = 0.0;
+}
+void updateDropOutTracingParams()
+{
+
+
+    thrust::host_vector<float>statics_data = MyThrustOp::DOT_statistics_data_to_host();
+    dot_params.data.host_data = statics_data.data();
+    dot_params.data.on_GPU = false;
+    auto records = MyThrustOp::DOT_get_host_statistic_record_buffer();
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////Update the Statstics Data In The Fllowing Data Block///////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////// 
+
+
+    /// light Type LS
+    /// surfaceSubspaceId is disable in the case of Light Type LS 
+    
+    // Create temporary vectors to store the counter and data for each subspace
+    std::vector<std::vector<int>> tempVector_counter(dot_params.specularSubSpaceNumber, std::vector<int>(dot_params.surfaceSubSpaceNumber, 0));
+    std::vector<std::vector<float>> tempVector(dot_params.specularSubSpaceNumber, std::vector<float>(dot_params.surfaceSubSpaceNumber, 0));
+    // Iterate through each record compute the summary reciprocal
+    for (int i = 0; i < records.size(); i++)
+    {
+        auto& record = records[i];
+        if (record.data_slot == DOT_usage::Average)
+        { 
+            tempVector[record.specular_subspaceId][DOT_EMPTY_SURFACEID] += float(record); 
+            tempVector_counter[record.specular_subspaceId][DOT_EMPTY_SURFACEID]++;
+        }
+    }
+    for (int i = 0; i < dot_params.specularSubSpaceNumber; i++)
+    {  
+        if (tempVector_counter[i][DOT_EMPTY_SURFACEID] != 0)
+        {
+            // Compute Average reciprocal
+            tempVector[i][DOT_EMPTY_SURFACEID] /= tempVector_counter[i][DOT_EMPTY_SURFACEID];
+        }
+        // Linearly interpolate the data in dot_params with the new data from tempVector
+        dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average) =
+            lerp(dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average), tempVector[i][DOT_EMPTY_SURFACEID], 1.0 / float(dot_params.statistics_iteration_count + 1));
+        printf("average pdf reciprocal for specular subspace %d is %f , this data comes from %d samples\n", i, dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average)
+            , 0);
+
+    }
+    
+
+
+
+    dot_params.statistics_iteration_count++;
+    printf("received %d valid records in the Light Tracing\n",records.size());
+
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////Update the Statstics Data In The Above Data Block//////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(statics_data);
+    dot_params.data.on_GPU = true;
+
+
+    dot_params.selection_const = lt_params.M_per_core * lt_params.num_core / params.sampler.glossy_count;
+}
+
+
+
+
+void preprocessing(sutil::Scene& scene)
+{ 
+    MyThrustOp::clear_training_set();
     const int target_sample_count = 1000000;
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
@@ -827,11 +955,11 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-         //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
 
-         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
 
@@ -839,12 +967,12 @@ int main( int argc, char* argv[] )
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
-         
-         scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
@@ -879,14 +1007,15 @@ int main( int argc, char* argv[] )
         initCameraState(TScene);
         //initCameraState(*myScene);
         initLaunchParams(TScene);
+        dropOutTracingParamsInit();
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
         env_params_setup(TScene);
         //pre tracing
         { 
             handleCameraUpdate(params);
+            dropOutTracingParamsSetup(TScene);
             preprocessing(TScene);
-
             path_guiding_params_setup(TScene);
         }
 
@@ -935,8 +1064,11 @@ int main( int argc, char* argv[] )
                     state_update_time += t1 - t0;
                     t0 = t1;
 
-                    if(render_alg[render_alg_id] == std::string("SPCBPT_eye"))
+                    if (render_alg[render_alg_id] == std::string("SPCBPT_eye"))
+                    {
                         launchLVCTrace(TScene);
+                        updateDropOutTracingParams();
+                    }
 
                     launchSubframe(output_buffer, TScene);
                     t1 = std::chrono::steady_clock::now();
@@ -962,7 +1094,7 @@ int main( int argc, char* argv[] )
                     }
                     else
                     {
-                        printf("frame %d\n", params.subframe_index);
+                        printf("frame %d\n", params.subframe_index);;
                     }
                     ++params.subframe_index;
                     /*if (sum_render_time > print_time && !print) {

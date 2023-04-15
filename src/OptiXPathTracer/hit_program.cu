@@ -169,9 +169,12 @@ extern "C" __global__ void __closesthit__lightsource()
                     (LSE_ENABLE && prd->depth == 1 && prd->path_record == 0b1) ||
                     /* L - S - D - E */
                     (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) ||
+                    /* L - (S)* - S - D - E */
+                    (L_S_SDE_ENABLE && prd->depth > 2 &&(prd->path_record == ((1<< prd->depth) - 2))) ||
                     /* L - S - S - D - E */
-                    (LSSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b110)
-
+                    (LSSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b110) ||
+                    /* L - S - S - S - D - E */
+                    (LSSSDE_ENABLE && prd->depth == 4 && prd->path_record == 0b1110)
                     )
                 )
             )

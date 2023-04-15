@@ -34,3 +34,9 @@ static const bool LSDE_ENABLE = 1;
 
 /* LSSDE */
 static const bool LSSDE_ENABLE = 0;
+
+/* LSSSDE */
+static const bool LSSSDE_ENABLE = 0;
+
+/* L(S)*SDE */
+static const bool L_S_SDE_ENABLE = 1;
