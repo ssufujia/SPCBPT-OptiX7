@@ -1398,7 +1398,7 @@ namespace Tracer
         }
 
         /*
-        if (isRefract(normal, V, L))
+        if (mat.trans > 0 && isRefract(normal, V, L))
         {
             if (dot(normal, V) > 0)
             {
@@ -1408,8 +1408,8 @@ namespace Tracer
             {
                 pdf /= (mat.eta * mat.eta);
             }
-        }
-        */ 
+        }*/
+         
 
         if (use_pg && Tracer::params.pg_params.pg_enable)
         { 
@@ -1554,7 +1554,7 @@ RT_FUNCTION float3 contriCompute(const BDPTVertex* path, int path_size)
         MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
         mat.base_color = make_float4(midPoint.color, 1.0);
         throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection))
-            * Eval(mat, midPoint.normal, nextDirection,lastDirection);
+            * Eval(mat, midPoint.normal, lastDirection,nextDirection);
     }
     return throughput;
 }
@@ -2990,7 +2990,7 @@ namespace Shift
             {
                 /* 从glossy顶点采样 */
                 /* 建立局部坐标系，onb代表orthonormal basis*/
-                Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                Onb onb(rnd(seed) > 0.5 ? v.normal : -v.normal);
                 float3 dir;
                 /* 半球空间采样 */
                 cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -3029,8 +3029,8 @@ namespace Shift
                 * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))
                 * GeometryTerm(np, v)
                 * Tracer::visibilityTest(Tracer::params.handle, np, v)
-                / (ratio * tracingPdf(v, np) + (1 - ratio) * tracingPdf(l, np));
-            bound = max(1.1 * pdf, bound);
+                / (ratio * tracingPdf(v, np) * 0.5f + (1 - ratio) * tracingPdf(l, np));
+            bound = max(1.5*pdf, bound);
         }
 
         float ans = 0;
@@ -3055,7 +3055,7 @@ namespace Shift
             {
                 loop_cnt += 1;
                 if (loop_cnt > 1000) {
-                    // printf("Break due to loop_cnt > 1000 \n");
+                    //printf("Break due to loop_cnt > 1000 \n");
                     break;
                 }
                 ans += factor / bound;
@@ -3071,7 +3071,7 @@ namespace Shift
                 {
                     /* 从glossy顶点采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
-                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                    Onb onb(rnd(seed) > 0.5 ? v.normal : -v.normal);
                     float3 dir;
                     /* 半球空间采样 */
                     cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -3090,7 +3090,7 @@ namespace Shift
                 {
                     /* 从光源采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
-                    Onb onb(dot(l.normal, path.get(1).position - l.position) > 0 ? l.normal : -l.normal);
+                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? l.normal : -l.normal);
                     float3 dir;
                     /* 半球空间采样 */
                     cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -3109,7 +3109,7 @@ namespace Shift
                 float pdf = l.pdf * tracingPdf(l, np)
                     * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))* GeometryTerm(np, v)
                     * Tracer::visibilityTest(Tracer::params.handle, np, v)
-                    / (ratio * tracingPdf(v,np) + (1 - ratio) * tracingPdf(l,np));
+                    / (ratio * tracingPdf(v,np)*0.5 + (1 - ratio) * tracingPdf(l,np));
                 //float pdf = tracingPdf(np, path.get(0));
 
                 if (RR_option) {

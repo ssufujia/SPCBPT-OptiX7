@@ -554,7 +554,7 @@ extern "C" __global__ void __closesthit__radiance()
             {
                 prd->vis_pos_A = geom.P;
                 prd->vis_pos_B = light_sample.position;
-                float3 eval = Tracer::Eval(currentPbr, N, L, V);
+                float3 eval = Tracer::Eval(currentPbr, N, V, L);
 
                 float MIS_weight = 1;
                 {
@@ -587,7 +587,7 @@ extern "C" __global__ void __closesthit__radiance()
             prd->vis_pos_A = geom.P;
             prd->vis_pos_B = geom.P + light_sample.direction * SKY.r * 10;
             //            printf("light_sample dir %f %f %f\n", light_sample.direction.x, light_sample.direction.y, light_sample.direction.z);
-            float3 eval = Tracer::Eval(currentPbr, N, L, V);
+            float3 eval = Tracer::Eval(currentPbr, N, V, L);
             result += prd->throughput * light_sample.emission / light_sample.pdf * eval * L_dot_N;
         }
     }
