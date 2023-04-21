@@ -2824,7 +2824,7 @@ namespace Shift
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
         //if (d > 2) 
-            return 100;
+            //return 100;
         Light light = Tracer::params.lights[path.get(d).materialId];
 
         /* 估计pdf上界 */

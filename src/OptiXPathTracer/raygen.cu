@@ -994,6 +994,12 @@ extern "C" __global__ void __raygen__shift_combine()
                                 {
                                     /* 没追到光源 */
                                     if (np[i + 1].type != BDPTVertex::Type::HIT_LIGHT_SOURCE) { retrace_state = 0; break; }
+
+                                    Light light = Tracer::params.lights[np[i+1].materialId];
+                                    Tracer::lightSample light_sample;
+
+                                    light_sample.ReverseSample(light, np[i+1].uv);
+                                    init_vertex_from_lightSample(light_sample, np[i+1]);
                                 }
                                 
                                 pdf_retrace *= Tracer::Pdf(mat, np[i].normal, in_dir, out_dir) *
