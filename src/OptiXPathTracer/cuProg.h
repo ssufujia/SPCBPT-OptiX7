@@ -2139,44 +2139,6 @@ namespace Shift
         pdf = 1 / ratio / ratio;
         return x * ratio;
     }
-    RT_FUNCTION float2 get_origin_uv(PathContainer& p, int index)// 从index+1个顶点正向生成第index个顶点的uv //单光源假设？    
-    {
-        //四种情况下
-        //查询点在光源上，直接返回uv，这在单光源下是成立的，多光源情况下需要额外的映射，需要注意
-        //源点在环境光上，这个时候uv取决于查询点的位置和源点代表的环境光方向
-        //源点在表面光上，或者在diffuse表面上，这个时候直接根据法线和角度处理
-        //源点在金属表面上，这个时候需要反向追踪
-        //打到光源的特判
-        if (index + 1 == p.size()) return p.get(index).uv;
-        if (index + 2 == p.size() && p.get(index + 1).type == BDPTVertex::Type::ENV)
-        {
-            return SKY.trace_reverse_uv(p.get(index).position, -p.get(index + 1).normal);
-        }
-        if ((index + 2 == p.size() && p.get(index + 1).type == BDPTVertex::Type::QUAD) || (!(glossy(p.get(index + 1)))))
-        {
-            float3 normal = p.get(index + 1).normal;
-            float3 dir = normalize(p.get(index).position - p.get(index + 1).position);
-            return sample_reverse_cosine(normal, dir);
-        }
-        else
-        {
-            BDPTVertex& lastVertex = p.get(index + 1);
-            BDPTVertex& midVertex = p.get(index);
-            MaterialData::Pbr mat = Tracer::params.materials[lastVertex.materialId];
-            mat.base_color = make_float4(lastVertex.color, 1.0);
-            float3 last_incident;
-            if (index + 3 == p.size() && p.get(index + 2).type == BDPTVertex::Type::ENV)
-            {
-                last_incident = p.get(index + 2).normal;
-            }
-            else
-            {
-                last_incident = normalize(p.get(index + 2).position - p.get(index + 1).position);
-            }
-
-            return Tracer::sample_reverse_metallic(mat, lastVertex.normal, last_incident, normalize(midVertex.position - lastVertex.position));
-        }
-    }
     RT_FUNCTION void refract_state_fill(bool* refract_state, PathContainer& path,float3 anchor, int g)
     { 
         for (int i = 0; i < g; i++)
@@ -2861,6 +2823,8 @@ namespace Shift
     {
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
+        //if (d > 2) 
+            return 100;
         Light light = Tracer::params.lights[path.get(d).materialId];
 
         /* 估计pdf上界 */
