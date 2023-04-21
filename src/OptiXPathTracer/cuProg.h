@@ -62,6 +62,11 @@ struct labelUnit
 
 };
 
+
+//RT_FUNCTION float max(float a, float b)
+//{
+//	return a > b ? a : b;
+//}
  
 RT_FUNCTION bool refract(float3& r, float3 i, float3 n, float ior)
 { 
@@ -172,7 +177,7 @@ struct Onb
     float3 m_normal;
 };
 
-static __forceinline__ __device__ void cosine_sample_hemisphere(const float u1, const float u2, float3& p)
+RT_FUNCTION void cosine_sample_hemisphere(const float u1, const float u2, float3& p)
 {
     // Uniformly sample disk.
     const float r = sqrtf(u1);
@@ -183,6 +188,19 @@ static __forceinline__ __device__ void cosine_sample_hemisphere(const float u1, 
     // Project up to hemisphere.
     p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
 }
+
+RT_FUNCTION void sample_small_lobe(const float u1, const float u2, float alpha, float3& p)
+{
+    // Sample a small lobe around axis y.
+    const float r = powf(u1, alpha);
+    const float phi = 2.0f * M_PIf * u2;
+    p.x = r * cosf(phi);
+    p.y = r * sinf(phi);
+
+    // Project up to hemisphere.
+    p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
+}
+
 RT_FUNCTION float2 sample_reverse_cosine(float3 N, float3 dir)
 {
     Onb onb(N);
@@ -199,6 +217,18 @@ RT_FUNCTION float2 sample_reverse_cosine(float3 N, float3 dir)
     float r2 = phi / 2.0f / M_PIf; 
     return make_float2(r1, r2);
 }
+
+RT_FUNCTION float pdf_small_lobe(float3 N, float3 dir, float alpha)
+{
+    Onb onb(N);
+    onb.transform(dir);
+
+    float r1 = dir.x * dir.x + dir.y * dir.y;
+
+    float pdf = 1/alpha * powf(r1, 1 / alpha - 1);
+    return pdf;
+}
+
 struct envInfo_device :envInfo
 {
 
@@ -2819,16 +2849,100 @@ namespace Shift
     }
 
 
+
+    RT_FUNCTION float BoundEstimate_L_S_S(PathContainer& path, unsigned& seed) 
+    {
+        /* path 0~d-1是glossy d是光*/
+        short d = path.size() - 1;
+        float alpha = max(10, 15 * d);
+        Light light = Tracer::params.lights[path.get(d).materialId];
+        float bound = 1;
+        int suc_int = 0;
+        while(suc_int < 1)
+        {
+            /* glossy顶点 */
+            BDPTVertex& v = path.get(0);
+            /* 光顶点 */
+            BDPTVertex& l = path.get(d);
+            BDPTVertex np0, np1, np2;
+            float pdf = l.pdf;
+            /* 从第一个 glossy 顶点采样，用半球空间 */
+            {
+                /* 建立局部坐标系，onb代表orthonormal basis*/
+                Onb onb(normalize(path.get(1).position - v.position));
+                float3 dir;
+                /* 小波瓣采样 */
+                sample_small_lobe(rnd(seed), rnd(seed), alpha, dir);
+                onb.inverse_transform(dir);
+                /* 从glossy顶点出发进行追踪 */
+                bool success_hit;
+                /* 此处np为中间的glossy顶点 */
+                np1 = Tracer::FastTrace(v, dir, success_hit);
+                /* 这里直接continue是正确的 */
+                if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                    !Shift::glossy(np1))
+                    continue;
+
+                float3 diff = np1.position - v.position;
+                float g = abs(dot(dir, np1.normal)) / dot(diff, diff);
+                pdf /= pdf_small_lobe(onb.m_normal, dir, alpha) * g;
+            }
+            /* 要追 d-1 个 glossy 顶点和 1 个光顶点 */
+            np0 = v;
+            bool retrace_state = 1;
+            for (int i = 1; i < d; ++i) {
+                float3 in_dir = np0.position - np1.position;
+                MaterialData::Pbr mat = Tracer::params.materials[np1.materialId];
+                float3 out_dir = Tracer::Sample(mat, np1.normal, in_dir, seed);
+
+                bool success_hit;
+                np2 = Tracer::FastTrace(v, out_dir, success_hit);
+
+                /* 到了最后一次，追光源顶点 */
+                if (i == d - 1)
+                {
+                    if (success_hit == false || np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                    {
+                        retrace_state = 0;
+                        break;
+                    }
+                }
+                else
+                    /* 之前 d-1 次，追 glossy 顶点 */
+                {
+                    if (success_hit == false || np2.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                        !Shift::glossy(np2))
+                    {
+                        retrace_state = 0;
+                        break;
+                    }
+                }
+                pdf *= GeometryTerm(np0, np1);
+                pdf *= Tracer::Pdf(mat, np1.normal, normalize(np2.position - np1.position), normalize(np0.position - np1.position));
+                np0 = np1;
+                np1 = np2;
+            }
+            if (!retrace_state) continue;
+            pdf *= tracingPdf(np2, np1);
+            bound = max(pdf * 1.1, bound);
+            ++suc_int;
+        }
+        return bound;
+    }
+
+
     RT_FUNCTION float inverPdfEstimate_L_S_S(PathContainer& path, unsigned& seed)
     {
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
-        //if (d > 2) 
-            //return 100;
+       /* if (d > 2) 
+            return 0;*/
+        float alpha = max(10, 10 * d);
+        alpha = 100;
         Light light = Tracer::params.lights[path.get(d).materialId];
 
         /* 估计pdf上界 */
-        float bound = 1;
+        float bound = 1;//BoundEstimate_L_S_S(path, seed);
 
         float ans = 0;
         float variance_accumulate = 0;
@@ -2861,10 +2975,10 @@ namespace Shift
                 /* 从第一个 glossy 顶点采样，用半球空间 */
                 {
                     /* 建立局部坐标系，onb代表orthonormal basis*/
-                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                    Onb onb(normalize(path.get(1).position - v.position));
                     float3 dir;
-                    /* 半球空间采样 */
-                    cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                    /* 小波瓣采样 */
+                    sample_small_lobe(rnd(seed), rnd(seed), alpha, dir);
                     onb.inverse_transform(dir);
                     /* 从glossy顶点出发进行追踪 */
                     bool success_hit;
@@ -2873,8 +2987,14 @@ namespace Shift
                     /* 这里直接continue是正确的 */
                     if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
                         !Shift::glossy(np1))
+                    {
+                        //return 10000;
                         continue;
-                    pdf /= tracingPdf(v, np1);
+                    }
+
+                    float3 diff = np1.position - v.position;
+                    float g = abs(dot(dir, np1.normal)) / dot(diff, diff);
+                    pdf /= pdf_small_lobe(onb.m_normal, dir, alpha) * g;
                 }
                 /* 要追 d-1 个 glossy 顶点和 1 个光顶点 */
                 np0 = v;
