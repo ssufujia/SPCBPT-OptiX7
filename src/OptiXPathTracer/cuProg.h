@@ -2849,16 +2849,15 @@ namespace Shift
     }
 
 
-
     RT_FUNCTION float BoundEstimate_L_S_S(PathContainer& path, unsigned& seed) 
     {
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
-        float alpha = max(10, 15 * d);
+        float alpha = 2+d;
         Light light = Tracer::params.lights[path.get(d).materialId];
-        float bound = 1;
+        float bound = 0.1;
         int suc_int = 0;
-        while(suc_int < 1)
+        while(suc_int < 5)
         {
             /* glossy顶点 */
             BDPTVertex& v = path.get(0);
@@ -2866,19 +2865,14 @@ namespace Shift
             BDPTVertex& l = path.get(d);
             BDPTVertex np0, np1, np2;
             float pdf = l.pdf;
-            /* 从第一个 glossy 顶点采样，用半球空间 */
             {
-                /* 建立局部坐标系，onb代表orthonormal basis*/
                 Onb onb(normalize(path.get(1).position - v.position));
                 float3 dir;
                 /* 小波瓣采样 */
                 sample_small_lobe(rnd(seed), rnd(seed), alpha, dir);
                 onb.inverse_transform(dir);
-                /* 从glossy顶点出发进行追踪 */
                 bool success_hit;
-                /* 此处np为中间的glossy顶点 */
                 np1 = Tracer::FastTrace(v, dir, success_hit);
-                /* 这里直接continue是正确的 */
                 if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
                     !Shift::glossy(np1))
                     continue;
@@ -2896,7 +2890,7 @@ namespace Shift
                 float3 out_dir = Tracer::Sample(mat, np1.normal, in_dir, seed);
 
                 bool success_hit;
-                np2 = Tracer::FastTrace(v, out_dir, success_hit);
+                np2 = Tracer::FastTrace(np1, out_dir, success_hit);
 
                 /* 到了最后一次，追光源顶点 */
                 if (i == d - 1)
@@ -2923,13 +2917,17 @@ namespace Shift
                 np1 = np2;
             }
             if (!retrace_state) continue;
-            pdf *= tracingPdf(np2, np1);
+            pdf *= tracingPdf(np1, np0);
             bound = max(pdf * 1.1, bound);
             ++suc_int;
         }
         return bound;
     }
 
+    RT_FUNCTION void printFloat3(float3 v)
+    {
+        printf("%f %f %f \n", v.x, v.y, v.z);
+    }
 
     RT_FUNCTION float inverPdfEstimate_L_S_S(PathContainer& path, unsigned& seed)
     {
@@ -2937,17 +2935,19 @@ namespace Shift
         short d = path.size() - 1;
        /* if (d > 2) 
             return 0;*/
-        float alpha = max(10, 10 * d);
-        alpha = 100;
+        float alpha = 2 + d;
         Light light = Tracer::params.lights[path.get(d).materialId];
 
         /* 估计pdf上界 */
         float bound = 1;//BoundEstimate_L_S_S(path, seed);
+        //printf("bound %f\n", bound);
 
         float ans = 0;
         float variance_accumulate = 0;
         float average_accumulate = 0;
         int suc_int = 0;
+
+        float aa = 0, bb = 0;
 
         /* pdf估计的核心流程 */
         for (int i = 0; i < 50; i++)
@@ -2964,6 +2964,7 @@ namespace Shift
                     // printf("Break due to loop_cnt > 1000 \n");
                     break;
                 }
+                //printf("factor %f\n", factor);
                 ans += factor / bound;
 
                 /* glossy顶点 */
@@ -2972,30 +2973,49 @@ namespace Shift
                 BDPTVertex& l = path.get(d);
                 BDPTVertex np0, np1,np2;
                 float pdf = l.pdf;
+                ++aa;
+
+                bool small_lobe = 1;
+
                 /* 从第一个 glossy 顶点采样，用半球空间 */
                 {
-                    /* 建立局部坐标系，onb代表orthonormal basis*/
-                    Onb onb(normalize(path.get(1).position - v.position));
                     float3 dir;
-                    /* 小波瓣采样 */
-                    sample_small_lobe(rnd(seed), rnd(seed), alpha, dir);
-                    onb.inverse_transform(dir);
-                    /* 从glossy顶点出发进行追踪 */
-                    bool success_hit;
-                    /* 此处np为中间的glossy顶点 */
-                    np1 = Tracer::FastTrace(v, dir, success_hit);
-                    /* 这里直接continue是正确的 */
-                    if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
-                        !Shift::glossy(np1))
-                    {
-                        //return 10000;
-                        continue;
-                    }
+                    if (small_lobe) {
+                        float3 in_dir = normalize(path.get(1).position - v.position);
+                        Onb onb(in_dir);
+                        sample_small_lobe(rnd(seed), rnd(seed), alpha, dir);
+                        onb.inverse_transform(dir);
+                        bool success_hit;
+                        np1 = Tracer::FastTrace(v, dir, success_hit);
+                        if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                            !Shift::glossy(np1))
+                        {
+                            ++bb;
+                            continue;
+                        }
 
-                    float3 diff = np1.position - v.position;
-                    float g = abs(dot(dir, np1.normal)) / dot(diff, diff);
-                    pdf /= pdf_small_lobe(onb.m_normal, dir, alpha) * g;
+                        float3 diff = np1.position - v.position;
+                        float g = abs(dot(dir, np1.normal)) / dot(diff, diff);
+                        pdf /= pdf_small_lobe(onb.m_normal, dir, alpha) * g;
+                        //printf("pdf %f, lobe %f, g %f\n", pdf, pdf_small_lobe(onb.m_normal, dir, alpha), g);
+                    }
+                    else
+                    {
+                        Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
+                        cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+                        onb.inverse_transform(dir);
+                        bool success_hit;
+                        np1 = Tracer::FastTrace(v, dir, success_hit);
+                        if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                            !Shift::glossy(np1))
+                        {
+                            ++bb;
+                            continue;
+                        }
+                        pdf /= tracingPdf(v, np1);
+                    }
                 }
+
                 /* 要追 d-1 个 glossy 顶点和 1 个光顶点 */
                 np0 = v;
                 bool retrace_state = 1;
@@ -3005,7 +3025,7 @@ namespace Shift
                     float3 out_dir = Tracer::Sample(mat, np1.normal, in_dir, seed);
 
                     bool success_hit;
-                    np2 = Tracer::FastTrace(v, out_dir, success_hit);
+                    np2 = Tracer::FastTrace(np1, out_dir, success_hit);
 
                     /* 到了最后一次，追光源顶点 */
                     if (i == d - 1)
@@ -3013,6 +3033,7 @@ namespace Shift
                         if (success_hit == false || np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
                         {
                             retrace_state = 0;
+                            ++bb;
                             break;
                         }
                     }
@@ -3023,6 +3044,7 @@ namespace Shift
                             !Shift::glossy(np2))
                         {
                             retrace_state = 0;
+                            ++bb;
                             break;
                         }
                     }
@@ -3031,10 +3053,11 @@ namespace Shift
                     np0 = np1;
                     np1 = np2;
                 }
+
                 if (!retrace_state) continue;
-                pdf *= tracingPdf(np2, np1);
+                //printf("pdf %f\n", pdf);
+                pdf *= tracingPdf(np1, np0);
                 
-       
                 float continue_rate = 1 - pdf / bound;
 
                 if (abs(continue_rate) > 1)
@@ -3047,20 +3070,24 @@ namespace Shift
                 float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
                 if (rnd(seed) > rr_rate)
                     break;
+                //printf("con %f\n", abs(continue_rate));
                 factor *= continue_rate / rr_rate;
 
             }  // end while
             // printf("loop_cnt: %d\n", loop_cnt);
             variance_accumulate += ans * ans;
+            //printf("ans %f\n", ans);
             average_accumulate += ans;
 
             if (suc_int == 1)
                 break;
         }
+        //printf("ave %f, suc %i\n", average_accumulate, suc_int);
         ans = average_accumulate / suc_int;
         variance_accumulate /= suc_int;
         variance_accumulate -= ans * ans;
         //printf("inverpdf %f\n", ans);
+        //printf("%f\n",bb / aa);
         return ans;
     }
 
