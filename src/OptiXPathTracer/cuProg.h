@@ -1298,7 +1298,7 @@ namespace Tracer
 
                 if (dot(V, normal) == 0) return -V;
 
-                float cosThetaI = abs(dot(half, V));
+                float cosThetaI = dot(half, V);
                 float sin2ThetaI = 1 - cosThetaI * cosThetaI;
                 float sin2ThetaT = eta * eta * sin2ThetaI;
 
@@ -1309,12 +1309,11 @@ namespace Tracer
                     //float x = -(y + eta) * cosThetaI;
                     float3 L = normalize(eta * -V + (eta * cosThetaI - cosThetaT) * half);
 
-                    //float3 L = x * half + y * V;
-                    float HdotV = dot(half, V);
-                    float HdotL = dot(half, L);
-                    //if(eta * cosThetaI - cosThetaT > 0)
-                    //	L = normalize(eta * -V - (eta * cosThetaI - cosThetaT) * half);
-                    // printf("direct: %f, eta: %f, eval: %f\n", dot(V,N), eta, sqrt((1 - HdotL * HdotL)/(1 - HdotV * HdotV)));
+                    if (cosThetaI < 0)//V与half在两侧。要求VdotH*LdotH<0
+                    {
+                        float LdotH = dot(L, half);
+                        L = L - 2 * LdotH * half;
+                    }
                     return L;
                 }
                 else
@@ -1404,7 +1403,7 @@ namespace Tracer
         float sin2ThetaI = 1 - cosThetaI * cosThetaI;
         float sin2ThetaT = 1 / (eta * eta) * sin2ThetaI;
 
-        if (sin2ThetaT <= 1)
+        if (sin2ThetaT <= 1 && dot(L, wh) * dot(V, wh) < 0)//refract
         {
             // Compute change of variables _dwh\_dwi_ for microfacet transmission
             float sqrtDenom = eta * dot(L, wh) + dot(V, wh);
@@ -1414,17 +1413,18 @@ namespace Tracer
             float Ds = GTR2(abs(dot(wh, n)), a);
             float pdfTrans = Ds * abs(dot(n, wh)) * dwh_dwi;
             //printf("r pdf: %f\n", transRatio * pdfTrans * refractRatio);
-            pdf += transRatio * pdfTrans * refractRatio;// refract
+            pdf += transRatio * pdfTrans * refractRatio;
         }
 
-        cosThetaI = abs(dot(half, V));
+        cosThetaI = abs(dot(
+            half, V));
         sin2ThetaI = 1 - cosThetaI * cosThetaI;
         sin2ThetaT = 1 / (eta * eta) * sin2ThetaI;
 
-        if (sin2ThetaT > 1)
+        if (sin2ThetaT > 1)// full reflect
         {
             //printf("l pdf: %f\n", (diffuseRatio * pdfDiff + specularRatio * pdfSpec));
-            pdf += (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * transRatio * refractRatio;// full reflect
+            pdf += (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * transRatio * refractRatio;
         }
 
         /*
