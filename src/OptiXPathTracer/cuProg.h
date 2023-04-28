@@ -2857,6 +2857,7 @@ namespace Shift
 
     RT_FUNCTION float inverPdfEstimate_L_S_S(PathContainer& path, unsigned& seed)
     {
+        //return 1000;
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
        /* if (d > 2) 
@@ -2867,6 +2868,8 @@ namespace Shift
         /* 估计pdf上界 */
         float bound = 1;//BoundEstimate_L_S_S(path, seed);
         //printf("bound %f\n", bound);
+        //printf("11111111111111111111111111\n");
+
 
         float ans = 0;
         float variance_accumulate = 0;

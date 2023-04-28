@@ -919,6 +919,7 @@ int main( int argc, char* argv[] )
     params.width = 1920;
     params.height = 1000;
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
+    _putenv("OPTIX_FORCE_DEPRECATED_LAUNCHER=1");
 
     //
     // Parse command line options

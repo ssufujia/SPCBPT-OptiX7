@@ -916,9 +916,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
                             bool trace_success = 0;
                             np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
-                            /* Ã»´òµ½ */
                             if (trace_success == false) continue;
-                            /* Ã»´òµ½¹âÔ´ */
                             if (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
 
                             Light light = Tracer::params.lights[np.materialId];
