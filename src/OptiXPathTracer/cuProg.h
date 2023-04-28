@@ -2697,7 +2697,7 @@ namespace Shift
             MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
             float pdf = l.pdf * tracingPdf(l, np)
                 * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))
-                * GeometryTerm(np, v)
+                * GeometryTerm(np, v) /// abs(dot(np.normal, normalize(v.position-np.position)))
                 * Tracer::visibilityTest(Tracer::params.handle, np, v)
                 / (ratio * tracingPdf(v, np) * 0.5f + (1 - ratio) * tracingPdf(l, np));
             bound = max(1.5*pdf, bound);
@@ -2777,7 +2777,7 @@ namespace Shift
                 /* 计算f(x)/p(x) */
                 MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
                 float pdf = l.pdf * tracingPdf(l, np)
-                    * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))* GeometryTerm(np, v)
+                    * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))* GeometryTerm(np, v) /// abs(dot(np.normal, normalize(v.position - np.position)))
                     * Tracer::visibilityTest(Tracer::params.handle, np, v)
                     / (ratio * tracingPdf(v,np)*0.5 + (1 - ratio) * tracingPdf(l,np));
                 //float pdf = tracingPdf(np, path.get(0));
@@ -2875,7 +2875,6 @@ namespace Shift
             /* 要追 d-1 个 glossy 顶点和 1 个光顶点 */
             np0 = v;
             bool retrace_state = 1;
-            pdf *= GeometryTerm(np0, np1);
             for (int i = 1; i < d; ++i) {
                 float3 in_dir = np0.position - np1.position;
                 MaterialData::Pbr mat = Tracer::params.materials[np1.materialId];
@@ -2915,7 +2914,6 @@ namespace Shift
 
                 pdf *= Tracer::Pdf(mat, np1.normal, v_21, v_01);
                 pdf /= Tracer::Pdf(mat, np1.normal, v_01, v_21);
-
 
                 np0 = np1;
                 np1 = np2;
