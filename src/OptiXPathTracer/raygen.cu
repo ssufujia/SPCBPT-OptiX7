@@ -965,6 +965,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         else if (light_subpath.depth > 1 && (light_subpath.path_record == ((1 << light_subpath.depth) - 1)))
                         {
                             short d = light_subpath.depth;
+                            if (d > 2) continue;
                             /* 0 ~ d-1 号是glossy顶点，d号是光源顶点，要动除了0号外的d个顶点 */
                             pdf_retrace = 1;
                             BDPTVertex np[SHIFT_VALID_SIZE];
@@ -1002,25 +1003,24 @@ extern "C" __global__ void __raygen__shift_combine()
                                 
                                 pdf_retrace *= Tracer::Pdf(mat, np[i].normal, in_dir, out_dir) *
                                     Shift::GeometryTerm(np[i], np[i+1]) / abs(dot(out_dir, np[i].normal));
-
                                 in_dir = -out_dir;
                             }
                             if (!retrace_state) continue;
                             for (int i = 1; i <= d; ++i)
                                 finalPath.get(i) = np[i];
+                            //printf("pdf_retrace %f\n", pdf_retrace);
                             
                         }
-
                         for (int i = 0; i < finalPath.size(); i++)
                             pathBuffer[buffer_size + i] = finalPath.get(i);
                         
                         float pdf = eye_vertex.pdf  * pdf_retrace;
 
                         float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()); 
-                        //printf("contri:  %f %f %f\n", contri.x, contri.y, contri.z);
                         //printf("pdf: %f", pdf);
                         float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
-                        // printf("inverpdf: %f\n", light_subpath.inverPdfEst);            
+                        //printf("inverpdf: %f\n", light_subpath.inverPdfEst);            
+                        //printf("contri:  %f %f %f\nres:  %f %f %f\npdf: %f    pmf: %f    inverPdf: %f\ncoefficient: %f\n\n", contri.x, contri.y, contri.z, res.x, res.y, res.z, pdf, pmf, light_subpath.inverPdfEst, light_subpath.inverPdfEst / pdf / pmf);
                         
                         if(LSDE_ENABLE && buffer_size + finalPath.size() == 4)
                             res *= dropOutTracing_MISWeight(pathBuffer, buffer_size + finalPath.size());

@@ -189,10 +189,35 @@ RT_FUNCTION void cosine_sample_hemisphere(const float u1, const float u2, float3
     p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
 }
 
-RT_FUNCTION void sample_small_lobe(const float u1, const float u2, float alpha, float3& p)
+RT_FUNCTION void sample_small_lobe_1(const float u1, const float u2, float alpha, float3& p)
+{
+    // Sample a small lobe around axis y.
+    const float r = sqrtf(1-powf((1-u1), 2/(1+alpha)));
+    const float phi = 2.0f * M_PIf * u2;
+    p.x = r * cosf(phi);
+    p.y = r * sinf(phi);
+
+    // Project up to hemisphere.
+    p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
+}
+
+RT_FUNCTION void sample_small_lobe_2(const float u1, const float u2, float alpha, float3& p)
 {
     // Sample a small lobe around axis y.
     const float r = powf(u1, alpha);
+    const float phi = 2.0f * M_PIf * u2;
+    p.x = r * cosf(phi);
+    p.y = r * sinf(phi);
+
+    // Project up to hemisphere.
+    p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
+}
+
+RT_FUNCTION void sample_small_lobe_3(const float u1, const float u2, float roughness, float3& p)
+{
+    // Sample a small lobe around axis y.
+    float cosTheta = sqrtf((1.0f - u1) / (1.0f + (roughness * roughness - 1.0f) * u1));
+    const float r = sqrtf(1-cosTheta*cosTheta);
     const float phi = 2.0f * M_PIf * u2;
     p.x = r * cosf(phi);
     p.y = r * sinf(phi);
@@ -218,14 +243,39 @@ RT_FUNCTION float2 sample_reverse_cosine(float3 N, float3 dir)
     return make_float2(r1, r2);
 }
 
-RT_FUNCTION float pdf_small_lobe(float3 N, float3 dir, float alpha)
+RT_FUNCTION float pdf_small_lobe_1(float3 N, float3 dir, float alpha)
 {
     Onb onb(N);
     onb.transform(dir);
 
     float r1 = dir.x * dir.x + dir.y * dir.y;
+    float theta = asin(r1);
+    float pdf = (alpha + 1) / (2 * M_PI) * powf(cos(theta), alpha);
+    return pdf;
+}
 
-    float pdf = 1/alpha * powf(r1, 1 / alpha - 1);
+RT_FUNCTION float pdf_small_lobe_2(float3 N, float3 dir, float alpha)
+{
+    Onb onb(N);
+    onb.transform(dir);
+
+    float r1 = dir.x * dir.x + dir.y * dir.y;
+    float theta = asin(r1);
+    float pdf = 1/(2*M_PI*alpha) * powf(sin(theta), 1/alpha-2)*cos(theta);
+    return pdf;
+}
+
+RT_FUNCTION float pdf_small_lobe_3(float3 N, float3 dir, float roughness)
+{
+    Onb onb(N);
+    onb.transform(dir);
+
+    float r1 = dir.x * dir.x + dir.y * dir.y;
+    float theta = asin(r1);
+    float cosTheta = cosf(theta);
+    float a_2 = roughness * roughness;
+    float tmp = (1 + (a_2 - 1) * cosTheta);
+    float pdf = (cosTheta*a_2) / (M_PI*tmp*tmp);
     return pdf;
 }
 
@@ -2775,41 +2825,57 @@ namespace Shift
     }
 
 
-    RT_FUNCTION float BoundEstimate_L_S_S(PathContainer& path, unsigned& seed) 
+    RT_FUNCTION void printFloat3(float3 v)
     {
+        printf("%f %f %f \n", v.x, v.y, v.z);
+    }
+
+    RT_FUNCTION float BoundEstimate_L_S_S(PathContainer& path, unsigned& seed)
+    {
+
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
-        float alpha = 2+d;
+        float alpha = 1 / (1.0f + (4 << d));
         Light light = Tracer::params.lights[path.get(d).materialId];
-        float bound = 0.1;
+        float bound = 0;
+        int sim_int = 0;
         int suc_int = 0;
-        while(suc_int < 5)
+        while (sim_int < 50)
         {
+
+            ++sim_int;
             /* glossy顶点 */
+            //printf("loop suc_int\n");
             BDPTVertex& v = path.get(0);
             /* 光顶点 */
             BDPTVertex& l = path.get(d);
             BDPTVertex np0, np1, np2;
             float pdf = l.pdf;
+            /* 从第一个 glossy 顶点采样，用半球空间 */
             {
+                /* 建立局部坐标系，onb代表orthonormal basis*/
                 Onb onb(normalize(path.get(1).position - v.position));
                 float3 dir;
                 /* 小波瓣采样 */
-                sample_small_lobe(rnd(seed), rnd(seed), alpha, dir);
+                sample_small_lobe_3(rnd(seed), rnd(seed), alpha, dir);
                 onb.inverse_transform(dir);
+                /* 从glossy顶点出发进行追踪 */
                 bool success_hit;
+                /* 此处np为中间的glossy顶点 */
                 np1 = Tracer::FastTrace(v, dir, success_hit);
+                /* 这里直接continue是正确的 */
                 if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
                     !Shift::glossy(np1))
                     continue;
 
                 float3 diff = np1.position - v.position;
                 float g = abs(dot(dir, np1.normal)) / dot(diff, diff);
-                pdf /= pdf_small_lobe(onb.m_normal, dir, alpha) * g;
+                pdf /= pdf_small_lobe_3(onb.m_normal, dir, alpha) * g;
             }
             /* 要追 d-1 个 glossy 顶点和 1 个光顶点 */
             np0 = v;
             bool retrace_state = 1;
+            pdf *= GeometryTerm(np0, np1);
             for (int i = 1; i < d; ++i) {
                 float3 in_dir = np0.position - np1.position;
                 MaterialData::Pbr mat = Tracer::params.materials[np1.materialId];
@@ -2827,6 +2893,7 @@ namespace Shift
                         break;
                     }
                 }
+
                 else
                     /* 之前 d-1 次，追 glossy 顶点 */
                 {
@@ -2837,39 +2904,49 @@ namespace Shift
                         break;
                     }
                 }
-                pdf *= GeometryTerm(np0, np1);
-                pdf *= Tracer::Pdf(mat, np1.normal, normalize(np2.position - np1.position), normalize(np0.position - np1.position));
+
+                float3 diff_01 = np0.position - np1.position;
+                float3 diff_21 = np2.position - np1.position;
+                float3 v_01 = normalize(diff_01);
+                float3 v_21 = normalize(diff_21);
+
+                pdf *= abs(dot(v_01, np0.normal)) / dot(v_01, v_01);
+                pdf /= abs(dot(v_21, np1.normal)) / dot(v_21, v_21);
+
+                pdf *= Tracer::Pdf(mat, np1.normal, v_21, v_01);
+                pdf /= Tracer::Pdf(mat, np1.normal, v_01, v_21);
+
+
                 np0 = np1;
                 np1 = np2;
             }
+
             if (!retrace_state) continue;
+
             pdf *= tracingPdf(np1, np0);
-            bound = max(pdf * 1.1, bound);
-            ++suc_int;
+
+            bound = max(pdf * 1.2, bound);
+            suc_int++;
         }
-        return bound;
+        return bound > 0 ? bound : 1;
     }
 
-    RT_FUNCTION void printFloat3(float3 v)
-    {
-        printf("%f %f %f \n", v.x, v.y, v.z);
-    }
 
     RT_FUNCTION float inverPdfEstimate_L_S_S(PathContainer& path, unsigned& seed)
     {
         //return 1000;
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
-       /* if (d > 2) 
+        //printf("d: %i\n", d);
+        /*if (d > 2) 
             return 0;*/
-        float alpha = 2 + d;
+        //float alpha = (1.0f + (d));
+        float alpha = 1 / (1.0f + (4 << d));
         Light light = Tracer::params.lights[path.get(d).materialId];
 
         /* 估计pdf上界 */
-        float bound = 1;//BoundEstimate_L_S_S(path, seed);
+        float bound = BoundEstimate_L_S_S(path, seed);
         //printf("bound %f\n", bound);
-        //printf("11111111111111111111111111\n");
-
 
         float ans = 0;
         float variance_accumulate = 0;
@@ -2894,6 +2971,8 @@ namespace Shift
                     break;
                 }
                 //printf("factor %f\n", factor);
+                //printf("bound %f\n", bound);
+
                 ans += factor / bound;
 
                 /* glossy顶点 */
@@ -2912,7 +2991,7 @@ namespace Shift
                     if (small_lobe) {
                         float3 in_dir = normalize(path.get(1).position - v.position);
                         Onb onb(in_dir);
-                        sample_small_lobe(rnd(seed), rnd(seed), alpha, dir);
+                        sample_small_lobe_3(rnd(seed), rnd(seed), alpha, dir);
                         onb.inverse_transform(dir);
                         bool success_hit;
                         np1 = Tracer::FastTrace(v, dir, success_hit);
@@ -2925,8 +3004,8 @@ namespace Shift
 
                         float3 diff = np1.position - v.position;
                         float g = abs(dot(dir, np1.normal)) / dot(diff, diff);
-                        pdf /= pdf_small_lobe(onb.m_normal, dir, alpha) * g;
-                        //printf("pdf %f, lobe %f, g %f\n", pdf, pdf_small_lobe(onb.m_normal, dir, alpha), g);
+                        pdf /= pdf_small_lobe_3(onb.m_normal, dir, alpha) * g;
+                        //printf("alpha %f, pdf %f, lobe %f, g %f\n",alpha,  pdf, pdf_small_lobe_2(onb.m_normal, dir, alpha), g);
                     }
                     else
                     {
@@ -2977,14 +3056,25 @@ namespace Shift
                             break;
                         }
                     }
-                    pdf *= GeometryTerm(np0, np1);
-                    pdf *= Tracer::Pdf(mat, np1.normal, normalize(np2.position - np1.position), normalize(np0.position - np1.position));
+
+                    float3 diff_01 = np0.position - np1.position;
+                    float3 diff_21 = np2.position - np1.position;
+                    float3 v_01 = normalize(diff_01);
+                    float3 v_21 = normalize(diff_21);
+
+                    pdf *= abs(dot(v_01, np0.normal)) / dot(v_01, v_01);
+                    pdf /= abs(dot(v_21, np1.normal)) / dot(v_21, v_21);
+
+                    pdf *= Tracer::Pdf(mat, np1.normal, v_21, v_01);
+                    pdf /= Tracer::Pdf(mat, np1.normal, v_01, v_21);
+
+
+                    //printf("pdf %f\n", Tracer::Pdf(mat, np1.normal, normalize(np2.position - np1.position), normalize(np0.position - np1.position)));
                     np0 = np1;
                     np1 = np2;
                 }
 
                 if (!retrace_state) continue;
-                //printf("pdf %f\n", pdf);
                 pdf *= tracingPdf(np1, np0);
                 
                 float continue_rate = 1 - pdf / bound;
@@ -3015,8 +3105,8 @@ namespace Shift
         ans = average_accumulate / suc_int;
         variance_accumulate /= suc_int;
         variance_accumulate -= ans * ans;
-        //printf("inverpdf %f\n", ans);
-        //printf("%f\n",bb / aa);
+        //printf("1/inverpdf %f\n", 1/ans);
+        //printf("SuccessRate %f\n",1- bb / aa);
         return ans;
     }
 
