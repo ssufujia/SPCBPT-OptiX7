@@ -34,9 +34,10 @@
 #include <cmath>
 
 #include "whitted.h"
-#include"optixPathTracer.h"
-#include"BDPTVertex.h" 
-#include"decisionTree/classTree_device.h"
+#include "optixPathTracer.h"
+#include "BDPTVertex.h" 
+#include "decisionTree/classTree_device.h"
+#include "pathControl.h"
 #define SCENE_EPSILON 1e-3f
 
 
@@ -2482,6 +2483,7 @@ namespace Shift
         /* 光顶点 */
         BDPTVertex& l = path.get(2);
         float ratio = 0.5;
+
         BDPTVertex np;
         const int simulate_num = 50;
         for (int i = 0; i < simulate_num; i++)
@@ -2511,12 +2513,11 @@ namespace Shift
             {
                 /* 从光源采样 */
                 /* 建立局部坐标系，onb代表orthonormal basis*/
-                Onb onb(dot(l.normal, path.get(1).position - l.position) > 0 ? l.normal : -l.normal);
+                Onb onb(l.normal);
                 float3 dir;
                 /* 半球空间采样 */
                 cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
                 onb.inverse_transform(dir);
-                /* 从glossy顶点出发进行追踪 */
                 bool success_hit;
                 /* 此处np为中间的diffuse顶点 */
                 np = Tracer::FastTrace(l, dir, success_hit);
@@ -2534,7 +2535,7 @@ namespace Shift
                 * abs(dot(v.normal, vec_np_v)) / dot(diff, diff)
                 * Tracer::visibilityTest(Tracer::params.handle, np, v)
                 * Tracer::visibilityTest(Tracer::params.handle, np, l)
-                / (ratio * tracingPdf(v, np) + (1 - ratio) * tracingPdf(l, np));
+                / ((1-ratio) * tracingPdf(v, np) * 0.5 + (ratio) * tracingPdf(l, np));
 
             bound = max(1.2*pdf, bound);
         }
@@ -2569,7 +2570,6 @@ namespace Shift
                 BDPTVertex& v = path.get(0);
                 /* 光顶点 */
                 BDPTVertex& l = path.get(2);
-                float ratio = 0.5;
                 BDPTVertex np;
                 /* 使用哪种方法来采样残缺顶点？*/
                 if (rnd(seed) >= ratio)
@@ -2577,7 +2577,7 @@ namespace Shift
                     /* 从glossy顶点采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
                     Onb onb(rnd(seed) > 0.5 ? v.normal : -v.normal);
-                    //Onb onb(v.normal);
+                    //Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? v.normal : -v.normal);
 
                     float3 dir;
                     /* 半球空间采样 */
@@ -2597,7 +2597,8 @@ namespace Shift
                 {
                     /* 从光源采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
-                    Onb onb(dot(v.normal, path.get(1).position - v.position) > 0 ? l.normal : -l.normal);
+                    Onb onb(l.normal);
+
                     float3 dir;
                     /* 半球空间采样 */
                     cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -2622,9 +2623,9 @@ namespace Shift
                     * Tracer::Pdf(mat, np.normal, normalize(l.position - np.position), normalize(v.position - np.position))
                     * abs(dot(v.normal, vec_np_v)) / dot(diff, diff)
                     * Tracer::visibilityTest(Tracer::params.handle, np, v)
-                    * Tracer::visibilityTest(Tracer::params.handle, np, l)
-                    / (ratio * tracingPdf(v,np) * 0.5+ (1 - ratio) * tracingPdf(l,np));
-
+                    // * Tracer::visibilityTest(Tracer::params.handle, np, l)
+                    / ((1-ratio) * tracingPdf(v,np)*0.5+ (ratio) * tracingPdf(l,np));
+                //printf("%f\n", pdf);
 
                 float continue_rate = 1 - pdf / bound;
                 /* 测出来continue_rate都很接近于1 */
@@ -2636,13 +2637,13 @@ namespace Shift
                     suc_int -= 1;
                     break;
                 }
-                float rr_rate = (abs(continue_rate) > 1) ? 0.5 : abs(continue_rate);
+                float rr_rate = abs(continue_rate);
                 if (rnd(seed) > rr_rate)
                     break;
                 factor *= continue_rate / rr_rate;
 
             }  // end while
-            // printf("loop_cnt: %d\n", loop_cnt);
+            //printf("loop_cnt: %d\n", loop_cnt);
             variance_accumulate += ans * ans;
             average_accumulate += ans;
             /* 提前退出了 */
@@ -2762,15 +2763,15 @@ namespace Shift
     }
 
 
-    RT_FUNCTION float inverPdfEstimate_L_S_S(PathContainer& path, unsigned& seed)
+    RT_FUNCTION float inverPdfEstimate_LS_S(PathContainer& path, unsigned& seed)
     {
-        //return 1000;
         /* path 0~d-1是glossy d是光*/
         short d = path.size() - 1;
-        //printf("d: %i\n", d);
-        /*if (d > 2) 
-            return 0;*/
-        //float alpha = (1.0f + (d));
+        if (LSSDE_ENABLE && d != 2) 
+            return 0;
+        if (LSSSDE_ENABLE && d != 3)
+            return 0;
+
         float alpha = 1 / (1.0f + (4 << d));
         Light light = Tracer::params.lights[path.get(d).materialId];
 
@@ -2946,7 +2947,6 @@ namespace Shift
     /* 计算残缺路径的pdf */
     RT_FUNCTION float inverPdfEstimate(PathContainer& path, unsigned &seed, BDPTVertex& curVertex)
     {
-
         /* L - S */
         if (curVertex.path_record == 0b1)
         {
@@ -2963,7 +2963,7 @@ namespace Shift
         /* L - (S)* - S */
         else if (curVertex.depth >1 && (curVertex.path_record == (1 << curVertex.depth) - 1))
         {
-            return inverPdfEstimate_L_S_S(path, seed);
+            return inverPdfEstimate_LS_S(path, seed);
         }
         return 0;
     }

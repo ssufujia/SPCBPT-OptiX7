@@ -1222,7 +1222,8 @@ extern "C" __global__ void __raygen__lightTrace()
                 curVertex.path_record = payload.path_record;
 
                 /* L -> S 光子路 */
-                if (LS_ENABLE && curVertex.depth == 1 && curVertex.path_record)
+                if ((LS_ENABLE || LSDE_ENABLE) 
+                    && curVertex.depth == 1 && curVertex.path_record)
                 {
                     BDPTVertex v[2];
                     /* v[1] 是光源顶点 */
@@ -1256,7 +1257,8 @@ extern "C" __global__ void __raygen__lightTrace()
                 } 
 
                 /* L -> D -> S 光子路，即 S - D - L， path_record 为 0b10 */
-                else if (LDS_ENABLE && curVertex.depth == 2 && curVertex.path_record == 0b10)
+                else if ((LDS_ENABLE || LDSDE_ENABLE)
+                    && curVertex.depth == 2 && curVertex.path_record == 0b10)
                 {
                     BDPTVertex v[3];
                     v[2] = payload.path(2);
@@ -1268,7 +1270,9 @@ extern "C" __global__ void __raygen__lightTrace()
                     curVertex.inverPdfEst = pdf_inverse;
                 }
                 /* L -> (S)* -> S 光子路 */
-                else if (LS_S_ENABLE && curVertex.depth > 1 && (curVertex.path_record == (1<< curVertex.depth) - 1) && (curVertex.depth< SHIFT_VALID_SIZE-1))
+                else if ((LS_S_ENABLE || LS_SDE_ENABLE || LSSDE_ENABLE || LSSSDE_ENABLE)
+                     && curVertex.depth > 1 && (curVertex.path_record == (1<< curVertex.depth) - 1) 
+                     && (curVertex.depth< SHIFT_VALID_SIZE-1))
                 {
                     BDPTVertex v[SHIFT_VALID_SIZE];
                     /* v[1] 是光源顶点 */

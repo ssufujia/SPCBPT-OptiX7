@@ -18,21 +18,21 @@ static const bool S_ONLY = 1;
 /* L - * - E*/
 static const bool LAE_ENABLE = 0;
 
-static const bool LE_ENABLE = 1;
+static const bool LE_ENABLE = 0;
 static const bool LDE_ENABLE = 0;
 static const bool LDSE_ENABLE = 0;
 
 
-/* LS */
+/* 光子路 LS */
 static const bool LS_ENABLE = 0;
 static const bool LSE_ENABLE = 0;
 static const bool LSDE_ENABLE = 0;
 
-/* LDS */
-static const bool LDS_ENABLE = 1;
-static const bool LDSDE_ENABLE = 0;
+/* 光子路 LDS */
+static const bool LDS_ENABLE = 0;
+static const bool LDSDE_ENABLE = 1;
 
-/* LS(S)* */
+/* 光子路 LS(S)* */
 static const bool LS_S_ENABLE = 0;
 static const bool LS_SDE_ENABLE = 0;
 static const bool LSSDE_ENABLE = 0;

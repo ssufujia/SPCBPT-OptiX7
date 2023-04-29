@@ -182,6 +182,7 @@ extern "C" __global__ void __closesthit__lightsource()
             )
         )
     {
+        // printf("record %d\n", prd->path_record);
         /* PT 加 NEE 的 MIS */
         float MIS_weight = 1;
         if (prd->depth != 0)
