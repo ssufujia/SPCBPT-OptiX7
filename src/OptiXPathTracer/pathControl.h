@@ -3,6 +3,8 @@
 #define PT_BRDF_STRATEGY_ONLY
 //#define PT_NEE_STRATEGY_ONLY
 
+
+
 /* 如果想要控制BDPT渲染哪些光路，需要打开这个开关 */
 static const bool BDPT_CONTROL = 1;
 
@@ -20,23 +22,19 @@ static const bool LE_ENABLE = 1;
 static const bool LDE_ENABLE = 0;
 static const bool LDSE_ENABLE = 0;
 
-/* LDSAE */
-static const bool LDSAE_ENABLE = 0;
-/* LDSDE */
-static const bool LDSDE_ENABLE = 1;
 
-/* LSAE */
-static const bool LSAE_ENABLE = 0;
-/* LSE */
+/* LS */
+static const bool LS_ENABLE = 0;
 static const bool LSE_ENABLE = 0;
-/* LSDE */
 static const bool LSDE_ENABLE = 0;
 
-/* LSSDE */
-static const bool LSSDE_ENABLE = 0;
+/* LDS */
+static const bool LDS_ENABLE = 1;
+static const bool LDSDE_ENABLE = 0;
 
-/* LSSSDE */
+/* LS(S)* */
+static const bool LS_S_ENABLE = 0;
+static const bool LS_SDE_ENABLE = 0;
+static const bool LSSDE_ENABLE = 0;
 static const bool LSSSDE_ENABLE = 0;
 
-/* L(S)*SDE */
-static const bool L_S_SDE_ENABLE = 0;

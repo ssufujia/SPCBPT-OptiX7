@@ -161,16 +161,18 @@ extern "C" __global__ void __closesthit__lightsource()
                     (LDE_ENABLE && prd->depth == 1 && prd->path_record == 0b0) ||
                     /* L - D - S - E */
                     (LDSE_ENABLE && prd->depth == 2 && prd->path_record == 0b01) ||
+                    /* L - D - S - + - E */
+                    (LDS_ENABLE && prd->depth > 2 && (prd->path_record & (1ll << (prd->depth - 2))) && !(prd->path_record & (1ll << (prd->depth - 1))) ) ||
                     /* L - D - S - D - E */
                     (LDSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b010) ||
                     /* L - S - * - E */
-                    (LSAE_ENABLE && prd->depth > 0 && (prd->path_record & (1ll << (prd->depth - 1)))) ||
+                    (LS_ENABLE && prd->depth > 0 && (prd->path_record & (1ll << (prd->depth - 1)))) ||
                     /* L - S - E */
                     (LSE_ENABLE && prd->depth == 1 && prd->path_record == 0b1) ||
                     /* L - S - D - E */
                     (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) ||
                     /* L - (S)* - S - D - E */
-                    (L_S_SDE_ENABLE && prd->depth > 2 &&(prd->path_record == ((1<< prd->depth) - 2))) ||
+                    (LS_SDE_ENABLE && prd->depth > 2 &&(prd->path_record == ((1<< prd->depth) - 2))) ||
                     /* L - S - S - D - E */
                     (LSSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b110) ||
                     /* L - S - S - S - D - E */

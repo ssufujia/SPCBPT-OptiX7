@@ -2492,6 +2492,7 @@ namespace Shift
                 /* 从glossy顶点采样 */
                 /* 建立局部坐标系，onb代表orthonormal basis*/
                 Onb onb(rnd(seed) > 0.5 ? v.normal : -v.normal);
+
                 float3 dir;
                 /* 半球空间采样 */
                 cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -2519,7 +2520,6 @@ namespace Shift
                 bool success_hit;
                 /* 此处np为中间的diffuse顶点 */
                 np = Tracer::FastTrace(l, dir, success_hit);
-                /* 这里直接continue是正确的 */
                 if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
                     Shift::glossy(np))
                     continue;
@@ -2534,7 +2534,7 @@ namespace Shift
                 * abs(dot(v.normal, vec_np_v)) / dot(diff, diff)
                 * Tracer::visibilityTest(Tracer::params.handle, np, v)
                 * Tracer::visibilityTest(Tracer::params.handle, np, l)
-                / (ratio * tracingPdf(v, np) * 0.5 + (1 - ratio) * tracingPdf(l, np));
+                / (ratio * tracingPdf(v, np) + (1 - ratio) * tracingPdf(l, np));
 
             bound = max(1.2*pdf, bound);
         }
@@ -2577,6 +2577,8 @@ namespace Shift
                     /* 从glossy顶点采样 */
                     /* 建立局部坐标系，onb代表orthonormal basis*/
                     Onb onb(rnd(seed) > 0.5 ? v.normal : -v.normal);
+                    //Onb onb(v.normal);
+
                     float3 dir;
                     /* 半球空间采样 */
                     cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
@@ -2621,7 +2623,7 @@ namespace Shift
                     * abs(dot(v.normal, vec_np_v)) / dot(diff, diff)
                     * Tracer::visibilityTest(Tracer::params.handle, np, v)
                     * Tracer::visibilityTest(Tracer::params.handle, np, l)
-                    / (ratio * tracingPdf(v,np) * 0.5 + (1 - ratio) * tracingPdf(l,np));
+                    / (ratio * tracingPdf(v,np) * 0.5+ (1 - ratio) * tracingPdf(l,np));
 
 
                 float continue_rate = 1 - pdf / bound;
