@@ -23,7 +23,7 @@ static const bool LDSE_ENABLE = 0;
 /* LDSAE */
 static const bool LDSAE_ENABLE = 0;
 /* LDSDE */
-static const bool LDSDE_ENABLE = 0;
+static const bool LDSDE_ENABLE = 1;
 
 /* LSAE */
 static const bool LSAE_ENABLE = 0;
@@ -39,4 +39,4 @@ static const bool LSSDE_ENABLE = 0;
 static const bool LSSSDE_ENABLE = 0;
 
 /* L(S)*SDE */
-static const bool L_S_SDE_ENABLE = 1;
+static const bool L_S_SDE_ENABLE = 0;

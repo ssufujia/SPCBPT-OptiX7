@@ -939,12 +939,13 @@ extern "C" __global__ void __raygen__shift_combine()
                             finalPath.get(2) = originPath.get(2);
                             pdf_retrace = 1;
 
-                            BDPTVertex np;
-                            MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
-                            float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
-                            float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed);
+                            BDPTVertex np, v;
+                            v = finalPath.get(0);
+                            MaterialData::Pbr mat = VERTEX_MAT(v);
+                            float3 in_dir = normalize(eye_vertex.position - v.position);
+                            float3 out_dir = Tracer::Sample(mat, v.normal, in_dir, seed);
                             bool trace_success = 0;
-                            np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
+                            np = Tracer::FastTrace(v, out_dir, trace_success);
                             /* 没追到 */
                             if (trace_success == false) continue;
                             /* 追到了光源 */
@@ -956,8 +957,9 @@ extern "C" __global__ void __raygen__shift_combine()
 
                             finalPath.get(1) = np;
 
-                            pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
-                                Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir, finalPath.get(0).normal));
+                            float3 diff = v.position - np.position;
+
+                            pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) * abs(dot(np.normal, out_dir)) / dot(diff, diff) ;
                             /*printf("pdf_retrace: %f\n", pdf_retrace);
                             printf("light pdf: %f\n", finalPath.get(2).pdf);*/
                         }
@@ -1219,7 +1221,7 @@ extern "C" __global__ void __raygen__lightTrace()
                 curVertex.path_record = payload.path_record;
 
                 /* L -> S 光子路 */
-                if (curVertex.depth == 1 && curVertex.path_record)
+                if (LSDE_ENABLE && curVertex.depth == 1 && curVertex.path_record)
                 {
                     BDPTVertex v[2];
                     /* v[1] 是光源顶点 */
@@ -1253,7 +1255,7 @@ extern "C" __global__ void __raygen__lightTrace()
                 } 
 
                 /* L -> D -> S 光子路，即 S - D - L， path_record 为 0b10 */
-                else if (curVertex.depth == 2 && curVertex.path_record == 0b10)
+                else if (LDSDE_ENABLE && curVertex.depth == 2 && curVertex.path_record == 0b10)
                 {
                     BDPTVertex v[3];
                     v[2] = payload.path(2);
@@ -1265,7 +1267,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     curVertex.inverPdfEst = pdf_inverse;
                 }
                 /* L -> (S)* -> S 光子路 */
-                else if (curVertex.depth > 1 && (curVertex.path_record == (1<< curVertex.depth) - 1) && (curVertex.depth< SHIFT_VALID_SIZE-1))
+                else if (L_S_SDE_ENABLE && curVertex.depth > 1 && (curVertex.path_record == (1<< curVertex.depth) - 1) && (curVertex.depth< SHIFT_VALID_SIZE-1))
                 {
                     BDPTVertex v[SHIFT_VALID_SIZE];
                     /* v[1] 是光源顶点 */
