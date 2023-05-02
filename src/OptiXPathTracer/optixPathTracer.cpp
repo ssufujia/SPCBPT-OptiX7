@@ -520,8 +520,8 @@ void env_params_setup(const sutil::Scene& scene)
 }
 void lt_params_setup(const sutil::Scene& scene)
 {
-    lt_params.M_per_core = 10;
-    lt_params.core_padding = 800;
+    lt_params.M_per_core = 1;
+    lt_params.core_padding = 80;
     lt_params.num_core = 1000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
     lt_params.launch_frame = 0;
@@ -694,8 +694,8 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     /////////////////////////////////////////////////////////
     dot_params.data.size = 
         dot_params.specularSubSpaceNumber * dot_params.surfaceSubSpaceNumber * dropOut_tracing::slot_number * int(dropOut_tracing::DropOutType::DropOutTypeNumber);
-    thrust::host_vector<float> DOT_statics_data(dot_params.data.size);
-    thrust::fill(DOT_statics_data.begin(), DOT_statics_data.end(), 0);
+    thrust::host_vector<dropOut_tracing::statistics_data_struct> DOT_statics_data(dot_params.data.size);
+    thrust::fill(DOT_statics_data.begin(), DOT_statics_data.end(), dropOut_tracing::statistics_data_struct());
     dot_params.data.host_data = DOT_statics_data.data();
     dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(dot_params.data.host_data, dot_params.data.size);
     dot_params.data.on_GPU = true; 
@@ -714,50 +714,90 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     dot_params.selection_const = 0.0;
 }
 void updateDropOutTracingParams()
-{
-
-
-    thrust::host_vector<float>statics_data = MyThrustOp::DOT_statistics_data_to_host();
+{ 
+    thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     dot_params.data.host_data = statics_data.data();
     dot_params.data.on_GPU = false;
     auto records = MyThrustOp::DOT_get_host_statistic_record_buffer();
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////Update the Statstics Data In The Fllowing Data Block///////////////////////////////////
+    ////////////Update the Statstics Data In The Fllowing Code Block///////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////// 
 
-
-    /// light Type LS
-    /// surfaceSubspaceId is disable in the case of Light Type LS 
-    
-    // Create temporary vectors to store the counter and data for each subspace
-    std::vector<std::vector<int>> tempVector_counter(dot_params.specularSubSpaceNumber, std::vector<int>(dot_params.surfaceSubSpaceNumber, 0));
-    std::vector<std::vector<float>> tempVector(dot_params.specularSubSpaceNumber, std::vector<float>(dot_params.surfaceSubSpaceNumber, 0));
-    // Iterate through each record compute the summary reciprocal
-    for (int i = 0; i < records.size(); i++)
-    {
-        auto& record = records[i];
-        if (record.data_slot == DOT_usage::Average)
-        { 
-            tempVector[record.specular_subspaceId][DOT_EMPTY_SURFACEID] += float(record); 
-            tempVector_counter[record.specular_subspaceId][DOT_EMPTY_SURFACEID]++;
-        }
-    }
-    for (int i = 0; i < dot_params.specularSubSpaceNumber; i++)
+    //Average Computation
     {  
-        if (tempVector_counter[i][DOT_EMPTY_SURFACEID] != 0)
-        {
-            // Compute Average reciprocal
-            tempVector[i][DOT_EMPTY_SURFACEID] /= tempVector_counter[i][DOT_EMPTY_SURFACEID];
-        }
-        // Linearly interpolate the data in dot_params with the new data from tempVector
-        dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average) =
-            lerp(dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average), tempVector[i][DOT_EMPTY_SURFACEID], 1.0 / float(dot_params.statistics_iteration_count + 1));
-        printf("average pdf reciprocal for specular subspace %d is %f , this data comes from %d samples\n", i, dot_params.get_statistic_data(DOT_type::LS, i, DOT_EMPTY_SURFACEID, DOT_usage::Average)
-            , 0);
+        // Create temporary vectors to store the counter and data for each subspace 
+        std::vector<std::vector<std::vector<int>>> tempVector_counter(dropOut_tracing::max_u,
+            std::vector<std::vector<int>>(dot_params.specularSubSpaceNumber,
+                std::vector<int>(dot_params.surfaceSubSpaceNumber, 0)));
+        std::vector<std::vector<std::vector<float>>> tempVector(dropOut_tracing::max_u, 
+            std::vector<std::vector<float>>(dot_params.specularSubSpaceNumber,
+                std::vector<float>(dot_params.surfaceSubSpaceNumber, 0)));
 
+
+        // Iterate through each record compute the summary reciprocal
+        for (int i = 0; i < records.size(); i++)
+        {
+            auto& record = records[i];
+            if (record.data_slot == DOT_usage::Average)
+            {
+                tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId] += float(record);
+                tempVector_counter[int(record.type)][record.specular_subspaceId][record.surface_subspaceId]++;
+            }
+        }
+        for(int i = 0;i<dropOut_tracing::max_u;i++)
+            for(int j=0;j< dot_params.specularSubSpaceNumber; j++)
+                for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
+                {
+                    auto& statistic_data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k);
+                    if (tempVector_counter[i][j][k] != 0)
+                    {
+                        // Compute Average reciprocal
+                        tempVector[i][j][k] /= tempVector_counter[i][j][k];
+                    }
+
+                    if (statistic_data.valid)
+                    { 
+                        // Linearly interpolate the data in dot_params with the new data from tempVector
+                        statistic_data.average = lerp(statistic_data.average, tempVector[i][j][k], 1.0 / float(dot_params.statistics_iteration_count + 1));
+                        if (statistic_data.valid)
+                            printf("Average reciprocal PDF for ID S:%d C:%d U:%d is %f\n", j, k, i, statistic_data.average);
+                    }
+                    if (tempVector_counter[i][j][k] != 0)
+                    {
+                        statistic_data.valid = true;
+                    }
+                }
+    }
+
+    //Bound Process
+    {  
+        std::vector<std::vector<std::vector<float>>> tempVector(dropOut_tracing::max_u,
+            std::vector<std::vector<float>>(dot_params.specularSubSpaceNumber,
+                std::vector<float>(dot_params.surfaceSubSpaceNumber, 0)));
+
+
+        // Iterate through each record compute the summary reciprocal
+        for (int i = 0; i < records.size(); i++)
+        {
+            auto& record = records[i];
+            if (record.data_slot == DOT_usage::Bound)
+            {
+                tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId] = 
+                    max( float(record), tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId]);
+                
+            }
+        }
+        for (int i = 0; i < dropOut_tracing::max_u; i++)
+            for (int j = 0; j < dot_params.specularSubSpaceNumber; j++)
+                for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
+                {
+                    auto& statistic_data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k); 
+                    statistic_data.bound = max(statistic_data.bound,tempVector[i][j][k]);
+                    if (statistic_data.valid)
+                        printf("Bound Setting for ID S:%d C:%d U:%d is %f\n", j, k, i, statistic_data.bound);
+                }
     }
     
-
 
 
     dot_params.statistics_iteration_count++;
@@ -775,8 +815,6 @@ void updateDropOutTracingParams()
 
     dot_params.selection_const = lt_params.M_per_core * lt_params.num_core / params.sampler.glossy_count;
 }
-
-
 
 
 void preprocessing(sutil::Scene& scene)
@@ -815,10 +853,15 @@ void preprocessing(sutil::Scene& scene)
     thrust::device_ptr<float> Q_star = nullptr;
     while (current_Q_samples < target_Q_samples)
     {
-        launchLightTrace(scene);
+        //launchLightTrace(scene);
+
+        launchLVCTrace(scene);
         auto p_v = thrust::device_pointer_cast(params.lt.ans);
         auto p_valid = thrust::device_pointer_cast(params.lt.validState); 
         current_Q_samples += MyThrustOp::preprocess_getQ(p_v, p_valid, params.lt.get_element_count(), Q_star);
+
+        updateDropOutTracingParams();//update the statistic data for drop out sampling
+
     }
     MyThrustOp::Q_zero_handle(Q_star); 
     MyThrustOp::node_label(subspaceInfo.eye_tree, subspaceInfo.light_tree);

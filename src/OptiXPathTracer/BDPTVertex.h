@@ -58,7 +58,7 @@ struct BDPTVertex
     short lastZoneId;
     enum Type
     {
-        SPHERE, QUAD, DIRECTION, ENV, HIT_LIGHT_SOURCE, ENV_MISS, NORMALHIT, VertexTypeNum
+        SPHERE, QUAD, DIRECTION, ENV, HIT_LIGHT_SOURCE, ENV_MISS, NORMALHIT, DROPOUT_NOVERTEX, VertexTypeNum
     };
     short type = Type::QUAD;
 

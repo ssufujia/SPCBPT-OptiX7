@@ -725,26 +725,26 @@ namespace MyThrustOp
         return thrust::raw_pointer_cast(d_v.data());
     }
 
-    thrust::device_vector<float> DOT_statistics_data;
-    float* DOT_statistics_data_to_device(float* a, int size)
+    thrust::device_vector<dropOut_tracing::statistics_data_struct> DOT_statistics_data;
+    dropOut_tracing::statistics_data_struct* DOT_statistics_data_to_device(dropOut_tracing::statistics_data_struct* a, int size)
     {
-        thrust::host_vector<float> h_v(a, a + size);
-        thrust::device_vector<float>& d_v = DOT_statistics_data;
+        thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v(a, a + size);
+        thrust::device_vector<dropOut_tracing::statistics_data_struct>& d_v = DOT_statistics_data;
         d_v = h_v;
         return thrust::raw_pointer_cast(d_v.data());
     }
 
-    float* DOT_statistics_data_to_device(thrust::host_vector<float> h_v)
+    dropOut_tracing::statistics_data_struct* DOT_statistics_data_to_device(thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v)
     { 
-        thrust::device_vector<float>& d_v = DOT_statistics_data;
+        thrust::device_vector<dropOut_tracing::statistics_data_struct>& d_v = DOT_statistics_data;
         d_v = h_v;
         return thrust::raw_pointer_cast(d_v.data());
     }
 
-    thrust::host_vector<float> DOT_statistics_data_to_host()
+    thrust::host_vector<dropOut_tracing::statistics_data_struct> DOT_statistics_data_to_host()
     {
-        thrust::device_vector<float>& d_v = DOT_statistics_data;
-        thrust::host_vector<float> h_v = d_v;
+        thrust::device_vector<dropOut_tracing::statistics_data_struct>& d_v = DOT_statistics_data;
+        thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v = d_v;
         return h_v;
     }
      

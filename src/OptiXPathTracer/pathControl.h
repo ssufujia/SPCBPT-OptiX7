@@ -26,11 +26,11 @@ static const bool LDSE_ENABLE = 0;
 /* 光子路 LS */
 static const bool LS_ENABLE = 0;
 static const bool LSE_ENABLE = 0;
-static const bool LSDE_ENABLE = 0;
+static const bool LSDE_ENABLE = 1;
 
 /* 光子路 LDS */
 static const bool LDS_ENABLE = 0;
-static const bool LDSDE_ENABLE = 1;
+static const bool LDSDE_ENABLE = 0;
 
 /* 光子路 LS(S)* */
 static const bool LS_S_ENABLE = 0;

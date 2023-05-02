@@ -487,7 +487,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
 
     float dropOutTracingPdf = dot_params.statistics_iteration_count == 0 ? 0.0 :
         1.0 / dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace, DOT_usage::Average);
-    if (isinf(dropOutTracingPdf))dropOutTracingPdf = 0.0;
+    if (isinf(dropOutTracingPdf) || isnan(dropOutTracingPdf) || (dropOutTracingPdf < 0))dropOutTracingPdf = 0.0;
 
 
     return pdf * dropOutTracingPdf * dot_params.selection_ratio(dropOut_tracing::pathLengthToDropOutType(u), specular_index, surface_index);
@@ -495,6 +495,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
 
 RT_FUNCTION float dropOutTracing_MISWeight(const BDPTVertex* path, int path_size)
 {
+    if (!dropOut_tracing::MIS_COMBINATION)return 1;
     if (Shift::IsCausticPath(path, path_size))
     { 
         float upt_pdf = Tracer::pdfCompute(path, path_size, path_size);
@@ -787,7 +788,8 @@ extern "C" __global__ void __raygen__shift_combine()
                 
                 
                 //res += eval_path(pathBuffer, buffer_size, buffer_size);
-                if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 4 && LSDE_ENABLE))
+                if (false&&Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 4 && LSDE_ENABLE))
+//                if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 5) && Shift::glossy(pathBuffer[2]) && !Shift::glossy(pathBuffer[3]))
                 {
 
                     float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
@@ -795,6 +797,12 @@ extern "C" __global__ void __raygen__shift_combine()
                     res += contri / pdf;
                     res *= (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
                 }
+ /*               else if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size > 5)&& Shift::glossy(pathBuffer[2])&&!Shift::glossy(pathBuffer[3]))
+                {
+                    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
+                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
+                    res += contri / pdf; 
+                }*/
                 else
                 {
                     res *= 0;
@@ -873,7 +881,9 @@ extern "C" __global__ void __raygen__shift_combine()
 
                 float final_pmf = guide_ratio * (pmf_firstStage * pmf_secondStage) + (1 - guide_ratio) * pmf_uniform; 
 
-                if ((
+                if (( 
+                    /* 暂时取消LSDE这样的光路筛选方式，改用dropoutTracing_common.h里根据四参数的形式来决定是否连接的方式，仅要求视子路为diffuse */
+                    (payload.depth == 1 && !payload.path_record)||
                     /* LSDE，光子路LS，视子路DE */
                     (LS_ENABLE && light_subpath.depth == 1) ||
                     (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
@@ -891,8 +901,7 @@ extern "C" __global__ void __raygen__shift_combine()
                     /* 其他约束条件 */
                     (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
-                {
-                    // printf("here\n");
+                { 
                     const BDPTVertex* light_ptr = &light_subpath;
                     float pmf = Tracer::params.sampler.path_count * final_pmf * caustic_connection_prob;
 
@@ -901,132 +910,23 @@ extern "C" __global__ void __raygen__shift_combine()
                         BDPTVertex light_sub_new[SHIFT_VALID_SIZE];
                         Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                         Shift::PathContainer finalPath(light_sub_new, 1);
+                          
+                        //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
+                        BDPTVertex CP,SP;
+                        int u;
+                        float3 WC;
+                        float retracing_pdf;
+                        u = Shift::get_imcomplete_subpath_info(originPath, SP, CP, WC);
+                        if (!Shift::valid_specular(CP, SP, u, WC))continue;
+                        bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
+                        if (retrace_success == false)continue;
 
-                        float pdf_retrace;
-                        finalPath.setSize(originPath.size());
-                        /* 0 号是 glossy 顶点*/
-                        finalPath.get(0) = originPath.get(0);
+                        int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, u, finalPath, originPath);
+                        float pdf = eye_vertex.pdf * retracing_pdf * CP.pdf;
 
-                        /*  LS 光子路 */
-                        if (light_subpath.depth == 1) 
-                        {
-                            BDPTVertex np;
-                            MaterialData::Pbr mat = VERTEX_MAT(finalPath.get(0));
-                            float3 in_dir = normalize(eye_vertex.position - finalPath.get(0).position);
-                            float3 out_dir = Tracer::Sample(mat, finalPath.get(0).normal, in_dir, seed); 
-
-                            bool trace_success = 0;
-                            np = Tracer::FastTrace(finalPath.get(0), out_dir, trace_success);
-                            if (trace_success == false) continue;
-                            if (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
-
-                            Light light = Tracer::params.lights[np.materialId];
-                            Tracer::lightSample light_sample;
-                            
-                           light_sample.ReverseSample(light, np.uv);
-                            init_vertex_from_lightSample(light_sample, np);
-
-                            pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) *
-                                 Shift::GeometryTerm(finalPath.get(0), np) / abs(dot(out_dir,finalPath.get(0).normal)); 
-
-                            // printf("pdf_retrace: %f\n", pdf_retrace);
-                            /* 新的光源顶点 */
-                            finalPath.get(1) = np;
-                        }
-                        /* LDS 光子路，即 S - D - L，path record 为 0b10 */
-                        else if (light_subpath.depth == 2 && light_subpath.path_record == 0b10)
-                        {
-                            /* 0号是glossy顶点，1号是diffuse顶点，2号是光源顶点 */
-                            finalPath.get(2) = originPath.get(2);
-                            pdf_retrace = 1;
-
-                            BDPTVertex np, v;
-                            v = finalPath.get(0);
-                            MaterialData::Pbr mat = VERTEX_MAT(v);
-                            float3 in_dir = normalize(eye_vertex.position - v.position);
-                            float3 out_dir = Tracer::Sample(mat, v.normal, in_dir, seed);
-                            bool trace_success = 0;
-                            np = Tracer::FastTrace(v, out_dir, trace_success);
-                            /* 没追到 */
-                            if (trace_success == false) continue;
-                            /* 追到了光源 */
-                            if (np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE) continue;
-                            /* 追到了glossy */
-                            if (Shift::glossy(np)) continue;
-                            /* 可见性测试 */
-                            if (!Tracer::visibilityTest(Tracer::params.handle, np, finalPath.get(2))) continue;
-
-                            finalPath.get(1) = np;
-
-                            float3 diff = v.position - np.position;
-
-                            pdf_retrace = Tracer::Pdf(mat, finalPath.get(0).normal, in_dir, out_dir) * abs(dot(np.normal, out_dir)) / dot(diff, diff) ;
-                            /*printf("pdf_retrace: %f\n", pdf_retrace);
-                            printf("light pdf: %f\n", finalPath.get(2).pdf);*/
-                        }
-                        /*  L(S)*S 光子路 */
-                        else if (light_subpath.depth > 1 && (light_subpath.path_record == ((1 << light_subpath.depth) - 1)))
-                        {
-                            short d = light_subpath.depth;
-                            if (d > 2) continue;
-                            /* 0 ~ d-1 号是glossy顶点，d号是光源顶点，要动除了0号外的d个顶点 */
-                            pdf_retrace = 1;
-                            BDPTVertex np[SHIFT_VALID_SIZE];
-                            np[0] = originPath.get(0);
-                            float3 in_dir = normalize(eye_vertex.position - originPath.get(0).position);
-                            bool retrace_state = true;
-                            /* d 个glossy顶点 */
-                            for (int i = 0; i < d; ++i)
-                            {
-                                MaterialData::Pbr mat = VERTEX_MAT(np[i]);
-                                float3 out_dir = Tracer::Sample(mat, np[i].normal, in_dir, seed);
-                                bool trace_success = 0;
-                                np[i+1] = Tracer::FastTrace(np[i], out_dir, trace_success);
-
-                                /* 没追到 */
-                                if (trace_success == false) { retrace_state = 0; break; }
-                                if (i < d - 1) 
-                                {
-                                     /* 追到了光源 */
-                                     if (np[i+1].type == BDPTVertex::Type::HIT_LIGHT_SOURCE) { retrace_state = 0; break; }
-                                     /* 追到了非glossy */
-                                     if (!Shift::glossy(np[i + 1])) { retrace_state = 0; break; }
-                                }
-                                else 
-                                {
-                                    /* 没追到光源 */
-                                    if (np[i + 1].type != BDPTVertex::Type::HIT_LIGHT_SOURCE) { retrace_state = 0; break; }
-
-                                    Light light = Tracer::params.lights[np[i+1].materialId];
-                                    Tracer::lightSample light_sample;
-
-                                    light_sample.ReverseSample(light, np[i+1].uv);
-                                    init_vertex_from_lightSample(light_sample, np[i+1]);
-                                }
-                                
-                                pdf_retrace *= Tracer::Pdf(mat, np[i].normal, in_dir, out_dir) *
-                                    Shift::GeometryTerm(np[i], np[i+1]) / abs(dot(out_dir, np[i].normal));
-                                in_dir = -out_dir;
-                            }
-                            if (!retrace_state) continue;
-                            for (int i = 1; i <= d; ++i)
-                                finalPath.get(i) = np[i];
-                            //printf("pdf_retrace %f\n", pdf_retrace);
-                            
-                        }
-                        for (int i = 0; i < finalPath.size(); i++)
-                            pathBuffer[buffer_size + i] = finalPath.get(i);
-                        
-                        float pdf = eye_vertex.pdf  * pdf_retrace;
-
-                        float3 contri = Tracer::contriCompute(pathBuffer, buffer_size + finalPath.size()); 
-                        //printf("pdf: %f", pdf);
-                        float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
-                        //printf("inverpdf: %f\n", light_subpath.inverPdfEst);            
-                        //printf("contri:  %f %f %f\nres:  %f %f %f\npdf: %f    pmf: %f    inverPdf: %f\ncoefficient: %f\n\n", contri.x, contri.y, contri.z, res.x, res.y, res.z, pdf, pmf, light_subpath.inverPdfEst, light_subpath.inverPdfEst / pdf / pmf);
-                        
-                        if(LSDE_ENABLE && buffer_size + finalPath.size() == 4)
-                            res *= dropOutTracing_MISWeight(pathBuffer, buffer_size + finalPath.size());
+                        float3 contri = Tracer::contriCompute(pathBuffer, path_size);   
+                        float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;  
+                        res *= dropOutTracing_MISWeight(pathBuffer, path_size);
 
                         if (!ISINVALIDVALUE(res))
                             result += res / CONNECTION_N;
@@ -1151,19 +1051,6 @@ RT_FUNCTION void pushVertexToLVC(BDPTVertex& v, unsigned int& putId, int bufferB
     putId++;
 } 
 
-RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId, int bufferBias)
-{
-    const DropOutTracing_params& dot_params = Tracer::params.dot_params;
-    if (putId > dot_params.record_buffer_padding)
-    {
-        printf("error in drop out tracing: pushing more record than the record buffer padding\n \
-            will discord the over-flowing record\n \
-            consider to increase record_buffer_width in dropOutTracing_common.h to assign more memory for record buffer\n");
-        return;
-    }
-    dot_params.record_buffer[putId + bufferBias] = record; 
-    putId++;
-}
 extern "C" __global__ void __raygen__lightTrace()
 {
     const uint3  launch_idx = optixGetLaunchIndex();
@@ -1220,74 +1107,7 @@ extern "C" __global__ void __raygen__lightTrace()
                 payload.path_record = (payload.path_record) |
                     ((long long)Shift::glossy(curVertex) << payload.depth);
                 curVertex.path_record = payload.path_record;
-
-                /* L -> S 光子路 */
-                if ((LS_ENABLE || LSDE_ENABLE) 
-                    && curVertex.depth == 1 && curVertex.path_record)
-                {
-                    BDPTVertex v[2];
-                    /* v[1] 是光源顶点 */
-                    v[1] = payload.path.lastVertex();
-                    v[0] = curVertex;
-
-                    Shift::PathContainer path(v, 1, 2);
-                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed,curVertex);
-                    curVertex.inverPdfEst = pdf_inverse;
-
-
-                    /////////////////////////////////////////////////////////////////////
-                    //////////Drop Out Tracing Statistics Record Create//////////////////
-                    /////////////////////////////////////////////////////////////////////
-                    DropOutTracing_params& dot_params = Tracer::params.dot_params;
-                    int specular_id = dot_params.get_specular_label(curVertex.position, curVertex.normal);
-                    int surface_id = DOT_EMPTY_SURFACEID;
-                    DOT_record dot_record(DOT_type::LS, specular_id, surface_id, DOT_usage::Average);
-                    dot_record = pdf_inverse;
-                    DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
-
-                    /////////////////////////////////////////////////////////////////////
-                    //////////Drop Out Tracing Statistics Record Finish//////////////////
-                    /////////////////////////////////////////////////////////////////////
-
-                    if (dot_params.statistics_iteration_count > 0)
-                    {
-                        // one example for you to Access the average pdf reciprocal in the corresponding specular subspace of the LS path type
-                        float average = dot_params.get_statistic_data(DOT_type::LS, specular_id, surface_id, DOT_usage::Average);
-                    }                        
-                } 
-
-                /* L -> D -> S 光子路，即 S - D - L， path_record 为 0b10 */
-                else if ((LDS_ENABLE || LDSDE_ENABLE)
-                    && curVertex.depth == 2 && curVertex.path_record == 0b10)
-                {
-                    BDPTVertex v[3];
-                    v[2] = payload.path(2);
-                    v[1] = payload.path(1);
-                    v[0] = curVertex;
-
-                    Shift::PathContainer path(v, 1, 3);
-                    float pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex);
-                    curVertex.inverPdfEst = pdf_inverse;
-                }
-                /* L -> (S)* -> S 光子路 */
-                else if ((LS_S_ENABLE || LS_SDE_ENABLE || LSSDE_ENABLE || LSSSDE_ENABLE)
-                     && curVertex.depth > 1 && (curVertex.path_record == (1<< curVertex.depth) - 1) 
-                     && (curVertex.depth< SHIFT_VALID_SIZE-1))
-                {
-                    BDPTVertex v[SHIFT_VALID_SIZE];
-                    /* v[1] 是光源顶点 */
-                    v[0] = curVertex;
-                    for (int i = 1; i <= curVertex.depth; ++i)
-                        v[i] = payload.path(i);
-
-                    Shift::PathContainer path(v, 1, curVertex.depth+1);
-
-                    float pdf_inverse = 100000;
-                    pdf_inverse = Shift::inverPdfEstimate(path, payload.seed, curVertex);
-                    curVertex.inverPdfEst = pdf_inverse;
-                }
-
-                
+                 
                 float e = curVertex.contri_float();
 
                 if (e < 0.00001) 
@@ -1295,6 +1115,50 @@ extern "C" __global__ void __raygen__lightTrace()
                 /* lightVertexCount 在经过这个函数后会加 1 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
+
+
+                if (Shift::glossy(curVertex) && curVertex.depth < SHIFT_VALID_SIZE)
+                {
+                    Shift::PathContainer light_subpath(&(Tracer::params.lt.ans[lightVertexCount + bufferBias - 1]), -1, curVertex.depth + 1);
+                     
+                    // @param CP: BDPTVertex, control point
+                    // @param SP: BDPTVertex, specular point
+                    // @param WC: float3, control direction
+                    // @param u: integer, step size
+                    // @param statistic_prd: statistic_payload, interface for using statistic information
+                    BDPTVertex CP,SP; 
+                    float3 WC;
+                    int u;
+                    //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
+                    u = Shift::get_imcomplete_subpath_info(light_subpath, SP, CP, WC); 
+                    if (Shift::valid_specular(CP, SP, u, WC))
+                    {  
+                        statistic_payload statistic_prd;
+                        statistic_prd.build(curVertex, CP, WC, u);
+                        statistic_prd.putId = DOT_record_count;
+                        statistic_prd.bufferBias = DOT_buffer_bias;
+                        float3 tempV;
+                        if (statistic_prd.data.valid == false)
+                            statistic_prd.data.bound = 1;// Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
+                        if (statistic_prd.data.bound > 1000)statistic_prd.data.bound = 1000;
+
+
+                        float pdf_inverse = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd);
+                        DOT_record_count = statistic_prd.putId;
+
+                        light_subpath.get(0).inverPdfEst = pdf_inverse;
+
+                        /////////////////////////////////////////////////////////////////////
+                        /////////////////////Average Record Create///////////////////////////
+                        /////////////////////////////////////////////////////////////////////
+                        DOT_record dot_record = statistic_prd.generate_record(DOT_usage::Average);
+                        dot_record = pdf_inverse;
+                        DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
+                        /////////////////////////////////////////////////////////////////////
+                        /////////////////////Average Record Finish///////////////////////////
+                        /////////////////////////////////////////////////////////////////////
+                    }
+                }
             }
             ray_direction = payload.ray_direction;
             ray_origin = payload.origin;

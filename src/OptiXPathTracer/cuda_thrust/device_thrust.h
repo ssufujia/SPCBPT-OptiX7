@@ -151,9 +151,9 @@ namespace MyThrustOp
     classTree::tree_node* eye_tree_to_device(classTree::tree_node* a, int size);
     classTree::tree_node* DOT_specular_tree_to_device(classTree::tree_node* a, int size);
     classTree::tree_node* DOT_surface_tree_to_device(classTree::tree_node* a, int size);
-    float* DOT_statistics_data_to_device(float* a, int size);
-    thrust::host_vector<float> DOT_statistics_data_to_host();
-    float* DOT_statistics_data_to_device(thrust::host_vector<float> h_v);
+    dropOut_tracing::statistics_data_struct* DOT_statistics_data_to_device(dropOut_tracing::statistics_data_struct* a, int size);
+    thrust::host_vector<dropOut_tracing::statistics_data_struct> DOT_statistics_data_to_host();
+    dropOut_tracing::statistics_data_struct* DOT_statistics_data_to_device(thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v);
     dropOut_tracing::statistic_record* DOT_get_statistic_record_buffer(int size = -1);
     thrust::host_vector<dropOut_tracing::statistic_record> DOT_get_host_statistic_record_buffer(bool valid_only = true);
 

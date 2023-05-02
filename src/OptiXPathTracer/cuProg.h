@@ -177,7 +177,12 @@ struct Onb
     float3 m_binormal;
     float3 m_normal;
 };
-
+//return true in probability rr_rate, rr_rate is assume to be within (0, 1)
+RT_FUNCTION bool RR_TEST(unsigned& seed, float rr_rate)
+{
+    if (rnd(seed) < rr_rate)return true;
+    return false;
+}
 RT_FUNCTION void cosine_sample_hemisphere(const float u1, const float u2, float3& p)
 {
     // Uniformly sample disk.
@@ -1950,7 +1955,7 @@ RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample,
 namespace Tracer
 {
     /* Latest Update! */
-    RT_FUNCTION BDPTVertex FastTrace(BDPTVertex& a, float3 direction, bool& success)
+    RT_FUNCTION BDPTVertex FastTrace(const BDPTVertex& a, float3 direction, bool& success)
     {
         Tracer::PayloadBDPTVertex payload;
         payload.clear();
@@ -1974,6 +1979,84 @@ namespace Tracer
         success = 1;
         return payload.path.currentVertex();
     }
+}
+
+RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId, int bufferBias)
+{
+    const DropOutTracing_params& dot_params = Tracer::params.dot_params;
+    if (putId > dot_params.record_buffer_padding)
+    {
+        printf("error in drop out tracing: pushing more record than the record buffer padding\n \
+            will discord the over-flowing record\n \
+            consider to increase record_buffer_width in dropOutTracing_common.h to assign more memory for record buffer\n");
+        return;
+    }
+    dot_params.record_buffer[putId + bufferBias] = record;
+    putId++;
+}
+
+struct statistic_payload
+{
+    unsigned putId;
+    unsigned bufferBias;
+    unsigned SP_label;
+    unsigned CP_label;
+    dropOut_tracing::DropOutType type;
+    dropOut_tracing::statistics_data_struct data;
+    bool CP_NOVERTEX;
+    RT_FUNCTION dropOut_tracing::statistic_record generate_record(dropOut_tracing::SlotUsage usage)
+    {
+        dropOut_tracing::statistic_record record(type, SP_label, CP_label, usage); 
+        return record;
+    }
+    RT_FUNCTION void build(BDPTVertex& SP, BDPTVertex& CP, float3 WC, int u)
+    {
+        DropOutTracing_params& dot_params = Tracer::params.dot_params;
+        if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX)
+        {
+            CP_label = DOT_EMPTY_SURFACEID;
+            CP_NOVERTEX = true;
+        }
+        else
+        {
+            CP_NOVERTEX = false;
+            CP_label = CP.depth == 0 ? dot_params.get_surface_label(CP.position, CP.normal) :
+                dot_params.get_surface_label(CP.position, CP.normal, WC);
+        }
+        SP_label = dot_params.get_specular_label(SP.position, SP.normal);
+
+        if (dot_params.statistic_available())
+        {
+            data = dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), SP_label, CP_label);
+        }
+        else
+        {
+            data = dropOut_tracing::statistics_data_struct();
+            data.bound = 1;
+        }
+    }
+    RT_FUNCTION float3 getInitialDirection(float3 normal, unsigned& seed)
+    {
+        float3 dir;
+        Onb onb(RR_TEST(seed, 0.5) ? normal : -normal);
+        cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+        onb.inverse_transform(dir);
+        return dir;
+    }
+    RT_FUNCTION float getInitialDirectionPdf(float3 normal, float3 direction)
+    {
+        //Sample in two hemisphere
+        return 1.0 / M_PI / 2;
+    }
+
+    RT_FUNCTION bool NO_CP()
+    {
+        return CP_NOVERTEX;
+    }
+};
+RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, statistic_payload& prd)
+{
+    DOT_pushRecordToBuffer(record, prd.putId, prd.bufferBias);
 }
 namespace Shift
 {
@@ -2054,6 +2137,7 @@ namespace Shift
         }
         return false;
     }
+
     RT_FUNCTION bool RefractionCase(const BDPTVertex& v)
     {
         return v.type == BDPTVertex::Type::NORMALHIT && RefractionCase(Tracer::params.materials[v.materialId]);
@@ -2101,7 +2185,7 @@ namespace Shift
             it_step = _step;
             m_size = size;
         }
-        RT_FUNCTION int size() { return m_size; }
+        RT_FUNCTION int size()const { return m_size; }
         RT_FUNCTION int setSize(int i) { m_size = i; }
         RT_FUNCTION BDPTVertex& get(int i)
         {
@@ -2310,7 +2394,7 @@ namespace Shift
 
     };
 
-    RT_FUNCTION float getClosestGeometry_upperBound(Light &light, float3 position,float3 normal,float3& sP)
+    RT_FUNCTION float getClosestGeometry_upperBound(const Light &light, float3 position,float3 normal,float3& sP)
     {
         Tracer::lightSample light_sample;
         float3 ca = getClosestPointFunction(light.quad.corner, light.quad.u, light.quad.v,position)();
@@ -2992,6 +3076,481 @@ namespace Shift
         return duv_dwh / dwi_dwh;
     }
 
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////Drop Out Tracing Code////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    RT_FUNCTION float tracingPdf(const BDPTVertex& a, const BDPTVertex& b, float3 direction, bool skip_rr, bool skip_visibility = false)
+    {
+        float pdf = 1;
+        if (a.type == BDPTVertex::Type::NORMALHIT)
+        {
+            MaterialData::Pbr mat = VERTEX_MAT(a);
+            float3 diff = b.position - a.position;
+            float3 out_dir = normalize(diff);
+            pdf = Tracer::Pdf(mat, a.normal, direction, out_dir) * abs(dot(out_dir, b.normal)) / dot(diff, diff);
+
+            if (!skip_rr)
+            {
+                pdf *= Tracer::rrRate(mat);
+            }
+            return skip_visibility ? pdf : pdf * Tracer::visibilityTest(Tracer::params.handle, a, b);
+        }
+        else
+        {
+            printf("tracing pdf is called at undesigned case：source vertex a is assumed to be a normal surface vertex\n");
+        }
+        return pdf;
+    }
+    // This function retraces the path and stores it in the path container. Returns false if retracing fails.
+    // seed is the random number seed. 
+    // SP is the specular point
+    // incident is the incident direction
+    // u is the step size
+    //  
+    // @param seed: unsigned integer, random number seed
+    // @param path: PathContainer, path container to store the retraced path
+    // @param SP: BDPTVertex, specular point
+    // @param incident: float3, incident direction
+    // @param u: integer, step size
+    // @param statistic_prd: statistic_payload, interface for using statistic information
+    // @return: bool, true if the path is retraced successfully, false otherwise
+    RT_FUNCTION bool retracing(unsigned& seed, PathContainer& path, const BDPTVertex& SP, const BDPTVertex& CP, float3 incident, int u, float& pdf)
+    {
+        path.setSize(u);
+        pdf = 1;
+        float3 in_dir = incident;
+        for (int i = 0; i < u; i++)
+        {
+            const BDPTVertex& currentVertex = i == 0 ? SP : path.get(i - 1);
+            MaterialData::Pbr mat = VERTEX_MAT(currentVertex);
+            float3 out_dir = Tracer::Sample(mat, currentVertex.normal, in_dir, seed);
+
+            bool success_hit;
+            path.get(i) = Tracer::FastTrace(currentVertex, out_dir, success_hit);
+            if (success_hit == false)
+            {
+                return false;
+            }
+            if (i == u - 1 && Shift::glossy(path.get(i)))
+            {
+                return false;
+            }
+            if (i != u - 1 && !Shift::glossy(path.get(i)))
+            {
+                return false;
+            }
+            if (path.get(i).type == BDPTVertex::HIT_LIGHT_SOURCE)
+            {
+                if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX && i == u - 1)
+                {
+                    int light_id = path.get(i).materialId;
+                    const Light& light = Tracer::params.lights[light_id];
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, path.get(i).uv);
+                    init_vertex_from_lightSample(light_sample, path.get(i));
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX && i == u - 1)
+            {
+                return false;
+            }
+            //float3 diff = currentVertex.position - path.get(i).position;
+            //pdf *= Tracer::Pdf(mat, currentVertex.normal, in_dir, out_dir);
+            //pdf *= abs(dot(out_dir, path.get(i).normal)) / dot(diff, diff);
+            pdf *= tracingPdf(currentVertex, path.get(i), in_dir, true, true);
+            in_dir = -out_dir;
+        }
+        if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && !Tracer::visibilityTest(Tracer::params.handle, path.get(-1), CP))
+        {
+            return false;
+        }
+        return true;
+    }
+
+
+    #define DOT_INVALIDATE_ALTERNATE_PATH(path) (path.setSize(0))
+    #define DOT_IS_ALTERNATE_PATH_INVALID(path) (path.size() == 0)
+    #define DOT_INVALID_ALTERNATE_PATH_PDF 1
+    #define DOT_SP_RATIO 0.5
+    /**
+     * This function samples an alternate path and stores it in the path container. Returns false if sampling fails.
+     * CP stands for control point, SP stands for specular point, u is the step size, and WC stands for control direction.
+     * seed is the random number seed.
+     *
+     * @param seed: unsigned integer, random number seed
+     * @param path: PathContainer, path container to store the sampled alternate path, initial size = 0
+     * @param CP: BDPTVertex, control point
+     * @param SP: BDPTVertex, specular point
+     * @param WC: float3, control direction
+     * @param u: integer, step size
+     * @param statistic_prd: statistic_payload, interface for using statistic information
+     * @return: bool, true if the path is sampled successfully, false otherwise
+     */
+    RT_FUNCTION bool alternate_path_sample(unsigned& seed, PathContainer& path, const BDPTVertex& CP, const BDPTVertex& SP, float3 WC, int u, statistic_payload& statistic_prd)
+    {
+        path.setSize(u);
+        bool SP_SAMPLE_ONLY = u != 1;
+        if (!SP_SAMPLE_ONLY && RR_TEST(seed, 1 - DOT_SP_RATIO))//forward sampling
+        {
+            if (statistic_prd.NO_CP())//light source sampling
+            { 
+                Tracer::lightSample light_sample;
+                light_sample(seed);
+                init_vertex_from_lightSample(light_sample, path.get(0));
+            }
+            else
+            {
+                float3 out_direction;
+                //Control Point is located on light source
+                //light source is assume to be surface light source
+                //sample by cosine
+                if (CP.depth == 0)
+                {
+                    Onb onb(CP.normal);
+                    cosine_sample_hemisphere(rnd(seed), rnd(seed), out_direction);
+                    onb.inverse_transform(out_direction); 
+                }
+                //Control Point is a normal surface vertex
+                //sample by BSDF at Control Point
+                else
+                {
+                    MaterialData::Pbr mat = VERTEX_MAT(CP);
+                    float3 out_direction = Tracer::Sample(mat, CP.normal, WC, seed);
+                }
+
+                bool success_hit;
+                path.get(0) = Tracer::FastTrace(CP, out_direction, success_hit);
+                if (success_hit == false || path.get(0).type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                    Shift::glossy(path.get(0)))
+                {
+                    DOT_INVALIDATE_ALTERNATE_PATH(path); return false;
+                }
+            }
+        }
+        //trace from Specular Point
+        else
+        {
+            float3 out_direction = statistic_prd.getInitialDirection(SP.normal, seed);
+            ////////////TBD:get the initial direction by path guiding/////////////
+
+            for (int i = 0; i < u; i++)
+            {
+                const BDPTVertex& currentVertex = (i == 0 ? SP : path.get(i - 1));
+                bool success_hit;
+                path.get(i) = Tracer::FastTrace(currentVertex, out_direction, success_hit);
+                if (success_hit == false)
+                {
+                    DOT_INVALIDATE_ALTERNATE_PATH(path); return false;
+                }
+                if (i == u - 1 && Shift::glossy(path.get(i)))
+                {
+                    DOT_INVALIDATE_ALTERNATE_PATH(path); return false;
+                }
+                if (i != u - 1 && !Shift::glossy(path.get(i)))
+                {
+                    DOT_INVALIDATE_ALTERNATE_PATH(path); return false;
+                }
+                if (path.get(i).type == BDPTVertex::HIT_LIGHT_SOURCE)
+                {
+                    if (statistic_prd.NO_CP() && i == u - 1)
+                    {
+                        int light_id = path.get(i).materialId;
+                        const Light& light = Tracer::params.lights[light_id];
+                        Tracer::lightSample light_sample;
+                        light_sample.ReverseSample(light, path.get(i).uv);
+                        init_vertex_from_lightSample(light_sample, path.get(i));
+                    }
+                    else
+                    {
+                        DOT_INVALIDATE_ALTERNATE_PATH(path); return false;
+                    }
+                }
+                else if (statistic_prd.NO_CP() && i == u - 1)
+                {
+                    DOT_INVALIDATE_ALTERNATE_PATH(path); return false;
+                }
+                if (i != u - 1)
+                {
+                    MaterialData::Pbr mat = VERTEX_MAT(path.get(i));
+                    out_direction = Tracer::Sample(mat, path.get(i).normal, -out_direction, seed);
+                }
+            }
+        }
+
+        return true;
+     }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////Supporting Distribution PDF Compute below////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * This function evaluates the supporting alternate path PDF for given parameters.
+     * CP stands for control point, SP stands for specular point, u is the step size, and WC stands for control direction.
+     *
+     * @param path: PathContainer, path container of the alternate path
+     * @param CP: BDPTVertex, control point
+     * @param SP: BDPTVertex, specular point
+     * @param WC: float3, control direction
+     * @param u: integer, step size
+     * @param statistic_prd: statistic_payload, interface for using statistic information
+     * @return: float, supporting PDF for given parameters
+     */
+    RT_FUNCTION float alternate_path_pdf(PathContainer& path, const BDPTVertex& CP, const BDPTVertex& SP, float3 WC, int u, statistic_payload& statistic_prd)
+    {
+        if (DOT_IS_ALTERNATE_PATH_INVALID(path))return DOT_INVALID_ALTERNATE_PATH_PDF;
+
+        bool SP_SAMPLE_ONLY = u != 1;
+
+        float SP_SAMPLE_pdf = 1;
+        SP_SAMPLE_pdf *= tracingPdf(SP, path.get(0)) * M_PI * statistic_prd.getInitialDirectionPdf(SP.normal, normalize(path.get(0).position - SP.position));
+        for (int i = 1; i < u; i++)
+        {
+            const BDPTVertex& LL_Vertex = i == 1 ? SP : path.get(i - 2);
+            SP_SAMPLE_pdf *= tracingPdf(path.get(i - 1), path.get(i), normalize(LL_Vertex.position - path.get(i - 1).position), true);
+        }
+        float CP_SAMPLE_pdf;
+        if (!SP_SAMPLE_ONLY)
+        {
+            if (statistic_prd.NO_CP())//light source sampling
+            {
+                CP_SAMPLE_pdf = path.get(0).pdf;
+            }
+            else
+            {
+                //Control Point is located on light source
+                //light source is assumed to be surface light source
+                //sample by cosine
+                if (CP.depth == 0)
+                {
+                    CP_SAMPLE_pdf = tracingPdf(CP, path.get(0));
+                }
+                else
+                {
+                    MaterialData::Pbr mat = VERTEX_MAT(CP);
+                    float3 diff = path.get(0).position - CP.position;
+                    float3 out_dir = normalize(diff);
+                    CP_SAMPLE_pdf = tracingPdf(CP, path.get(0), WC, true);
+                }
+            } 
+        }
+        return SP_SAMPLE_ONLY ? SP_SAMPLE_pdf : SP_SAMPLE_pdf * DOT_SP_RATIO + CP_SAMPLE_pdf * (1 - DOT_SP_RATIO);
+    }
+
+    /**
+     * This function evaluates the alternate path tracing PDF for given parameters.
+     * CP stands for control point, SP stands for specular point, u is the step size, and WC stands for control direction.
+     *
+     * @param path: PathContainer, path container of the alternate path
+     * @param CP: BDPTVertex, control point
+     * @param SP: BDPTVertex, specular point
+     * @param WC: float3, control direction
+     * @param u: integer, step size
+     * @param statistic_prd: statistic_payload, interface for using statistic information
+     * @return: float, alternate path tracing PDF in normal sub-path tracing for given parameters
+     */
+    RT_FUNCTION float alternate_path_eval(PathContainer& path, const BDPTVertex& CP, const BDPTVertex& SP, float3 WC, int u, statistic_payload& statistic_prd)
+    {
+        if (DOT_IS_ALTERNATE_PATH_INVALID(path))return 0;
+
+        float pdf = 1;
+        if (statistic_prd.NO_CP())
+        {
+            pdf = path.get(-1).pdf;
+        }
+        else if (CP.depth == 0)
+        {
+            pdf = tracingPdf(CP, path.get(-1));
+        }
+        else
+        {
+            pdf = tracingPdf(CP, path.get(-1), WC, false,true);
+        }
+        for (int i = 1; i < u; i++)
+        {
+            if (statistic_prd.NO_CP() && i == 1)
+                pdf *= tracingPdf(path.get(-i), path.get(-i - 1));
+            else
+            {
+                const BDPTVertex& LL_Vertex = i == 1 ? CP : path.get(-i + 1);
+                pdf *= tracingPdf(path.get(-i), path.get(-i - 1), normalize(LL_Vertex.position - path.get(-i).position), false);
+            }
+        }
+        
+        if (statistic_prd.NO_CP() && u == 1)
+        {
+            pdf *= tracingPdf(path.get(0), SP);
+        }
+        else
+        {
+            float3 dir = u == 1 ? normalize(CP.position - path.get(0).position) : normalize(path.get(1).position - path.get(0).position);
+            pdf *= tracingPdf(path.get(0), SP, dir, false, true);
+
+        }
+        return pdf;
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////Reciprocal Estimation Code Below/////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct splitingStack
+    {
+        int positive_stack;
+        int negative_stack;
+        RT_FUNCTION splitingStack() :positive_stack(0), negative_stack(0) {}
+        RT_FUNCTION void push(int sign, int size)
+        {
+            if (sign == 1)
+                positive_stack += size;
+            else if (sign == -1)
+                negative_stack += size;
+            else
+            {
+                printf("spliting stack error: push invalid sign");
+            }
+        }
+        RT_FUNCTION bool empty() { return positive_stack == 0 && negative_stack == 0; }
+        RT_FUNCTION int pop()
+        {
+            if (positive_stack > 0)
+            {
+                positive_stack -= 1;
+                return 1;
+            }
+            else if (negative_stack > 0)
+            {
+                negative_stack -= 1;
+                return -1;
+            }
+            else
+            {
+                printf("spliting stack error: pop order for a empty stack %d %d\n", positive_stack,negative_stack);
+            }
+        }
+    }; 
+    // This function evaluates the reciprocal of the path PDF integral for given parameters.
+    // CP stands for control point, SP stands for specular point, u is the step size, and WC stands for control direction.
+    // seed is the random number seed.
+    // 
+    // @param seed: unsigned integer, random number seed
+    // @param CP: BDPTVertex, control point
+    // @param SP: BDPTVertex, specular point
+    // @param WC: float3, control direction
+    // @param u: integer, step size
+    // @param statistic_prd: statistic_payload, interface for using statistic information
+    // @return: float, reciprocal of the path PDF integral for given parameters
+    RT_FUNCTION float reciprocal_estimation(unsigned& seed, BDPTVertex CP, BDPTVertex SP, float3 WC, int u, statistic_payload& statistic_prd)
+    {
+        float B = 1;
+        int loop_limit = 40000;
+        B = statistic_prd.data.bound;
+        float max_B = 0;
+        //above code: information setup
+
+        float res = 1 / B;
+        BDPTVertex buffer[SHIFT_VALID_SIZE];
+        PathContainer path(buffer, 1, 0);
+        splitingStack spliting_stack;
+        spliting_stack.push(1, 1); 
+        while (spliting_stack.empty() == false && loop_limit > 0)
+        {
+            int sign = spliting_stack.pop();
+            bool sample_success = alternate_path_sample(seed, path, CP, SP, WC, u, statistic_prd);
+            float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
+            float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
+            float factor = 1 - p / (B * q);
+            res += factor / B * sign;
+            //if (sample_success)printf("p %f q%f B%f u%d\n", p, q, B, path.size());
+            float RRS = abs(factor);
+            float rr_rate = RRS - int(RRS);
+            int next_sign = factor > 0 ? sign : sign * -1;
+            if (RR_TEST(seed,rr_rate))
+            {
+                spliting_stack.push(next_sign, int(RRS) + 1);
+            }
+            else
+            {
+                spliting_stack.push(next_sign, int(RRS));
+            }
+
+            loop_limit--;
+            path.setSize(0);
+            ////statistic collection
+            max_B = max_B > abs(p / q) ? max_B : abs(p / q); 
+        }
+
+
+        ////statistic collection
+        dropOut_tracing::statistic_record bound_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Bound);
+        bound_record.data = max_B;
+        DOT_pushRecordToBuffer(bound_record, statistic_prd);
+        ////statistic collection end
+
+
+        return res;
+    }
+
+    //return u, vertex number of alternate path 
+    //path: light sub-path
+    //find the Specular Point(SP), Control Point(CP), Control Direction(WC) and u for the given light sub-path
+    RT_FUNCTION int get_imcomplete_subpath_info(PathContainer path, BDPTVertex& SP, BDPTVertex& CP, float3& WC)
+    {
+        int u = 1;
+        SP = path.get(0);        
+        CP.type = BDPTVertex::Type::DROPOUT_NOVERTEX;
+        CP.pdf = 1;
+        for (int i = 1; i < path.size() - 1; i++)
+        {
+            if (Shift::glossy(path.get(i)))
+                u += 1;
+            else
+            {
+                CP = path.get(i + 1);
+                if (CP.depth != 0)
+                {
+                    WC = normalize(path.get(i + 2).position - path.get(i + 1).position);
+                }
+                break;
+            }
+        }
+        return u;
+    }
+    /* This function concatenates paths gand h_y together.
+    *@param buffer : an array of BDPTVertex objects to store the concatenated path
+    * @param begin : the number of vertices in the subpath(and is therefore skipped)
+    * @param u : the number of vertices skipped in h_y.In an implementation where the replacement path is the same length as the original path, u is equal to the size of g.However, in future implementations where the replacement path length may vary, u may not be equal to the size of g.
+    * @param g : the PathContainer object representing the first path to be concatenated
+    * @param h_y : the PathContainer object representing the second path to be concatenated
+    * @return: the total number of vertices in the concatenated path
+    */
+    RT_FUNCTION int dropoutTracing_concatenate(BDPTVertex * buffer, int begin, int u, PathContainer g, PathContainer h_y)
+    {
+        buffer[begin] = h_y.get(0);
+        for (int i = 0; i < g.size(); i++)
+        {
+            buffer[begin + i + 1] = g.get(i);
+        }
+        for (int i = u + 1; i < h_y.size(); i++)
+        {
+            buffer[begin + i] = h_y.get(i);
+        }
+        return begin + h_y.size() - u + g.size();
+    }
+    RT_FUNCTION bool valid_specular(BDPTVertex& CP, BDPTVertex& SP, int u, float3 WC)
+    {
+        if (dropOut_tracing::CP_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
+        if (dropOut_tracing::multi_bounce_disable && u != 1)return false;
+        if (dropOut_tracing::CP_lightsource_only && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth != 0)return false;
+        if (dropOut_tracing::lightsource_alternate_disable && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
+        if (Shift::glossy(CP))return false; 
+        return true;
+    }
 }
 
 #endif // !CUPROG_H

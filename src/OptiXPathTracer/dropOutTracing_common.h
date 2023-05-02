@@ -10,8 +10,18 @@ namespace dropOut_tracing
 {
     const int slot_number = 5;
     const int default_specularSubSpaceNumber = 20;
-    const int default_surfaceSubSpaceNumber = 100; 
+    const int default_surfaceSubSpaceNumber = 20; 
     const int record_buffer_width = 1;
+    const int max_u = 5;
+    const bool MIS_COMBINATION = false;
+
+    const bool multi_bounce_disable = true;// if true, u mush be 1
+    const bool CP_disable = true;//if true, no control point is valid
+    const bool CP_lightsource_only = true;// if true, CP must be on light source
+    const bool lightsource_alternate_disable = false;// if true, can't retrace light source
+    //true  true  true  false = LSDE  enable
+    //true  false true  true  = LDSDE enable
+
 #define DOT_EMPTY_SURFACEID 0
     enum class DropOutType
     {
@@ -29,7 +39,7 @@ namespace dropOut_tracing
      */
     enum class SlotUsage
     {
-        Average, SlotUsageNumber
+        Average, Bound, SlotUsageNumber
     };
 
     RT_FUNCTION __host__ DropOutType pathLengthToDropOutType(int num) {
@@ -38,18 +48,28 @@ namespace dropOut_tracing
     }
 
 
+    struct statistics_data_struct
+    {
+        float average;
+        float variance;
+        float bound;
+        bool valid;
+        RT_FUNCTION __host__ statistics_data_struct():average(0),variance(0),bound(0),valid(false){}
+    };
+
     struct statistics_data
     {
-        float* host_data;
-        float* device_data;
+        statistics_data_struct* host_data;
+        statistics_data_struct* device_data;
         int size;
         bool on_GPU;
          
-        RT_FUNCTION __host__ float& operator[](int i)
+        RT_FUNCTION __host__ statistics_data_struct& operator[](int i)
         {
             return on_GPU ? device_data[i] : host_data[i];
         }
     };
+
 
     struct statistic_record
     {
@@ -111,7 +131,7 @@ namespace dropOut_tracing
         { return surfaceSubSpace? classTree::tree_index(surfaceSubSpace, position, normal, dir) : 0; }
         RT_FUNCTION __host__ int spaceId2DataId(int specular_id, int surface_id) { return surface_id * specularSubSpaceNumber + specular_id; }
         RT_FUNCTION __host__ int2 dataId2SpaceId(int data_id) { return make_int2(data_id % specularSubSpaceNumber, int(data_id / specularSubSpaceNumber)); }
-        RT_FUNCTION __host__ float& get_statistic_data(int type, int specular_id, int surface_id, int data_slot)
+        RT_FUNCTION __host__ statistics_data_struct& get_statistic_data(DropOutType type, int specular_id, int surface_id)
         {
             if (record_buffer == nullptr)
             {
@@ -129,25 +149,20 @@ namespace dropOut_tracing
             //    return data[slot_bias + specular_id * slot_number + data_slot];
             //} 
             //slot_bias += specularSubSpaceNumber * slot_number;
-            slot_bias += type * specularSubSpaceNumber * surfaceSubSpaceNumber * slot_number;
+            slot_bias += int(type) * specularSubSpaceNumber * surfaceSubSpaceNumber ;
              
             int one_dim_id = spaceId2DataId(specular_id, surface_id);
-            return data[one_dim_id * slot_number + data_slot + slot_bias];
+            return data[one_dim_id  +  slot_bias];
         } 
         RT_FUNCTION __host__ float& get_statistic_data(DropOutType type, int specular_id, int surface_id, SlotUsage data_slot)
         {
-            return get_statistic_data(type, specular_id, surface_id, int(data_slot));
+            if(data_slot == SlotUsage::Average)
+                return get_statistic_data(type, specular_id, surface_id).average;
+            printf("dataslot undefined\n");
+            return get_statistic_data(type, specular_id, surface_id).average;
+            
         }
-
-        RT_FUNCTION __host__ float& get_statistic_data(DropOutType type, int specular_id, int surface_id, int data_slot)
-        {
-            return get_statistic_data(int(type), specular_id, surface_id, data_slot);
-        }
-
-        RT_FUNCTION __host__ float& get_statistic_data(int type, int specular_id, int surface_id, SlotUsage data_slot)
-        {
-            return get_statistic_data(type, specular_id, surface_id, int(data_slot));
-        }
+         
         RT_FUNCTION __host__ bool statistic_available()
         {
             return statistics_iteration_count != 0;
