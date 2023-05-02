@@ -1140,7 +1140,7 @@ extern "C" __global__ void __raygen__lightTrace()
                         float3 tempV;
                         if (statistic_prd.data.valid == false)
                             statistic_prd.data.bound = 1;// Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
-                        if (statistic_prd.data.bound > 1000)statistic_prd.data.bound = 1000;
+                        if (statistic_prd.data.bound > dropOut_tracing::max_bound)statistic_prd.data.bound = dropOut_tracing::max_bound;
 
 
                         float pdf_inverse = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd);

@@ -3448,7 +3448,7 @@ namespace Shift
     RT_FUNCTION float reciprocal_estimation(unsigned& seed, BDPTVertex CP, BDPTVertex SP, float3 WC, int u, statistic_payload& statistic_prd)
     {
         float B = 1;
-        int loop_limit = 40000;
+        int loop_limit = dropOut_tracing::max_loop;
         B = statistic_prd.data.bound;
         float max_B = 0;
         //above code: information setup
@@ -3548,7 +3548,8 @@ namespace Shift
         if (dropOut_tracing::multi_bounce_disable && u != 1)return false;
         if (dropOut_tracing::CP_lightsource_only && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth != 0)return false;
         if (dropOut_tracing::lightsource_alternate_disable && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
-        if (Shift::glossy(CP))return false; 
+        if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0)return false;
+        if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP))return false;
         return true;
     }
 }

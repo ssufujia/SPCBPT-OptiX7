@@ -18,9 +18,13 @@ namespace dropOut_tracing
     const bool multi_bounce_disable = true;// if true, u mush be 1
     const bool CP_disable = true;//if true, no control point is valid
     const bool CP_lightsource_only = true;// if true, CP must be on light source
+    const bool CP_lightsource_disable = false;// if true, CP can't be on light source
     const bool lightsource_alternate_disable = false;// if true, can't retrace light source
     //true  true  true  false = LSDE  enable
     //true  false true  true  = LDSDE enable
+    //true  false false
+    const int max_bound = 400;
+    const int max_loop = 4000;
 
 #define DOT_EMPTY_SURFACEID 0
     enum class DropOutType
