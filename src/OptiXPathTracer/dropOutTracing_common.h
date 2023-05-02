@@ -20,9 +20,9 @@ namespace dropOut_tracing
     const bool CP_lightsource_only = true;// if true, CP must be on light source
     const bool CP_lightsource_disable = false;// if true, CP can't be on light source
     const bool lightsource_alternate_disable = false;// if true, can't retrace light source
-    //true  true  true  false = LSDE  enable
-    //true  false true  true  = LDSDE enable
-    //true  false false
+    //true  true  true  false false = LSDE  enable
+    //true  false true  false true  = LDSDE enable
+    //true  false false true  true  = L(A)*DSDE enable 
     const int max_bound = 400;
     const int max_loop = 4000;
 
