@@ -771,7 +771,7 @@ extern "C" __global__ void __raygen__shift_combine()
         float3 res = make_float3(0.0);
         if (payload.path.hit_lightSource())
         {
-            if (false&&RMIS_FLAG)
+            if (!S_ONLY&&RMIS_FLAG)
             {
                 res = lightStraghtHit(payload.path.currentVertex());
             }
@@ -968,7 +968,6 @@ extern "C" __global__ void __raygen__shift_combine()
                         else if (light_subpath.depth > 1 && (light_subpath.path_record == ((1 << light_subpath.depth) - 1)))
                         {
                             short d = light_subpath.depth;
-                            if (d > 2) continue;
                             /* 0 ~ d-1 号是glossy顶点，d号是光源顶点，要动除了0号外的d个顶点 */
                             pdf_retrace = 1;
                             BDPTVertex np[SHIFT_VALID_SIZE];
@@ -1073,7 +1072,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 float pmf_secondStage;
                 const BDPTVertex& light_subpath =
                     reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
-                if (Shift::glossy(light_subpath))continue;
+                //if (Shift::glossy(light_subpath))continue;
                 if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
                 {
