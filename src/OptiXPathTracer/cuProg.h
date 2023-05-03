@@ -3415,7 +3415,7 @@ namespace Shift
         }
         else
         {
-            pdf = tracingPdf(CP, path.get(-1), WC, false,true);
+            pdf = tracingPdf(CP, path.get(-1), WC, false, true);
         }
         for (int i = 1; i < u; i++)
         {
@@ -3435,7 +3435,7 @@ namespace Shift
         else
         {
             float3 dir = u == 1 ? normalize(CP.position - path.get(0).position) : normalize(path.get(1).position - path.get(0).position);
-            pdf *= tracingPdf(path.get(0), SP, dir, false, true);
+            pdf *= tracingPdf(path.get(0), SP, dir, false);
 
         }
         return pdf;
@@ -3515,7 +3515,7 @@ namespace Shift
             float RRS = abs(factor);
             float rr_rate = RRS - int(RRS);
             int next_sign = factor > 0 ? sign : sign * -1;
-            if (RR_TEST(seed,rr_rate))
+            if (RR_TEST(seed, rr_rate))
             {
                 spliting_stack.push(next_sign, int(RRS) + 1);
             }
@@ -3555,7 +3555,7 @@ namespace Shift
             if (Shift::glossy(path.get(i)))
                 u += 1;
             else
-            {
+            { 
                 CP = path.get(i + 1);
                 if (CP.depth != 0)
                 {

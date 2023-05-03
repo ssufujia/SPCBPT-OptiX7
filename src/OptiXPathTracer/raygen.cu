@@ -1124,6 +1124,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     int u;
                     //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
                     u = Shift::get_imcomplete_subpath_info(light_subpath, SP, CP, WC); 
+
                     if (Shift::valid_specular(CP, SP, u, WC)&& dropOut_tracing::debug_PT_ONLY == false)
                     {  
                         statistic_payload statistic_prd;
