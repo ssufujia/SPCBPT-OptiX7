@@ -1505,114 +1505,128 @@ namespace Tracer
         return pdf;
     }
 
-RT_FUNCTION float3 contriCompute(const BDPTVertex* path, int path_size)
-{
-    //要求：第0个顶点为eye，第size-1个顶点为light
-    float3 throughput = make_float3(1);
-    const BDPTVertex& light = path[path_size - 1];
-    const BDPTVertex& lastMidPoint = path[path_size - 2];
-    float3 lightLine = lastMidPoint.position - light.position;
-    float3 lightDirection = normalize(lightLine);
-    float lAng = dot(light.normal, lightDirection);
-    if (lAng < 0.0f)
+    RT_FUNCTION float rrRate(float3 color)
     {
-        return make_float3(0.0f);
-    }
-    float3 Le = light.flux * lAng;
-    throughput *= Le;
-    for (int i = 1; i < path_size; i++)
-    {
-        const BDPTVertex& midPoint = path[i];
-        const BDPTVertex& lastPoint = path[i - 1];
-        float3 line = midPoint.position - lastPoint.position;
-        throughput /= dot(line, line);
-    }
-    for (int i = 1; i < path_size - 1; i++)
-    {
-        const BDPTVertex& midPoint = path[i];
-        const BDPTVertex& lastPoint = path[i - 1];
-        const BDPTVertex& nextPoint = path[i + 1];
-        float3 lastDirection = normalize(lastPoint.position - midPoint.position);
-        float3 nextDirection = normalize(nextPoint.position - midPoint.position);
+        float rr_rate = fmaxf(color);
 
-        MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-        mat.base_color = make_float4(midPoint.color, 1.0);
-        throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection))
-            * Eval(mat, midPoint.normal, lastDirection,nextDirection);
+#ifdef RR_MIN_LIMIT
+        rr_rate = rr_rate < MIN_RR_RATE ? MIN_RR_RATE : rr_rate;
+#endif
+        // if (rr_rate > 0.5)return 0.5;
+        return rr_rate;
     }
-    return throughput;
-}
-RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy_id)
-{
-
-    int eyePathLength = strategy_id;
-    int lightPathLength = path_size - eyePathLength; 
-    /*光源默认为面光源上一点，因此可以用cos来近似模拟其光照效果，如果是点光源需要修改以下代码*/
-
-    float pdf = 1.0;
-    if (lightPathLength > 0)
+    RT_FUNCTION float rrRate(const MaterialData::Pbr& pbr)
     {
-        const BDPTVertex& light = path[path_size - 1];
-        pdf *= light.pdf;
-    }
-    if (lightPathLength > 1)
+        return rrRate(make_float3(pbr.base_color));
+        }
+    RT_FUNCTION float3 contriCompute(const BDPTVertex* path, int path_size)
     {
+        //要求：第0个顶点为eye，第size-1个顶点为light
+        float3 throughput = make_float3(1);
         const BDPTVertex& light = path[path_size - 1];
         const BDPTVertex& lastMidPoint = path[path_size - 2];
         float3 lightLine = lastMidPoint.position - light.position;
         float3 lightDirection = normalize(lightLine);
-        pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
-
-        /*因距离和倾角导致的pdf*/
-        for (int i = 1; i < lightPathLength; i++)
+        float lAng = dot(light.normal, lightDirection);
+        if (lAng < 0.0f)
         {
-            const BDPTVertex& midPoint = path[path_size - i - 1];
-            const BDPTVertex& lastPoint = path[path_size - i];
-            float3 line = midPoint.position - lastPoint.position;
-            float3 lineDirection = normalize(line);
-            pdf *= 1.0 / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+            return make_float3(0.0f);
         }
-
-        for (int i = 1; i < lightPathLength - 1; i++)
+        float3 Le = light.flux * lAng;
+        throughput *= Le;
+        for (int i = 1; i < path_size; i++)
         {
-            const BDPTVertex& midPoint = path[path_size - i - 1];
-            const BDPTVertex& lastPoint = path[path_size - i];
-            const BDPTVertex& nextPoint = path[path_size - i - 2];
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            float3 line = midPoint.position - lastPoint.position;
+            throughput /= dot(line, line);
+        }
+        for (int i = 1; i < path_size - 1; i++)
+        {
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            const BDPTVertex& nextPoint = path[i + 1];
             float3 lastDirection = normalize(lastPoint.position - midPoint.position);
             float3 nextDirection = normalize(nextPoint.position - midPoint.position);
 
             MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
             mat.base_color = make_float4(midPoint.color, 1.0);
-            float rr_rate = fmaxf(midPoint.color);
+            throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection))
+                * Eval(mat, midPoint.normal, lastDirection,nextDirection);
+        }
+        return throughput;
+    }
+    RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy_id)
+    {
+
+        int eyePathLength = strategy_id;
+        int lightPathLength = path_size - eyePathLength; 
+        /*光源默认为面光源上一点，因此可以用cos来近似模拟其光照效果，如果是点光源需要修改以下代码*/
+
+        float pdf = 1.0;
+        if (lightPathLength > 0)
+        {
+            const BDPTVertex& light = path[path_size - 1];
+            pdf *= light.pdf;
+        }
+        if (lightPathLength > 1)
+        {
+            const BDPTVertex& light = path[path_size - 1];
+            const BDPTVertex& lastMidPoint = path[path_size - 2];
+            float3 lightLine = lastMidPoint.position - light.position;
+            float3 lightDirection = normalize(lightLine);
+            pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
+
+            /*因距离和倾角导致的pdf*/
+            for (int i = 1; i < lightPathLength; i++)
+            {
+                const BDPTVertex& midPoint = path[path_size - i - 1];
+                const BDPTVertex& lastPoint = path[path_size - i];
+                float3 line = midPoint.position - lastPoint.position;
+                float3 lineDirection = normalize(line);
+                pdf *= 1.0 / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+            }
+
+            for (int i = 1; i < lightPathLength - 1; i++)
+            {
+                const BDPTVertex& midPoint = path[path_size - i - 1];
+                const BDPTVertex& lastPoint = path[path_size - i];
+                const BDPTVertex& nextPoint = path[path_size - i - 2];
+                float3 lastDirection = normalize(lastPoint.position - midPoint.position);
+                float3 nextDirection = normalize(nextPoint.position - midPoint.position);
+
+                MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
+                mat.base_color = make_float4(midPoint.color, 1.0);
+                float rr_rate = rrRate(mat);
+                pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
+            }
+
+        }
+        /*由于投影角导致的pdf变化*/
+        for (int i = 1; i < eyePathLength; i++)
+        {
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            float3 line = midPoint.position - lastPoint.position;
+            float3 lineDirection = normalize(line);
+            pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+        }
+        /*采样方向的概率*/
+        for (int i = 1; i < eyePathLength - 1; i++)
+        {
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            const BDPTVertex& nextPoint = path[i + 1];
+            float3 lastDirection = normalize(lastPoint.position - midPoint.position);
+            float3 nextDirection = normalize(nextPoint.position - midPoint.position);
+
+            MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
+            mat.base_color = make_float4(midPoint.color, 1.0);
+            float rr_rate = rrRate(mat);
             pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
         }
-
+        return pdf;
     }
-    /*由于投影角导致的pdf变化*/
-    for (int i = 1; i < eyePathLength; i++)
-    {
-        const BDPTVertex& midPoint = path[i];
-        const BDPTVertex& lastPoint = path[i - 1];
-        float3 line = midPoint.position - lastPoint.position;
-        float3 lineDirection = normalize(line);
-        pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
-    }
-    /*采样方向的概率*/
-    for (int i = 1; i < eyePathLength - 1; i++)
-    {
-        const BDPTVertex& midPoint = path[i];
-        const BDPTVertex& lastPoint = path[i - 1];
-        const BDPTVertex& nextPoint = path[i + 1];
-        float3 lastDirection = normalize(lastPoint.position - midPoint.position);
-        float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-        MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-        mat.base_color = make_float4(midPoint.color, 1.0);
-        float rr_rate = fmaxf(midPoint.color);
-        pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
-    }
-    return pdf;
-}
 
     RT_FUNCTION float MISWeight_SPCBPT(const BDPTVertex* path, int path_size, int strategy_id)
     {
@@ -1709,20 +1723,6 @@ RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy
             light_subspace_id = lu.getLabel();
         }
         return pdf * float3weight(connectRate_SOL(eye_subspace_id, light_subspace_id, light_contri));
-    }
-    RT_FUNCTION float rrRate(float3 color)
-    {
-        float rr_rate = fmaxf(color);
-
-#ifdef RR_MIN_LIMIT
-        rr_rate = rr_rate < MIN_RR_RATE ? MIN_RR_RATE : rr_rate;
-#endif
-       // if (rr_rate > 0.5)return 0.5;
-        return rr_rate;
-    }
-    RT_FUNCTION float rrRate(const MaterialData::Pbr& pbr)
-    {
-        return rrRate(make_float3(pbr.base_color));
     }
 } // namespace Tracer
 RT_FUNCTION int labelUnit::getLabel()
@@ -1997,7 +1997,7 @@ RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId,
 
 struct statistic_payload
 {
-    unsigned putId;
+    unsigned* putId;
     unsigned bufferBias;
     unsigned SP_label;
     unsigned CP_label;
@@ -2008,6 +2008,17 @@ struct statistic_payload
     {
         dropOut_tracing::statistic_record record(type, SP_label, CP_label, usage); 
         return record;
+    }
+    RT_FUNCTION bool subspace_valid()const
+    {
+        if (data.valid)
+        {
+            if (isnan(data.average) || isinf(data.average) || isnan(data.bound) || isinf(data.bound))
+            {
+                return false;
+            }
+        }
+        return true;
     }
     RT_FUNCTION void build(BDPTVertex& SP, BDPTVertex& CP, float3 WC, int u)
     {
@@ -2034,6 +2045,7 @@ struct statistic_payload
             data = dropOut_tracing::statistics_data_struct();
             data.bound = 1;
         }
+        type = dropOut_tracing::pathLengthToDropOutType(u);
     }
     RT_FUNCTION float3 getInitialDirection(float3 normal, unsigned& seed)
     {
@@ -2056,7 +2068,7 @@ struct statistic_payload
 };
 RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, statistic_payload& prd)
 {
-    DOT_pushRecordToBuffer(record, prd.putId, prd.bufferBias);
+    DOT_pushRecordToBuffer(record, *prd.putId, prd.bufferBias);
 }
 namespace Shift
 {
@@ -2134,6 +2146,39 @@ namespace Shift
 
             if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == true)
                 return true;
+        }
+        return false;
+    }
+
+    RT_FUNCTION bool getCausticPathInfo(const BDPTVertex* path, int path_size, BDPTVertex& SP, BDPTVertex& CP, int& u, float3 & WC)
+    {
+        for (int i = 1; i < path_size - 1; i++)
+        {
+            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == false)
+                break;
+
+            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == true)
+            {
+                SP = path[i + 1];
+                CP.type = BDPTVertex::Type::DROPOUT_NOVERTEX;
+                u = 1;
+                for (u = 1; i + u + 1 < path_size; u++)
+                {
+                    if (!glossy(path[i + u + 1]))
+                    {
+                        if (i + u + 2 < path_size)
+                        {
+                            CP = path[i + u + 2];
+                        }
+                        if (i + u + 3 < path_size)
+                        {
+                            WC = normalize(path[i + u + 3].position - path[i + u + 2].position);
+                        }
+                        break;
+                    }
+                }
+                return true;
+            }
         }
         return false;
     }
@@ -3163,7 +3208,7 @@ namespace Shift
             //float3 diff = currentVertex.position - path.get(i).position;
             //pdf *= Tracer::Pdf(mat, currentVertex.normal, in_dir, out_dir);
             //pdf *= abs(dot(out_dir, path.get(i).normal)) / dot(diff, diff);
-            pdf *= tracingPdf(currentVertex, path.get(i), in_dir, true, true);
+            pdf *= tracingPdf(currentVertex, path.get(i), in_dir, true, true); 
             in_dir = -out_dir;
         }
         if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && !Tracer::visibilityTest(Tracer::params.handle, path.get(-1), CP))
@@ -3550,6 +3595,17 @@ namespace Shift
         if (dropOut_tracing::lightsource_alternate_disable && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
         if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0)return false;
         if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP))return false;
+        if (u > dropOut_tracing::max_u)return false;
+        return true;
+    }
+    RT_FUNCTION bool pathRecord_is_causticEyesubpath(long long record, int depth)
+    {
+        for (int i = 0; i < depth; i++)
+        {
+            if (i != depth - 1 && record % 2 != 1)return false;
+            if (i == depth - 1 && record % 2 != 0)return false;
+            record = record >> 1;
+        }
         return true;
     }
 }

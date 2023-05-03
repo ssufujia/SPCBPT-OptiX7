@@ -383,9 +383,9 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
     int u = 1;
     for (int i = 1; i < path_size - 1; i++)
     {
-        if (Shift::glossy(path[i]))
+        if (Shift::glossy(path[i + 1]) && !Shift::glossy(path[i]))
         {
-            specular_index = i;
+            specular_index = i + 1;
             break;
         }
     }
@@ -405,7 +405,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
         {
             u += 1;
         }
-    }
+    } 
     DropOutTracing_params& dot_params = Tracer::params.dot_params;
     int specular_subspace = dot_params.get_specular_label(path[specular_index].position, path[specular_index].normal);
     int surface_subspace = surface_index  == -1? DOT_EMPTY_SURFACEID: 
@@ -439,7 +439,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
 
             MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
             mat.base_color = make_float4(midPoint.color, 1.0);
-            float rr_rate = fmaxf(midPoint.color);
+            float rr_rate = i>=specular_index?1: Tracer::rrRate(mat);
             pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
         }
     }
@@ -450,6 +450,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
         if (lightPathLength > 0)
         {
             const BDPTVertex& light = path[path_size - 1];
+
             pdf *= light.pdf;
         }
         if (lightPathLength > 1)
@@ -479,7 +480,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
 
                 MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
                 mat.base_color = make_float4(midPoint.color, 1.0);
-                float rr_rate = fmaxf(midPoint.color);
+                float rr_rate = Tracer::rrRate(mat);
                 pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
             } 
         }
@@ -489,12 +490,14 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
         1.0 / dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace, DOT_usage::Average);
     if (isinf(dropOutTracingPdf) || isnan(dropOutTracingPdf) || (dropOutTracingPdf < 0))dropOutTracingPdf = 0.0;
 
+    //printf("%f %f %f\n", pdf, dropOutTracingPdf, dot_params.selection_ratio(dropOut_tracing::pathLengthToDropOutType(u), specular_index, surface_index));
 
     return pdf * dropOutTracingPdf * dot_params.selection_ratio(dropOut_tracing::pathLengthToDropOutType(u), specular_index, surface_index);
 }
 
 RT_FUNCTION float dropOutTracing_MISWeight(const BDPTVertex* path, int path_size)
 {
+    if (dropOut_tracing::debug_PT_ONLY)return 0;
     if (!dropOut_tracing::MIS_COMBINATION)return 1;
     if (Shift::IsCausticPath(path, path_size))
     { 
@@ -786,23 +789,25 @@ extern "C" __global__ void __raygen__shift_combine()
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
                 
-                
+                BDPTVertex SP;
+                BDPTVertex CP;
+                int u;
+                float3 WC;
                 //res += eval_path(pathBuffer, buffer_size, buffer_size);
-                if (false&&Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 4 && LSDE_ENABLE))
+                if (Shift::getCausticPathInfo(pathBuffer,buffer_size,SP,CP,u,WC)&& Shift::valid_specular(CP, SP, u, WC))
 //                if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 5) && Shift::glossy(pathBuffer[2]) && !Shift::glossy(pathBuffer[3]))
-                {
-
+                {  
                     float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
                     float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
                     res += contri / pdf;
-                    res *= (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
+                    res *= (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size)); 
                 }
- /*               else if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size > 5)&& Shift::glossy(pathBuffer[2])&&!Shift::glossy(pathBuffer[3]))
-                {
-                    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
-                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
-                    res += contri / pdf; 
-                }*/
+                //else if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 5) && !Shift::glossy(pathBuffer[1]) && Shift::glossy(pathBuffer[2]) &&Shift::glossy(pathBuffer[3]))
+                //{
+                //    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
+                //    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
+                //    res += contri / pdf; 
+                //}
                 else
                 {
                     res *= 0;
@@ -881,27 +886,14 @@ extern "C" __global__ void __raygen__shift_combine()
 
                 float final_pmf = guide_ratio * (pmf_firstStage * pmf_secondStage) + (1 - guide_ratio) * pmf_uniform; 
 
-                if (( 
+                if (
                     /* 暂时取消LSDE这样的光路筛选方式，改用dropoutTracing_common.h里根据四参数的形式来决定是否连接的方式，仅要求视子路为diffuse */
-                    (payload.depth == 1 && !payload.path_record)||
-                    /* LSDE，光子路LS，视子路DE */
-                    (LS_ENABLE && light_subpath.depth == 1) ||
-                    (LSDE_ENABLE && light_subpath.depth == 1 && payload.depth == 1 && !payload.path_record) ||
-                    /* LDSDE，光子路LDS，视子路DE */
-                    (LDS_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b10) ||
-                    (LDSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b10 && payload.depth == 1 &&  !payload.path_record) ||
-                    /* L(S)*SDE，光子路L(S)*S，视子路DE */
-                    (LS_S_ENABLE && light_subpath.depth > 1 && (light_subpath.path_record == ((1 << light_subpath.depth) - 1))) ||
-                    (LS_SDE_ENABLE && light_subpath.depth > 1 && (light_subpath.path_record == ((1 << light_subpath.depth) - 1)) && payload.depth == 1 && !payload.path_record) ||
-                    /* LSSDE，光子路LSS，视子路DE */
-                    (LSSDE_ENABLE && light_subpath.depth == 2 && light_subpath.path_record == 0b11 && payload.depth == 1 && !payload.path_record) ||
-                    /* LSSSDE，光子路LSSS，视子路DE */
-                    (LSSSDE_ENABLE && light_subpath.depth == 3 && light_subpath.path_record == 0b111 && payload.depth == 1 && !payload.path_record)
-                        ) &&
+                    (Shift::pathRecord_is_causticEyesubpath(payload.path_record, payload.depth)) &&
                     /* 其他约束条件 */
                     (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
                 { 
+                    
                     const BDPTVertex* light_ptr = &light_subpath;
                     float pmf = Tracer::params.sampler.path_count * final_pmf * caustic_connection_prob;
 
@@ -917,7 +909,8 @@ extern "C" __global__ void __raygen__shift_combine()
                         float3 WC;
                         float retracing_pdf;
                         u = Shift::get_imcomplete_subpath_info(originPath, SP, CP, WC);
-                        if (!Shift::valid_specular(CP, SP, u, WC))continue;
+                        if (!Shift::valid_specular(CP, SP, u, WC) || dropOut_tracing::debug_PT_ONLY)continue;
+
                         bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
                         if (retrace_success == false)continue;
 
@@ -1131,32 +1124,36 @@ extern "C" __global__ void __raygen__lightTrace()
                     int u;
                     //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
                     u = Shift::get_imcomplete_subpath_info(light_subpath, SP, CP, WC); 
-                    if (Shift::valid_specular(CP, SP, u, WC))
+                    if (Shift::valid_specular(CP, SP, u, WC)&& dropOut_tracing::debug_PT_ONLY == false)
                     {  
                         statistic_payload statistic_prd;
                         statistic_prd.build(curVertex, CP, WC, u);
-                        statistic_prd.putId = DOT_record_count;
+                        statistic_prd.putId = &DOT_record_count;
                         statistic_prd.bufferBias = DOT_buffer_bias;
                         float3 tempV;
                         if (statistic_prd.data.valid == false)
                             statistic_prd.data.bound = 1;// Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
                         if (statistic_prd.data.bound > dropOut_tracing::max_bound)statistic_prd.data.bound = dropOut_tracing::max_bound;
 
+                        if (statistic_prd.subspace_valid())
+                        {
+                            float pdf_inverse = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd); 
+                            light_subpath.get(0).inverPdfEst = pdf_inverse;
+                            /////////////////////////////////////////////////////////////////////
+                            /////////////////////Average Record Create///////////////////////////
+                            /////////////////////////////////////////////////////////////////////
+                            DOT_record dot_record = statistic_prd.generate_record(DOT_usage::Average);
+                            dot_record = pdf_inverse;
+                            DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
+                            /////////////////////////////////////////////////////////////////////
+                            /////////////////////Average Record Finish///////////////////////////
+                            /////////////////////////////////////////////////////////////////////
+                        }
+                        else
+                        {
+                            light_subpath.get(0).inverPdfEst = 0;
+                        }
 
-                        float pdf_inverse = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd);
-                        DOT_record_count = statistic_prd.putId;
-
-                        light_subpath.get(0).inverPdfEst = pdf_inverse;
-
-                        /////////////////////////////////////////////////////////////////////
-                        /////////////////////Average Record Create///////////////////////////
-                        /////////////////////////////////////////////////////////////////////
-                        DOT_record dot_record = statistic_prd.generate_record(DOT_usage::Average);
-                        dot_record = pdf_inverse;
-                        DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
-                        /////////////////////////////////////////////////////////////////////
-                        /////////////////////Average Record Finish///////////////////////////
-                        /////////////////////////////////////////////////////////////////////
                     }
                 }
             }

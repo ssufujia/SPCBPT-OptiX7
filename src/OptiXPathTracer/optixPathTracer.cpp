@@ -782,6 +782,7 @@ void updateDropOutTracingParams()
             auto& record = records[i];
             if (record.data_slot == DOT_usage::Bound)
             {
+                if (isinf(record))continue;
                 tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId] = 
                     max( float(record), tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId]);
                 
@@ -813,7 +814,8 @@ void updateDropOutTracingParams()
     dot_params.data.on_GPU = true;
 
 
-    dot_params.selection_const = lt_params.M_per_core * lt_params.num_core / params.sampler.glossy_count;
+    dot_params.selection_const = lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count);
+//    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
 }
 
 
@@ -1011,7 +1013,7 @@ int main( int argc, char* argv[] )
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
         
@@ -1019,7 +1021,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/glossy_kitchen/glossy_kitchen.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
 

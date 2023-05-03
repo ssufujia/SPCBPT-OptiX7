@@ -1,0 +1,2336 @@
+
+cameraSetting
+{
+    eye 0.483840 1.575793 2.749950
+    lookat 0.443696 1.576540 2.658364
+    
+    #eye 2.653059 0.733602 1.036655
+    #lookat 2.555092 0.751108 1.026866
+    fov 45
+}
+material Background-plane
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+   albedoTex kitchen/textures/view-overexposed5a.jpg
+}
+
+material Blind-ends
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+}
+
+material Blind-material
+{
+   color 0.800000011920929 0.7719602584838867 0.716690719127655
+   roughness 0.5
+   metallic 0.0
+}
+
+material Blind-String
+{
+   color 0.5173230767250061 0.5173230767250061 0.5173230767250061
+   roughness 0.5
+   metallic 0.0
+}
+
+material Blind-string-knob
+{
+   color 0.26675403118133545 0.21685606241226196 0.1744847148656845
+   roughness 0.5
+   metallic 0.0
+}
+
+material Blind-wood-strip
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+}
+
+material Book-Cover
+{
+   color 0.01032325904816389 0.01738630048930645 0.006370707415044308
+   roughness 0.5
+   metallic 0.0
+}
+
+material Book-Pages
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.022360679840455644
+   metallic 0.10000000149011612
+   albedoTex kitchen/textures/Kitchen-bookpage-large.jpg
+}
+
+material Bread-bin-handle
+{
+   color 0.5488413572311401 0.5488413572311401 0.5488413572311401
+   roughness 0.08944271802902222
+   metallic 1.0
+}
+
+material Breadbin-front
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.011180339920227822
+   metallic 0.05000000074505806
+   albedoTex kitchen/textures/Tabletop-light.jpg
+}
+
+material Breadbin-sides
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.011180339920227822
+   metallic 0.05000000074505806
+   albedoTex kitchen/textures/Tabletop-light.jpg
+}
+
+material Breadbin-top
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.011180339920227822
+   metallic 0.05000000074505806
+   albedoTex kitchen/textures/Tabletop-light.jpg
+}
+
+material Burners
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.1414213538169861
+   metallic 1.0
+}
+
+material Burners-top
+{
+   color 0.012215787544846535 0.012215787544846535 0.012215787544846535
+   roughness 0.5
+   metallic 0.0
+}
+
+material bush-logo.001
+{
+   color 0.814028263092041 0.814028263092041 0.814028263092041
+   roughness 0.006324555724859238
+   metallic 1.0
+}
+
+material Cable
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0316227768603381
+   metallic 0.10000000149011612
+}
+
+material Carrots
+{
+   color 0.6981799602508545 0.11010681092739105 0.0
+   roughness 0.5
+   metallic 0.0
+   albedoTex kitchen/textures/Kitchen-carrot-uv.png
+}
+
+material Ceiling
+{
+   color 0.8549648523330688 0.8549648523330688 0.8549648523330688
+   roughness 0.5
+   metallic 0.0
+}
+
+material Ceiling-light-fitting
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.011180339920227822
+   metallic 0.05000000074505806
+}
+
+material Chopping-board
+{
+   color 0.814028263092041 0.8078145980834961 0.7597597241401672
+   roughness 0.5
+   metallic 0.0
+   albedoTex kitchen/textures/Chopping-Board.jpg
+}
+
+material Chopping-Kife-handle
+{
+   color 0.003641572780907154 0.003641572780907154 0.003641572780907154
+   roughness 0.020000000596046452
+   metallic 0.10000000149011612
+}
+
+material Chopping-Kn-edge
+{
+   color 0.7873858213424683 0.7873858213424683 0.7873858213424683
+   roughness 0.04472135901451111
+   metallic 1.0
+}
+
+material Chopping-Knife-blade
+{
+   color 0.41092953085899353 0.41092953085899353 0.41092953085899353
+   roughness 0.010954451560974122
+   metallic 1.0
+}
+
+material Clay-Shader-white
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.022360679840455644
+   metallic 0.10000000149011612
+}
+
+material Cooker-black
+{
+   color 0.013409354723989964 0.013409354723989964 0.013409354723989964
+   roughness 0.02449489719413067
+   metallic 0.10000000149011612
+}
+
+material Cooker-chrome
+{
+   color 0.8006424307823181 0.8006424307823181 0.8006424307823181
+   roughness 0.05656853914260864
+   metallic 1.0
+}
+
+material Cooker-Fake-Glass
+{
+   color 0.00489497696980834 0.00489497696980834 0.00489497696980834
+   roughness 0.00848528068173049
+   metallic 0.11999999731779099
+}
+
+material Cooker-iron
+{
+   color 0.015993626788258553 0.015993626788258553 0.015993626788258553
+   roughness 0.5
+   metallic 0.0
+}
+
+material Cupboard-units
+{
+   color 0.814028263092041 0.7527739405632019 0.6874533295631409
+   roughness 0.017320508022911962
+   metallic 0.10000000149011612
+}
+
+material Cushion-Ties
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+   albedoTex kitchen/textures/cushion-red.jpg
+}
+
+material Cushion1
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+   albedoTex kitchen/textures/cushion-red.jpg
+}
+
+material Cuttelry
+{
+   color 0.6382598876953125 0.6382598876953125 0.6382598876953125
+   roughness 0.07483314871788024
+   metallic 1.0
+}
+
+material Extrator-hood
+{
+   color 0.3672296106815338 0.3672296106815338 0.3672296106815338
+   roughness 0.07745966911315919
+   metallic 1.0
+}
+
+material Floor-Wood
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.029103263458862827
+   metallic 0.10999999940395355
+   albedoTex kitchen/textures/wood-floorboards-texture-softer.jpg
+}
+
+material Grout
+{
+   color 0.897077739238739 0.897077739238739 0.897077739238739
+   roughness 0.5
+   metallic 0.0
+}
+
+material Handle-chrome.001
+{
+   color 0.626650869846344 0.626650869846344 0.626650869846344
+   roughness 0.006324555724859238
+   metallic 1.0
+}
+
+material Home
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.022360679840455644
+   metallic 0.10000000149011612
+}
+
+material Hud-lights
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+}
+
+material Kettle-chrome
+{
+   color 0.8275435566902161 0.8275435566902161 0.8275435566902161
+   roughness 0.06324555277824402
+   metallic 1.0
+}
+
+material Kettle-handle
+{
+   color 0.01002079900354147 0.01002079900354147 0.01002079900354147
+   roughness 0.022360679840455644
+   metallic 0.05000000074505806
+}
+
+material Kettle-red-metal
+{
+   color 0.0 0.02909764088690281 0.0034496451262384653
+   roughness 0.05692099976225684
+   metallic 0.18000000715255737
+}
+
+material Lamp-cable
+{
+   color 0.7230299115180969 0.7230299115180969 0.7230299115180969
+   roughness 0.5
+   metallic 0.0
+}
+
+material Lamp-inside
+{
+   color 0.7986345291137695 0.800000011920929 0.7761486172676086
+   roughness 0.02828426999277278
+   metallic 0.10000000149011612
+}
+
+material Left-page
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.022360679840455644
+   metallic 0.10000000149011612
+   albedoTex kitchen/textures/Kitchen-book-leftpage.jpg
+}
+
+material Light-lamp
+{
+   color 0.7483884692192078 0.14280930161476135 0.0
+   roughness 0.06708204118736738
+   metallic 0.30000001192092896
+}
+
+material Main-Bulb
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+}
+
+material Metal-Handles
+{
+   color 0.8 0.8 0.8
+   roughness 0.0
+   metallic 1.0
+}
+
+material Microwave-back
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+}
+
+material Microwave-digital
+{
+   color 0.01738630048930645 0.01738630048930645 0.01738630048930645
+   roughness 0.02828426957130432
+   metallic 1.0
+}
+
+material Microwave-front-steel
+{
+   color 0.5840784907341003 0.5840784907341003 0.5840784907341003
+   roughness 0.08944271802902222
+   metallic 1.0
+}
+
+material Microwave-Glass
+{
+   color 0.011086617596447468 0.011086617596447468 0.011086617596447468
+   roughness 0.02828426957130432
+   metallic 1.0
+}
+
+material Mushroom-ends
+{
+   color 0.46719151735305786 0.420080304145813 0.3635166585445404
+   roughness 0.5
+   metallic 0.0
+}
+
+material Mushrooms-whole
+{
+   color 0.4479691684246063 0.4165668785572052 0.35466915369033813
+   roughness 0.5
+   metallic 0.0
+}
+
+material Pepper-Green
+{
+   color 0.025718552991747856 0.046665094792842865 0.001206064480356872
+   roughness 0.0316227768603381
+   metallic 0.10000000149011612
+}
+
+material Pepper-Red
+{
+   color 0.8275436758995056 0.17660146951675415 0.0
+   roughness 0.0316227768603381
+   metallic 0.10000000149011612
+}
+
+material Pepper-stems
+{
+   color 0.07755080610513687 0.09083417803049088 0.06658147275447845
+   roughness 0.5
+   metallic 0.0
+}
+
+material Pepper-Yellow
+{
+   color 0.800000011920929 0.35051020979881287 0.0
+   roughness 0.0316227768603381
+   metallic 0.10000000149011612
+}
+
+material Plates
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.03354102059368369
+   metallic 0.15000000596046448
+}
+
+material Pot-handles
+{
+   color 0.0188472680747509 0.0188472680747509 0.0188472680747509
+   roughness 0.0316227768603381
+   metallic 0.10000000149011612
+}
+
+material Radio-dial-line.001
+{
+   color 0.4019600450992584 0.4019600450992584 0.4019600450992584
+   roughness 0.006324555724859238
+   metallic 1.0
+}
+
+material Radio-dialback
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.026457512772940284
+   metallic 0.10000000149011612
+   albedoTex kitchen/textures/radio-dial-idea.jpg
+}
+
+material Radio-edges.001
+{
+   color 0.7742582559585571 0.7742582559585571 0.7742582559585571
+   roughness 0.006324555724859238
+   metallic 1.0
+}
+
+material Radio-glass.001
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0
+   metallic 0.05000000074505806
+}
+
+material Radio-handle.001
+{
+   color 0.48514997959136963 0.4677838385105133 0.366252601146698
+   roughness 0.0035355337490965977
+   metallic 0.05000000074505806
+}
+
+material Radio-inside.001
+{
+   color 0.0 0.0 0.0
+   roughness 0.5
+   metallic 0.0
+}
+
+material Radio-knob.001
+{
+   color 0.4479691684246063 0.37616977095603943 0.16077159345149994
+   roughness 0.006324555724859238
+   metallic 1.0
+}
+
+material Radio-metal-ring.001
+{
+   color 0.8 0.8 0.8
+   roughness 0.0
+   metallic 1.0
+}
+
+material Radio-plastic.001
+{
+   color 0.7991029620170593 0.7529424428939819 0.5457246899604797
+   roughness 0.022360679840455644
+   metallic 0.05000000074505806
+}
+
+material Radio-suround.001
+{
+   color 0.08437621593475342 0.03560131788253784 0.017641952261328697
+   roughness 0.007071067498193195
+   metallic 0.10000000149011612
+}
+
+material Skirting-Board
+{
+   color 0.8275436758995056 0.8275436758995056 0.8275436758995056
+   roughness 0.03130495144343781
+   metallic 0.14000000059604645
+}
+
+material Sliced-Mushroms
+{
+   color 0.5814520716667175 0.562686026096344 0.44341927766799927
+   roughness 0.5
+   metallic 0.0
+   albedoTex kitchen/textures/Kitchen-mushroom-texture.png
+}
+
+material Small-worktop
+{
+   color 0.009721217676997185 0.009721217676997185 0.009721217676997185
+   roughness 0.017320508022911962
+   metallic 0.10000000149011612
+   albedoTex kitchen/textures/Worktopt-light.jpg
+}
+
+material Steel-Pot
+{
+   color 0.429216593503952 0.38747167587280273 0.3764541745185852
+   roughness 0.06324555277824402
+   metallic 1.0
+}
+
+material Table-Cross
+{
+   color 0.8549648523330688 0.8549648523330688 0.8549648523330688
+   roughness 0.020000000596046452
+   metallic 0.10000000149011612
+}
+
+material Table-Mats
+{
+   color 0.02720813825726509 0.02720813825726509 0.02720813825726509
+   roughness 0.022360679840455644
+   metallic 0.05000000074505806
+}
+
+material Table-Top
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.017320508022911962
+   metallic 0.10000000149011612
+   albedoTex kitchen/textures/Tabletop-light.jpg
+}
+
+material Tea-Towel
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+   albedoTex kitchen/textures/Tea-Towel.jpg
+}
+
+material Tea-Towel-loop
+{
+   color 0.5488413572311401 0.5488413572311401 0.5488413572311401
+   roughness 0.5
+   metallic 0.0
+}
+
+material Tiles
+{
+   color 0.6981799602508545 0.6834620833396912 0.6646156311035156
+   roughness 0.020000000596046452
+   metallic 0.10000000149011612
+}
+
+material Tomatoes
+{
+   color 0.3931056261062622 0.017652340233325958 0.0
+   roughness 0.0316227768603381
+   metallic 0.10000000149011612
+}
+
+material Unitstiplights
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+}
+
+material Utensils
+{
+   color 0.6382598876953125 0.6382598876953125 0.6382598876953125
+   roughness 0.06324555277824402
+   metallic 1.0
+}
+
+material Wall-socket1
+{
+   color 0.8411890864372253 0.8411890864372253 0.8411890864372253
+   roughness 0.022360679840455644
+   metallic 0.10000000149011612
+}
+
+material Walls
+{
+   color 0.8549648523330688 0.8549648523330688 0.8549648523330688
+   roughness 0.5
+   metallic 0.0
+}
+
+material Walls-other-colour
+{
+   color 0.8411890864372253 0.816618800163269 0.8057214021682739
+   roughness 0.5
+   metallic 0.0
+}
+
+material White-pot
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.010000000298023226
+   metallic 0.10000000149011612
+}
+
+material Window-Emitter-Front.001
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+}
+
+material Window-Fake-Glass
+{
+   color 0.8688713908195496 0.8688713908195496 0.8688713908195496
+   roughness 0.0
+   metallic 0.009999999776482582
+}
+
+material Window-frame-etc
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.03130495144343781
+   metallic 0.14000000059604645
+}
+
+material Window-lock
+{
+   color 0.20791037380695343 0.15470406413078308 0.13594147562980652
+   roughness 0.10954451560974121
+   metallic 1.0
+}
+
+material Wine-Glasses
+{
+   color 0.8 0.8 0.8
+   roughness 0
+   metallic 0.0
+   brdf 1
+}
+
+material Wine.001
+{
+   color 0.8 0.8 0.8
+   roughness 0
+   metallic 0.0
+   brdf 1
+}
+
+material Wood-top-suround
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.04472135968091129
+   metallic 0.10000000149011612
+   albedoTex kitchen/textures/Worktopt-light.jpg
+}
+
+material Worktops-main
+{
+   color 0.009721217676997185 0.009721217676997185 0.009721217676997185
+   roughness 0.03354102059368369
+   metallic 0.15000000596046448
+   albedoTex kitchen/textures/Worktopt-light.jpg
+}
+
+mesh
+{
+    file kitchen\geometry\Background-image.obj
+    material Background-plane
+}
+
+mesh
+{
+    file kitchen\geometry\Base-unit-Box-Left.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Base-unit-Box-Right.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-cord-Fixing-Middle.obj
+    material Blind-ends
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-cord-knob-Middle.obj
+    material Blind-string-knob
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-cord-Middle.obj
+    material Blind-String
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-drop-bar-Middle.obj
+    material Blind-wood-strip
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-drop-Middle.obj
+    material Blind-material
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-Roll-Ends-Fixings-Middle.obj
+    material Blind-ends
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-Roll-Ends-Middle.obj
+    material Blind-ends
+}
+
+mesh
+{
+    file kitchen\geometry\Blind-roll-Middle.obj
+    material Blind-material
+}
+
+mesh
+{
+    file kitchen\geometry\Book-Cover-and-botom-pages.obj
+    material Book-Cover
+}
+
+mesh
+{
+    file kitchen\geometry\Book-Left-Pages.obj
+    material Book-Pages
+}
+
+mesh
+{
+    file kitchen\geometry\Book-Pages-Top-Left.obj
+    material Left-page
+}
+
+mesh
+{
+    file kitchen\geometry\Bread-Box-Base.obj
+    material Breadbin-top
+}
+
+mesh
+{
+    file kitchen\geometry\Bread-Box-Front.obj
+    material Breadbin-front
+}
+
+mesh
+{
+    file kitchen\geometry\Bread-Box-Handle.obj
+    material Bread-bin-handle
+}
+
+mesh
+{
+    file kitchen\geometry\Bread-Box-Left.obj
+    material Breadbin-sides
+}
+
+mesh
+{
+    file kitchen\geometry\Bread-Box-Right.obj
+    material Breadbin-sides
+}
+
+mesh
+{
+    file kitchen\geometry\Bread-Box-Top.obj
+    material Breadbin-top
+}
+
+mesh
+{
+    file kitchen\geometry\Bulb.obj
+    material Main-Bulb
+}
+
+mesh
+{
+    file kitchen\geometry\Carrot1.obj
+    material Carrots
+}
+
+mesh
+{
+    file kitchen\geometry\Carrot2.obj
+    material Carrots
+}
+
+mesh
+{
+    file kitchen\geometry\Carrot3.obj
+    material Carrots
+}
+
+mesh
+{
+    file kitchen\geometry\Carrot4.obj
+    material Carrots
+}
+
+mesh
+{
+    file kitchen\geometry\Ceiling.obj
+    material Ceiling
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Back-Top.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Back-Uprights-legs.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-section1.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-section2.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-section3.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-section4.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-top-section1.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-top-section2.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-top-section3.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cross-top-section4.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cushion1.obj
+    material Cushion1
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cushion2.obj
+    material Cushion1
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cushion3.obj
+    material Cushion1
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-Cushion4.obj
+    material Cushion1
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-leg-front-L.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-leg-front-R.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chair-seat.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Chopping-Board.obj
+    material Chopping-board
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Handles-Bottom.obj
+    material Cooker-chrome
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Handles-Top.obj
+    material Cooker-chrome
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-iron.obj
+    material Cooker-iron
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Knobs-Left.obj
+    material Cooker-chrome
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Knobs-Middle.obj
+    material Cooker-chrome
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Knobs-Right.obj
+    material Cooker-chrome
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Knobs-small.obj
+    material Cooker-chrome
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-main.obj
+    material Cooker-Fake-Glass
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-main.001.obj
+    material Cooker-black
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Splashback.obj
+    material Extrator-hood
+}
+
+mesh
+{
+    file kitchen\geometry\Cooker-Top.obj
+    material Cooker-black
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.006.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.010.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.012.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.014.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.015.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.019.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.020.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.021.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.022.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.023.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.024.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.025.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.026.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.027.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.028.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.029.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.030.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.031.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.035.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.036.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.037.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.038.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.039.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.040.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.041.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.042.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.043.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.044.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.045.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.046.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.047.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.048.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.049.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.050.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.051.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.052.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.062.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.101.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.102.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.103.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.104.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.105.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.106.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cube.107.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Cup-Handle-Island.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Cup-Handle-Right.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Cupboard-Base-trim-Left.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cupboard-Base-trim-Right.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cupboard-Lights.obj
+    material Unitstiplights
+}
+
+mesh
+{
+    file kitchen\geometry\Cupboard-Lights.001.obj
+    material Hud-lights
+}
+
+mesh
+{
+    file kitchen\geometry\Cupboard-Top-Left-box.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cupboard-Top-Right-box.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cupboard-trim.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Cushion-tie1.obj
+    material Cushion-Ties
+}
+
+mesh
+{
+    file kitchen\geometry\Cushion-tie2.obj
+    material Cushion-Ties
+}
+
+mesh
+{
+    file kitchen\geometry\Cushion-tie3.obj
+    material Cushion-Ties
+}
+
+mesh
+{
+    file kitchen\geometry\Cylinder.011.obj
+    material Burners-top
+}
+
+mesh
+{
+    file kitchen\geometry\Cylinder.012.obj
+    material Burners
+}
+
+mesh
+{
+    file kitchen\geometry\Cylinder.013.obj
+    material Burners
+}
+
+mesh
+{
+    file kitchen\geometry\Cylinder.014.obj
+    material Burners
+}
+
+mesh
+{
+    file kitchen\geometry\Cylinder.015.obj
+    material Burners
+}
+
+mesh
+{
+    file kitchen\geometry\Cylinder.016.obj
+    material Burners
+}
+
+mesh
+{
+    file kitchen\geometry\Door-and-Drawers-Left.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Door-and-Drawers-Right.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Island-Left.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Island-Right.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-lower-Left.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Lower-Right.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Upper-Left1.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Upper-Right1.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Upper-Right2.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Upper-Right3.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Door-Handles-Upper2-Left.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Doors-Upper-Left.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Doors-Upper-Right.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Drain-Spoon.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Extractor-Hud.obj
+    material Extrator-hood
+}
+
+mesh
+{
+    file kitchen\geometry\Extractor-Hud-knobs.obj
+    material Extrator-hood
+}
+
+mesh
+{
+    file kitchen\geometry\Fork1.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Fork2.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Fork3.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Fork4.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Green-Pepper.obj
+    material Pepper-stems
+}
+
+mesh
+{
+    file kitchen\geometry\Green-Pepper.001.obj
+    material Pepper-Green
+}
+
+mesh
+{
+    file kitchen\geometry\Home-Ornament.obj
+    material Home
+}
+
+mesh
+{
+    file kitchen\geometry\Island-base-trim.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Island-Panel1.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Island-Panel2.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Island-Panel3.obj
+    material Cupboard-units
+}
+
+mesh
+{
+    file kitchen\geometry\Kettle.obj
+    material Kettle-red-metal
+}
+
+mesh
+{
+    file kitchen\geometry\Kettle.001.obj
+    material Kettle-handle
+}
+
+mesh
+{
+    file kitchen\geometry\Kettle.002.obj
+    material Kettle-chrome
+}
+
+mesh
+{
+    file kitchen\geometry\Kitchen-Tools-handle1.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Kitchen-Tools-handle2.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Kitchen-Tools-handle3.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Kitchen-Tools-handle4.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Kitchen-Tools-handle5.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Kitchen-Tools-Rack.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Knife.obj
+    material Chopping-Kife-handle
+}
+
+mesh
+{
+    file kitchen\geometry\Knife.001.obj
+    material Chopping-Knife-blade
+}
+
+mesh
+{
+    file kitchen\geometry\Knife.002.obj
+    material Chopping-Kn-edge
+}
+
+mesh
+{
+    file kitchen\geometry\Knife1.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Knife2.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Knife3.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Knife4.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Ladel.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Lamp-shade.obj
+    material Lamp-inside
+}
+
+mesh
+{
+    file kitchen\geometry\Lamp-shade.001.obj
+    material Light-lamp
+}
+
+mesh
+{
+    file kitchen\geometry\Lampshade-cable.obj
+    material Lamp-cable
+}
+
+mesh
+{
+    file kitchen\geometry\Large-Pan.obj
+    material Steel-Pot
+}
+
+mesh
+{
+    file kitchen\geometry\Large-Pan.001.obj
+    material Pot-handles
+}
+
+mesh
+{
+    file kitchen\geometry\Light-Ceiling-Fitting.obj
+    material Ceiling-light-fitting
+}
+
+mesh
+{
+    file kitchen\geometry\Masher.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Microwave-Front.obj
+    material Microwave-front-steel
+}
+
+mesh
+{
+    file kitchen\geometry\Microwave-Handle.obj
+    material Microwave-front-steel
+}
+
+mesh
+{
+    file kitchen\geometry\Microwave-Handle-Joint-Bottom.obj
+    material Microwave-front-steel
+}
+
+mesh
+{
+    file kitchen\geometry\Microwave-Handle-Joint-top.obj
+    material Microwave-front-steel
+}
+
+mesh
+{
+    file kitchen\geometry\Microwave-Large-Knob.obj
+    material Microwave-front-steel
+}
+
+mesh
+{
+    file kitchen\geometry\Microwave-Shell.obj
+    material Microwave-back
+}
+
+mesh
+{
+    file kitchen\geometry\Microwave-Small-Buttons.obj
+    material Microwave-front-steel
+}
+
+mesh
+{
+    file kitchen\geometry\Mug.obj
+    material White-pot
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice1.obj
+    material Mushroom-ends
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice10.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice11.obj
+    material Mushroom-ends
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice2.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice3.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice4.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice5.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice6.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice7.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice8.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushroom-slice9.obj
+    material Sliced-Mushroms
+}
+
+mesh
+{
+    file kitchen\geometry\Mushrooms-Whole.obj
+    material Mushrooms-whole
+}
+
+mesh
+{
+    file kitchen\geometry\Orange-Pepper.obj
+    material Pepper-Red
+}
+
+mesh
+{
+    file kitchen\geometry\Orange-Pepper.001.obj
+    material Pepper-stems
+}
+
+mesh
+{
+    file kitchen\geometry\Place-Mats.obj
+    material Table-Mats
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.005.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.007.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.014.obj
+    material Wood-top-suround
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.015.obj
+    material Wood-top-suround
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.024.obj
+    material Microwave-Glass
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.044.obj
+    material Floor-Wood
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.045.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.046.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.047.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.048.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.049.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Plane.050.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Plates.obj
+    material Plates
+}
+
+mesh
+{
+    file kitchen\geometry\Plug.obj
+    material Wall-socket1
+}
+
+mesh
+{
+    file kitchen\geometry\Plug-Cable.obj
+    material Cable
+}
+
+mesh
+{
+    file kitchen\geometry\Plug-Socket-Left.obj
+    material Wall-socket1
+}
+
+mesh
+{
+    file kitchen\geometry\Plug-Socket-Right.obj
+    material Wall-socket1
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-back.obj
+    material Radio-plastic.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-dial.obj
+    material Radio-dial-line.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-dial-back.obj
+    material Radio-dialback
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-dial-edge.obj
+    material Radio-metal-ring.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-dial-glass.obj
+    material Radio-glass.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-feet.obj
+    material Radio-plastic.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-front.obj
+    material Radio-plastic.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-handle.obj
+    material Radio-handle.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-handle-chrome.obj
+    material Handle-chrome.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-handle-joint.obj
+    material Radio-plastic.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-inner.obj
+    material Radio-inside.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-Knob.obj
+    material Radio-knob.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-shell.obj
+    material Radio-suround.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-trim-Back.obj
+    material Radio-edges.001
+}
+
+mesh
+{
+    file kitchen\geometry\Radio-trim-front.obj
+    material Radio-edges.001
+}
+
+mesh
+{
+    file kitchen\geometry\Skirting-Board.obj
+    material Skirting-Board
+}
+
+mesh
+{
+    file kitchen\geometry\Small-Pan.obj
+    material Steel-Pot
+}
+
+mesh
+{
+    file kitchen\geometry\Small-pan-handle.obj
+    material Pot-handles
+}
+
+mesh
+{
+    file kitchen\geometry\Spatular.obj
+    material Utensils
+}
+
+mesh
+{
+    file kitchen\geometry\Sphere.021.obj
+    material Metal-Handles
+}
+
+mesh
+{
+    file kitchen\geometry\Spoon1.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Spoon2.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Spoon3.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Spoon4.obj
+    material Cuttelry
+}
+
+mesh
+{
+    file kitchen\geometry\Table-Front-Cross-sections.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Table-Front-Cross-sections-other.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Table-Legs.obj
+    material Table-Cross
+}
+
+mesh
+{
+    file kitchen\geometry\Table-top.obj
+    material Table-Top
+}
+
+mesh
+{
+    file kitchen\geometry\Tea-Towel.obj
+    material Tea-Towel
+}
+
+mesh
+{
+    file kitchen\geometry\Tea-Towel-loop.obj
+    material Tea-Towel-loop
+}
+
+mesh
+{
+    file kitchen\geometry\Tile-Grout.obj
+    material Grout
+}
+
+mesh
+{
+    file kitchen\geometry\Tiles-Left.obj
+    material Tiles
+}
+
+mesh
+{
+    file kitchen\geometry\Tiles-Right.obj
+    material Tiles
+}
+
+mesh
+{
+    file kitchen\geometry\Tomatoes.obj
+    material Tomatoes
+}
+
+mesh
+{
+    file kitchen\geometry\Wall-Left.obj
+    material Walls-other-colour
+}
+
+mesh
+{
+    file kitchen\geometry\Wall-Left.001.obj
+    material Walls
+}
+
+mesh
+{
+    file kitchen\geometry\Wall-Right.obj
+    material Walls
+}
+
+mesh
+{
+    file kitchen\geometry\Window-Base-Panel.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Window-door-Left-panel.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Window-door-Left-panel-knob.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Window-door-Right-panel.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Window-door-right-panel-Knob.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Window-Frame.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Window-Glass-Top.obj
+    material Wine-Glasses
+}
+
+mesh
+{
+    file kitchen\geometry\Window-Glass-Bottom.obj
+    material Wine-Glasses
+}
+
+mesh
+{
+    file kitchen\geometry\Window-Left-panel.obj
+    material Window-frame-etc
+}
+ 
+
+mesh
+{
+    file kitchen\geometry\Window-Left-panel.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Window-lock.obj
+    material Window-lock
+}
+
+ 
+
+mesh
+{
+    file kitchen\geometry\Window-Panel-right-panel.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\window-trim-Left.obj
+    material Clay-Shader-white
+}
+
+mesh
+{
+    file kitchen\geometry\window-trim-Right.obj
+    material Clay-Shader-white
+}
+
+mesh
+{
+    file kitchen\geometry\Window-wood-trim.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Windowsill.obj
+    material Window-frame-etc
+}
+
+mesh
+{
+    file kitchen\geometry\Wine-Glasses-Left.obj
+    material Wine-Glasses
+}
+
+mesh
+{
+    file kitchen\geometry\Wine-Glasses-Right.obj
+    material Wine-Glasses
+}
+
+mesh
+{
+    file kitchen\geometry\Worktop-Island.obj
+    material Small-worktop
+}
+
+mesh
+{
+    file kitchen\geometry\Worktop-Left.obj
+    material Worktops-main
+}
+
+mesh
+{
+    file kitchen\geometry\Worktop-Right.obj
+    material Worktops-main
+}
+
+mesh
+{
+    file kitchen\geometry\Yellow-Pepper.obj
+    material Pepper-Yellow
+}
+
+light
+{
+    position -0.795364 3.11901 -3.18236 
+    v2  0.902258  3.11901 -3.18236 
+    v1 -0.795364 0.863535 -3.18236 
+    divLevel 5
+    emission 10 10 10
+    type Quad
+}
+
+light
+{
+    position -2.14197 1.88525 0.425336 
+    v1  -2.18467 1.88525 0.425336 
+
+    v2 -2.14197 1.88525 -0.640726
+    divLevel 5
+    emission 40 31 22
+    type Quad
+}
+
+light
+{
+    position -2.35522  1.58813 1.75515  
+    v1  -2.39787 1.58813 1.75515  
+
+    v2 -2.39787 1.58813 0.659997 
+    divLevel 5
+    emission 4.8 4.2 3.5
+    type Quad
+}
+
+light
+{
+    position -2.35522  1.58813 -0.813258 
+    v1  -2.39787 1.58813 -0.813258 
+
+    v2 -2.39787 1.58813 -2.3807
+    divLevel 5
+    emission 4.8 4.2 3.5
+    type Quad
+}
+

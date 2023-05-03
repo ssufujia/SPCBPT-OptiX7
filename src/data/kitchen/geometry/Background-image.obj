@@ -1,0 +1,16 @@
+# Blender v2.90.1 OBJ File: 'Country-Kitchen.blend'
+# www.blender.org
+mtllib Background-image.mtl
+o Background-image_snowsheff1a1.jpg
+v 3.392665 0.001650 -6.570698
+v -2.714494 0.001649 -6.569301
+v -2.714495 4.582017 -6.569300
+v 3.392665 4.582018 -6.570696
+vt 0.000000 0.000000
+vt 1.000000 0.000000
+vt 1.000000 1.000000
+vt 0.000000 1.000000
+vn -0.0002 0.0000 -1.0000
+usemtl Background-plane
+s off
+f 1/1/1 2/2/1 3/3/1 4/4/1

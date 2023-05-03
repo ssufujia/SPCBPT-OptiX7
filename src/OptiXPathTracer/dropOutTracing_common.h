@@ -13,18 +13,19 @@ namespace dropOut_tracing
     const int default_surfaceSubSpaceNumber = 20; 
     const int record_buffer_width = 1;
     const int max_u = 5;
-    const bool MIS_COMBINATION = false;
+    const bool MIS_COMBINATION = true;
+    const bool debug_PT_ONLY = false;
 
-    const bool multi_bounce_disable = true;// if true, u mush be 1
-    const bool CP_disable = true;//if true, no control point is valid
+    const bool multi_bounce_disable = false;// if true, u mush be 1
+    const bool CP_disable = false;//if true, no control point is valid
     const bool CP_lightsource_only = true;// if true, CP must be on light source
     const bool CP_lightsource_disable = false;// if true, CP can't be on light source
     const bool lightsource_alternate_disable = false;// if true, can't retrace light source
     //true  true  true  false false = LSDE  enable
     //true  false true  false true  = LDSDE enable
     //true  false false true  true  = L(A)*DSDE enable 
-    const int max_bound = 400;
-    const int max_loop = 4000;
+    const int max_bound = 20;
+    const int max_loop = 1000;
 
 #define DOT_EMPTY_SURFACEID 0
     enum class DropOutType
