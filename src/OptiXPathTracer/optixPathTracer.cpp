@@ -999,13 +999,14 @@ int main( int argc, char* argv[] )
 
     /*trainingParams tp;
     unsigned int sd = 0;
-    for (int i = 0; i < 10000; ++i) {
+    for (int i = 0; i < 10; ++i) {
         tp.train(make_float3(rnd(sd), rnd(sd), rnd(sd)));
     }
     tp.printGrid();
     tp.printPrefixSum();
     tp.printPdf();
-    tp.checkSample();*/
+    tp.checkSample();
+    exit(0);*/
 
     try
     {
