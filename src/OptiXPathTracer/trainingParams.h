@@ -5,6 +5,7 @@
 #include <cuda/random.h>
 #include <sutil/vec_math.h>
 #include <stdio.h>
+#include <vector>
 #include "rt_function.h"
 
 #define GRID_SIZE 4
@@ -57,7 +58,7 @@ struct trainingParams
 
 		int sample_grid[GRID_SIZE][GRID_SIZE];
 		memset(sample_grid, 0, sizeof(sample_grid));
-		int sampleNum = 1000000;
+		int sampleNum = 10000000;
 		unsigned int seed = 114514;
 		float2 s;
 		for (int i = 0; i < sampleNum; ++i) {
@@ -91,14 +92,31 @@ struct trainingParams
 		}
 	}
 
+	RT_FUNCTION __host__ void train(vector<float3> input)
+	{
+		for (auto i : input) {
+			int u = i.x * GRID_SIZE;
+			int v = i.y * GRID_SIZE;
+			checkUV(u, v);
+			grid[u][v] += i.z;
+		}
+		updatePrefixSum();
+	}
+
 	RT_FUNCTION __host__ void train(float3 input)
 	{
 		int u = input.x * GRID_SIZE;
 		int v = input.y * GRID_SIZE;
 		checkUV(u, v);
 		grid[u][v] += input.z;
-		for (int i = GRID_SIZE * u + v; i < GRID_SIZE * GRID_SIZE; ++i)
-			prefixSum[i] += input.z;
+		updatePrefixSum();
+	}
+
+	RT_FUNCTION __host__ void updatePrefixSum()
+	{
+		prefixSum[0] = grid[0][0];
+		for (int i = 1; i < GRID_SIZE * GRID_SIZE; ++i)
+			prefixSum[i] = prefixSum[i - 1] + grid[i / GRID_SIZE][i % GRID_SIZE];
 	}
 
 	RT_FUNCTION __host__ void sample(unsigned int& seed, float2& s)
