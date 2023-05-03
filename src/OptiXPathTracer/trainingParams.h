@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include "rt_function.h"
 
-#define GRID_SIZE 10
+#define GRID_SIZE 4
 
 struct trainingParams
 {
@@ -18,6 +18,63 @@ struct trainingParams
 	RT_FUNCTION __host__ trainingParams() {
 		memset(grid, 0, sizeof(grid));
 		memset(prefixSum, 0, sizeof(prefixSum));
+	}
+
+	RT_FUNCTION __host__ void printGrid() {
+		printf("Print Grid:\n");
+		for (int i = 0; i < GRID_SIZE; ++i) {
+			for (int j = 0; j < GRID_SIZE; ++j) {
+				printf("%f ", grid[i][j]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+
+	RT_FUNCTION __host__ void printPrefixSum() {
+		printf("Print PrefixSum:\n");
+		for (int i = 0; i < GRID_SIZE; ++i) {
+			for (int j = 0; j < GRID_SIZE; ++j) {
+				printf("%f ", prefixSum[i * GRID_SIZE + j]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+
+	RT_FUNCTION __host__ void printPdf() {
+		printf("Print pdf:\n");
+		for (int i = 0; i < GRID_SIZE; ++i) {
+			for (int j = 0; j < GRID_SIZE; ++j) {
+				printf("%f ", pdf(make_float2(((float)i) / GRID_SIZE + 1e-3, ((float)j) / GRID_SIZE + 1e-3)));
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+
+	RT_FUNCTION __host__ void checkSample() {
+
+		int sample_grid[GRID_SIZE][GRID_SIZE];
+		memset(sample_grid, 0, sizeof(sample_grid));
+		int sampleNum = 1000000;
+		unsigned int seed = 114514;
+		float2 s;
+		for (int i = 0; i < sampleNum; ++i) {
+			//printf("sample %d\n", i);
+			sample(seed, s);
+			int u = s.x * GRID_SIZE;
+			int v = s.y * GRID_SIZE;
+			sample_grid[u][v] += 1;
+		}
+		printf("Check sample:\n");
+		for (int i = 0; i < GRID_SIZE; ++i) {
+			for (int j = 0; j < GRID_SIZE; ++j) {
+				printf("%f ", GRID_SIZE* GRID_SIZE*((float)sample_grid[i][j]) / sampleNum);
+			}
+			printf("\n");
+		}
+		printf("\n");
 	}
 
 	RT_FUNCTION __host__ void checkUV(int u, int v) {
@@ -40,7 +97,7 @@ struct trainingParams
 		int v = input.y * GRID_SIZE;
 		checkUV(u, v);
 		grid[u][v] += input.z;
-		for (int i = 10 * u + v; i < GRID_SIZE * GRID_SIZE; ++i)
+		for (int i = GRID_SIZE * u + v; i < GRID_SIZE * GRID_SIZE; ++i)
 			prefixSum[i] += input.z;
 	}
 
@@ -50,9 +107,11 @@ struct trainingParams
 		checkGrid();
 		float sum = prefixSum[GRID_SIZE * GRID_SIZE - 1];
 		int l = 0, r = GRID_SIZE * GRID_SIZE - 1, mid = (l+r)/2;
+		//printf("before \n");
 		while (l != r) {
-			if (a >= prefixSum[mid] / sum) {
-				l = mid+10;
+			//printf("l %d\t\tr %d\n", l, r);
+			if (a >= (prefixSum[mid] / sum)) {
+				l = mid+1;
 			}
 			else {
 				r = mid;
@@ -60,6 +119,7 @@ struct trainingParams
 			mid = (l + r) / 2;
 		}
 
+		//printf("after \n");
 		int u = l / GRID_SIZE;
 		int v = l % GRID_SIZE;
 		float grid_step = 1.0f / GRID_SIZE;
@@ -78,7 +138,7 @@ struct trainingParams
 		checkUV(u, v);
 		checkGrid();
 		float sum = prefixSum[GRID_SIZE * GRID_SIZE - 1];
-		return grid[u][v] / sum;
+		return GRID_SIZE * GRID_SIZE * grid[u][v] / sum;
 	}
 
 };
