@@ -71,6 +71,8 @@
 #include"decisionTree/classTree_host.h"
 #include"PG_host.h"
 #include"frame_estimation.h"
+#include"trainingParams.h"
+
 using namespace std;
  
 
@@ -996,6 +998,16 @@ int main( int argc, char* argv[] )
             printUsageAndExit( argv[0] );
         }
     }
+
+    /*trainingParams tp;
+    unsigned int sd = 0;
+    for (int i = 0; i < 10000; ++i) {
+        tp.train(make_float3(rnd(sd), rnd(sd), rnd(sd)));
+    }
+    tp.printGrid();
+    tp.printPrefixSum();
+    tp.printPdf();
+    tp.checkSample();*/
 
     try
     {
