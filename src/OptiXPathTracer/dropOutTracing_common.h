@@ -49,6 +49,7 @@ namespace dropOut_tracing
     RT_FUNCTION __host__ DropOutType pathLengthToDropOutType(int num) {
         if (num < 1)printf("warn: pathLength for drop out type must be larger than 1\n");
         return static_cast<DropOutType>(num - 1);
+
     }
 
 
