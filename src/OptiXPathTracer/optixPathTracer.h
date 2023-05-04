@@ -48,6 +48,8 @@ static const bool PG_ENABLE = 0;
 #include"decisionTree/classTree_common.h"
 #include"PG_common.h"
 #include"dropOutTracing_common.h"
+#include "tester.h"
+
 struct Subspace
 {   
     int jump_bias;

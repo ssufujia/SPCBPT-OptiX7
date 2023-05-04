@@ -369,6 +369,7 @@ void initLaunchParams(const sutil::Scene& scene) {
     subspaceInfo.light_tree = nullptr;
     subspaceInfo.Q = nullptr;
     subspaceInfo.CMFGamma = nullptr;
+
 }
 
  
@@ -914,13 +915,26 @@ void updateDropOutTracingParams()
                         printf("Bound Setting for ID S:%d C:%d U:%d is %f\n", j, k, i, statistic_data.bound);
                 }
     }
-    
 
 
     dot_params.statistics_iteration_count++;
-    printf("received %d valid records in the Light Tracing\n",records.size());
+    printf("received %lld valid records in the Light Tracing\n",records.size());
+    
+    // Bad Block Ratio
+    float sum = dropOut_tracing::max_u * dot_params.specularSubSpaceNumber * dot_params.surfaceSubSpaceNumber;
+    int bad_cnt = 0;
+    for (int i = 0; i < dropOut_tracing::max_u; i++)
+        for (int j = 0; j < dot_params.specularSubSpaceNumber; j++)
+            for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
+            {
+                auto& data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k);
+                if (isnan(data.average) || isinf(data.average) || isnan(data.bound) || isinf(data.bound))
+                {
+                    ++bad_cnt;
+                }
+            }
 
-
+    printf("Bad Block: %.2f%%\n", 100.0f * bad_cnt / sum);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////Update the Statstics Data In The Above Data Block//////////////////////////////////////
@@ -1072,7 +1086,6 @@ void initCameraState(const sutil::Scene& scene)
 }
  
  
- 
 //------------------------------------------------------------------------------
 //
 // Main
@@ -1135,7 +1148,7 @@ int main( int argc, char* argv[] )
 
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
 
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
@@ -1275,7 +1288,8 @@ int main( int argc, char* argv[] )
                     }
                     else
                     {
-                        printf("frame %d\n", params.subframe_index);;
+                        printf("frame %d\n", params.subframe_index);
+
                     }
                     ++params.subframe_index;
                     /*if (sum_render_time > print_time && !print) {
