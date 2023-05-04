@@ -3510,6 +3510,15 @@ namespace Shift
             bool sample_success = alternate_path_sample(seed, path, CP, SP, WC, u, statistic_prd);
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
+
+            if()
+            ////statistic collection
+            dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
+            dirction_record.data = max_B;
+            dirction_record.data2 = max_B;
+            DOT_pushRecordToBuffer(dirction_record, statistic_prd);
+            ////statistic collection end
+            
             float factor = 1 - p / (B * q);
             res += factor / B * sign;
             //if (sample_success)printf("p %f q%f B%f u%d\n", p, q, B, path.size());
@@ -3593,8 +3602,8 @@ namespace Shift
         if (dropOut_tracing::CP_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
         if (dropOut_tracing::multi_bounce_disable && u != 1)return false;
         if (dropOut_tracing::CP_lightsource_only && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth != 0)return false;
-        if (dropOut_tracing::lightsource_alternate_disable && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
         if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0)return false;
+        if (dropOut_tracing::CP_require && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX) return false;
         if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP))return false;
         if (u > dropOut_tracing::max_u)return false;
         return true;

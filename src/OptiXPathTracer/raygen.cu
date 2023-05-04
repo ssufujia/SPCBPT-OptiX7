@@ -36,6 +36,7 @@
 #include "cuProg.h"
 #include "pathControl.h"
 #include "rmis.h"
+#include "tester.h"
 //------------------------------------------------------------------------------
 //
 //
@@ -778,7 +779,7 @@ extern "C" __global__ void __raygen__shift_combine()
         float3 res = make_float3(0.0);
         if (payload.path.hit_lightSource())
         {
-            if (false&&RMIS_FLAG)
+            if (!S_ONLY&&RMIS_FLAG)
             {
                 res = lightStraghtHit(payload.path.currentVertex());
             }
