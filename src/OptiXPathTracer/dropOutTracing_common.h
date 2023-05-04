@@ -16,11 +16,11 @@ namespace dropOut_tracing
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
 
-    const bool multi_bounce_disable = false;// if true, u mush be 1
-    const bool CP_disable = false;//if true, no control point is valid
-    const bool CP_lightsource_only = true;// if true, CP must be on light source
-    const bool CP_lightsource_disable = false;// if true, CP can't be on light source
-    const bool lightsource_alternate_disable = false;// if true, can't retrace light source
+    const bool multi_bounce_disable = true; // if true, u mush be 1
+    const bool CP_disable = true; // if true, only no control point is valid
+    const bool CP_lightsource_only = false; // if true, CP must be on light source
+    const bool CP_lightsource_disable = false; // if true, CP can't be on light source
+    const bool CP_require = false; // if true, control point is required
     //true  true  true  false false = LSDE  enable
     //true  false true  false true  = LDSDE enable
     //true  false false true  true  = L(A)*DSDE enable 
@@ -127,8 +127,6 @@ namespace dropOut_tracing
         // 当计数为0时，说明尚未有任何的统计数据被统计，注意不要在此时使用统计数据来做别的操作，所有的统计数据在此时都会被设为0
         int statistics_iteration_count;
         float selection_const;
-       
-
 
         statistics_data data; 
 

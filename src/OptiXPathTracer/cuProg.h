@@ -3592,8 +3592,8 @@ namespace Shift
         if (dropOut_tracing::CP_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
         if (dropOut_tracing::multi_bounce_disable && u != 1)return false;
         if (dropOut_tracing::CP_lightsource_only && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth != 0)return false;
-        if (dropOut_tracing::lightsource_alternate_disable && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
         if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0)return false;
+        if (dropOut_tracing::CP_require && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX) return false;
         if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP))return false;
         if (u > dropOut_tracing::max_u)return false;
         return true;

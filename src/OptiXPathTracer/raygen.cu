@@ -36,6 +36,7 @@
 #include "cuProg.h"
 #include "pathControl.h"
 #include "rmis.h"
+#include "tester.h"
 //------------------------------------------------------------------------------
 //
 //
@@ -775,7 +776,7 @@ extern "C" __global__ void __raygen__shift_combine()
         float3 res = make_float3(0.0);
         if (payload.path.hit_lightSource())
         {
-            if (false&&RMIS_FLAG)
+            if (!S_ONLY&&RMIS_FLAG)
             {
                 res = lightStraghtHit(payload.path.currentVertex());
             }
@@ -909,10 +910,10 @@ extern "C" __global__ void __raygen__shift_combine()
                         float3 WC;
                         float retracing_pdf;
                         u = Shift::get_imcomplete_subpath_info(originPath, SP, CP, WC);
-                        if (!Shift::valid_specular(CP, SP, u, WC) || dropOut_tracing::debug_PT_ONLY)continue;
-
+                        if (!Shift::valid_specular(CP, SP, u, WC) || dropOut_tracing::debug_PT_ONLY) continue;
+                        //printLightSubpath(SP.depth, SP.path_record);
                         bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
-                        if (retrace_success == false)continue;
+                        if (retrace_success == false) continue;
 
                         int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, u, finalPath, originPath);
                         float pdf = eye_vertex.pdf * retracing_pdf * CP.pdf;
