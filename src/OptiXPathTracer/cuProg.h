@@ -498,9 +498,9 @@ namespace Tracer {
 
         RT_FUNCTION int SampleGlossyFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
         {
-            int begin_index = eye_subsapce * NUM_SUBSPACE;
-            int end_index = begin_index + NUM_SUBSPACE;
-            int index = binary_sample(Tracer::params.subspace_info.CMFCausticGamma + begin_index, NUM_SUBSPACE, seed, sample_pmf);
+            int begin_index = eye_subsapce * dropOut_tracing::default_specularSubSpaceNumber;
+            int end_index = begin_index + dropOut_tracing::default_specularSubSpaceNumber;
+            int index = binary_sample(Tracer::params.subspace_info.CMFCausticGamma + begin_index, dropOut_tracing::default_specularSubSpaceNumber, seed, sample_pmf);
             return index;
         }
     };
@@ -2004,6 +2004,7 @@ struct statistic_payload
     dropOut_tracing::DropOutType type;
     dropOut_tracing::statistics_data_struct data;
     bool CP_NOVERTEX;
+    dropOut_tracing::PGParams* pg_p;
     RT_FUNCTION dropOut_tracing::statistic_record generate_record(dropOut_tracing::SlotUsage usage)
     {
         dropOut_tracing::statistic_record record(type, SP_label, CP_label, usage); 
@@ -3600,6 +3601,7 @@ namespace Shift
     }
     RT_FUNCTION bool pathRecord_is_causticEyesubpath(long long record, int depth)
     {
+        if (depth > 32)return false;
         for (int i = 0; i < depth; i++)
         {
             if (i != depth - 1 && record % 2 != 1)return false;

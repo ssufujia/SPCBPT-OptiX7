@@ -221,6 +221,10 @@ struct PTParams :whitted::LaunchParams
 
     PG_params pg_params;
     DropOutTracing_params dot_params;
+    __host__ void image_resize()
+    {
+        dot_params.pixel_dirty = true;
+    }
 };
 typedef PTParams MyParams;
 

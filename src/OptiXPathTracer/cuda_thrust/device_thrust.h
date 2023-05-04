@@ -14,6 +14,7 @@
 #include<thrust/host_vector.h>
 #include"../PG_common.h"
 #include"../dropOutTracing_common.h"
+#include"../DOT_PG_trainingParams.h"
 void useCUDA();
 
 
@@ -130,7 +131,7 @@ namespace MyThrustOp
     void build_optimal_E_train_data(int N_samples);
     void Q_zero_handle(thrust::device_ptr<float>& Q);
     void train_optimal_E(thrust::device_ptr<float>& E_ptr);
-    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma, bool caustic_case = false);
+    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma);
 
 
     void load_Q_file(thrust::device_ptr<float>& Q);
@@ -156,6 +157,14 @@ namespace MyThrustOp
     dropOut_tracing::statistics_data_struct* DOT_statistics_data_to_device(thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v);
     dropOut_tracing::statistic_record* DOT_get_statistic_record_buffer(int size = -1);
     thrust::host_vector<dropOut_tracing::statistic_record> DOT_get_host_statistic_record_buffer(bool valid_only = true);
+
+    dropOut_tracing::PGParams* DOT_PG_data_to_device(thrust::host_vector<dropOut_tracing::PGParams> h_v);
+    thrust::host_vector<dropOut_tracing::PGParams> DOT_PG_data_to_host();
+    float* DOT_causticCMFGamma_to_device(thrust::host_vector<float> DOT_h_GAMMA);
+    float* DOT_causticFrac_to_device(thrust::host_vector<float> DOT_h_frac);
+    thrust::host_vector<dropOut_tracing::pixelRecord> DOT_get_pixelRecords();
+    dropOut_tracing::pixelRecord* DOT_set_pixelRecords_size(int size);
+    float* DOT_get_Q();
 
 
     path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size);

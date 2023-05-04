@@ -71,14 +71,12 @@
 #include"decisionTree/classTree_host.h"
 #include"PG_host.h"
 #include"frame_estimation.h"
-#include"trainingParams.h"
 
 using namespace std;
  
 
 bool resize_dirty = false;
-bool minimized    = false;
-
+bool minimized    = false; 
 // Camera state
 bool             camera_changed = true;
 MyParams* d_params = nullptr; 
@@ -145,19 +143,21 @@ static void mouseButtonCallback( GLFWwindow* window, int button, int action, int
 
 static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
 {
-    Params* params = static_cast<Params*>( glfwGetWindowUserPointer( window ) );
+    MyParams* params = static_cast<MyParams*>( glfwGetWindowUserPointer( window ) );
 
     if( mouse_button == GLFW_MOUSE_BUTTON_LEFT )
     {
         trackball.setViewMode( sutil::Trackball::LookAtFixed );
         trackball.updateTracking( static_cast<int>( xpos ), static_cast<int>( ypos ), params->width, params->height );
         camera_changed = true;
+        params->image_resize();
     }
     else if( mouse_button == GLFW_MOUSE_BUTTON_RIGHT )
     {
         trackball.setViewMode( sutil::Trackball::EyeFixed );
         trackball.updateTracking( static_cast<int>( xpos ), static_cast<int>( ypos ), params->width, params->height );
         camera_changed = true;
+        params->image_resize();
     }
 }
 
@@ -176,6 +176,7 @@ static void windowSizeCallback( GLFWwindow* window, int32_t res_x, int32_t res_y
     params->height = res_y;
     camera_changed = true;
     resize_dirty   = true;
+    params->image_resize();
 }
 
 
@@ -281,14 +282,18 @@ static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, 
         camera.setLookat(lookat);
         camera_changed = true;
         resize_dirty = true;
+        params.image_resize();
     }
 }
 
 
-static void scrollCallback( GLFWwindow* window, double xscroll, double yscroll )
+static void scrollCallback(GLFWwindow* window, double xscroll, double yscroll)
 {
-    if( trackball.wheelEvent( (int)yscroll ) )
+    if (trackball.wheelEvent((int)yscroll))
+    {
         camera_changed = true;
+        params.image_resize();
+    }
 }
 
 
@@ -575,12 +580,12 @@ void launchLightTrace(sutil::Scene& scene)
 }
 void launchLVCTrace(sutil::Scene& scene)
 { 
-    launchLightTrace(scene);
+    launchLightTrace(scene); 
     auto p_v = thrust::device_pointer_cast(params.lt.ans);
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
-    auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count());
+    auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count()); 
     params.sampler = sampler;
-    sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials);
+    sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials); 
     params.sampler.glossy_count = sampler.glossy_count;
     params.sampler.glossy_index = sampler.glossy_index;
     params.sampler.glossy_subspace_bias = sampler.glossy_subspace_bias;
@@ -663,6 +668,7 @@ void dropOutTracingParamsInit()
 }
 void dropOutTracingParamsSetup(sutil::Scene& scene)
 {
+    dot_params.pixel_dirty = true;
     dot_params.specularSubSpaceNumber = dropOut_tracing::default_specularSubSpaceNumber;
     dot_params.surfaceSubSpaceNumber = dropOut_tracing::default_surfaceSubSpaceNumber;
     dot_params.data.on_GPU = false;
@@ -678,7 +684,7 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     }
 
     auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000);
-    auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber, 0);
+    auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber-1, 1);
     dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
      
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
@@ -700,7 +706,11 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     thrust::fill(DOT_statics_data.begin(), DOT_statics_data.end(), dropOut_tracing::statistics_data_struct());
     dot_params.data.host_data = DOT_statics_data.data();
     dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(dot_params.data.host_data, dot_params.data.size);
+
+    thrust::host_vector<dropOut_tracing::PGParams> DOT_PG_data(dot_params.specularSubSpaceNumber * dot_params.surfaceSubSpaceNumber * dropOut_tracing::max_u);
+    dot_params.data.device_PGParams = MyThrustOp::DOT_PG_data_to_device(DOT_PG_data);
     dot_params.data.on_GPU = true; 
+     
 
 
     //thrust::host_vector<dropOut_tracing::statistic_record> h_record(lt_params.get_element_count());
@@ -710,15 +720,119 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     dot_params.statistics_iteration_count = 0;
 
 
+    if (dot_params.pixel_dirty)
+    {
+        thrust::host_vector<float> h_frac(params.width * params.height, 0.5);
+        dot_params.pixel_caustic_refract = MyThrustOp::DOT_causticFrac_to_device(h_frac);
+        dot_params.pixel_record = MyThrustOp::DOT_set_pixelRecords_size(params.width * params.height);
 
+        //thrust::host_vector<dropOut_tracing::pixelRecord> h_record(params.width * params.height);
+        dot_params.pixel_dirty = false;
+    }
     //initial finished
     dot_params.is_init = true;
     dot_params.selection_const = 0.0;
 }
+//update the probability for caustic subspace sampling and caustic frac
+void updateDropOutTracingCombineWeight()
+{
+    static thrust::host_vector<float> h_frac(params.width * params.height, 0.5);
+    static thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
+    static vector<float> normal_weight(params.width * params.height, 0);
+    static vector<int> normal_count(params.width * params.height, 0);
+    static vector<float> caustic_weight(params.width * params.height, 0);
+    static vector<int> caustic_count(params.width * params.height, 0);
+    static vector<float> gamma_non_normalized(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0.000001);
+    if (dot_params.pixel_dirty)
+    {  
+        h_frac.resize(params.width * params.height);
+        thrust::fill(h_frac.begin(), h_frac.end(), 0.5);
+        normal_weight.resize(params.width * params.height);
+        thrust::fill(normal_weight.begin(), normal_weight.end(), 0);
+        normal_count.resize(params.width * params.height);
+        thrust::fill(normal_count.begin(), normal_count.end(), 0);
+        caustic_weight.resize(params.width * params.height);
+        thrust::fill(caustic_weight.begin(), caustic_weight.end(), 0);
+        caustic_count.resize(params.width * params.height);
+        thrust::fill(caustic_count.begin(), caustic_count.end(), 0);
+
+        dot_params.pixel_caustic_refract = MyThrustOp::DOT_causticFrac_to_device(h_frac);
+        dot_params.pixel_record = MyThrustOp::DOT_set_pixelRecords_size(params.width * params.height);
+        dot_params.pixel_dirty = false;
+    }
+    else
+    {
+        auto h_record = MyThrustOp::DOT_get_pixelRecords();
+        for (int i = 0; i < h_record.size(); i++)
+        {
+            if (h_record[i].valid() == false||h_record[i].is_caustic() == false)continue;
+            if (isnan(h_record[i].record) || isinf(h_record[i].record))continue;
+            if (abs(h_record[i].record) > 1000)continue;
+            gamma_non_normalized[h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId] += abs(h_record[i].record);
+        }
+        vector<float> gamma_sum(NUM_SUBSPACE, 0);
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
+            {
+                gamma_sum[i] += gamma_non_normalized[j + i * dropOut_tracing::default_specularSubSpaceNumber];
+            }
+        }
+
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
+            {
+                h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j] =
+                    gamma_non_normalized[i * dropOut_tracing::default_specularSubSpaceNumber + j] / gamma_sum[i] * (1-CONSERVATIVE_RATE) + 
+                    1.0 / dropOut_tracing::default_specularSubSpaceNumber * (CONSERVATIVE_RATE);
+            }
+        }
+
+        for (int i = 0; i < h_record.size(); i++)
+        {
+            if (!h_record[i].valid())continue;
+            //if (abs(h_record[i].record) == 0)continue;
+            uint2 pixel_label = dot_params.Id2pixel(i, make_uint2(params.width,params.height)); 
+            int final_label = dot_params.pixel2unitId(pixel_label, make_uint2(params.width, params.height));
+
+            if (!h_record[i].is_caustic())
+            {
+                normal_count[final_label]++;
+                normal_weight[final_label] += h_record[i].record;
+            }
+            else
+            {
+                caustic_count[final_label]++;
+                caustic_weight[final_label] += h_record[i].record;
+            } 
+        }
+        for (int i = 0; i < h_frac.size(); i++)
+        {
+            int valid_size = 10;
+            float t = lerp(1, CONSERVATIVE_RATE, min(1.0f, float(normal_count[i] + caustic_count[i]) / valid_size));
+            if (caustic_count[i] + normal_count[i] == 0)
+                h_frac[i] = 0.5;
+            else
+            {
+                h_frac[i] = 0.5 * t + (1 - t) * (caustic_weight[i] / (normal_weight[i] + caustic_weight[i]));
+            }
+        } 
+        subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
+        dot_params.CMF_Gamma = subspaceInfo.CMFCausticGamma;
+        dot_params.pixel_caustic_refract = MyThrustOp::DOT_causticFrac_to_device(h_frac);
+    }
+}
+
+
+
 void updateDropOutTracingParams()
 { 
+    bool disable_print = true;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
+    thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
     dot_params.data.host_data = statics_data.data();
+    dot_params.data.host_PGParams = pg_data.data();
     dot_params.data.on_GPU = false;
     auto records = MyThrustOp::DOT_get_host_statistic_record_buffer();
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -761,7 +875,7 @@ void updateDropOutTracingParams()
                     { 
                         // Linearly interpolate the data in dot_params with the new data from tempVector
                         statistic_data.average = lerp(statistic_data.average, tempVector[i][j][k], 1.0 / float(dot_params.statistics_iteration_count + 1));
-                        if (statistic_data.valid)
+                        if (statistic_data.valid&&!disable_print)
                             printf("Average reciprocal PDF for ID S:%d C:%d U:%d is %f\n", j, k, i, statistic_data.average);
                     }
                     if (tempVector_counter[i][j][k] != 0)
@@ -796,7 +910,7 @@ void updateDropOutTracingParams()
                 {
                     auto& statistic_data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k); 
                     statistic_data.bound = max(statistic_data.bound,tempVector[i][j][k]);
-                    if (statistic_data.valid)
+                    if (statistic_data.valid && !disable_print)
                         printf("Bound Setting for ID S:%d C:%d U:%d is %f\n", j, k, i, statistic_data.bound);
                 }
     }
@@ -813,13 +927,14 @@ void updateDropOutTracingParams()
     ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(statics_data);
+    dot_params.data.device_PGParams = MyThrustOp::DOT_PG_data_to_device(pg_data);
     dot_params.data.on_GPU = true;
 
 
-    dot_params.selection_const = lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count);
+    dot_params.selection_const = lt_params.M_per_core * lt_params.num_core;// / float(params.sampler.glossy_count);
+    dot_params.specular_Q = MyThrustOp::DOT_get_Q();
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
 }
-
 
 void preprocessing(sutil::Scene& scene)
 { 
@@ -882,9 +997,13 @@ void preprocessing(sutil::Scene& scene)
     subspaceInfo.Q = thrust::raw_pointer_cast(Q_star);
     subspaceInfo.CMFGamma = thrust::raw_pointer_cast(MyThrustOp::Gamma2CMFGamma(Gamma));
 
-    thrust::device_ptr<float> CausticGamma;
-    MyThrustOp::preprocess_getGamma(CausticGamma, true);
-    subspaceInfo.CMFCausticGamma = thrust::raw_pointer_cast(MyThrustOp::Gamma2CMFGamma(CausticGamma, true));
+    //thrust::device_ptr<float> CausticGamma;
+    //MyThrustOp::preprocess_getGamma(CausticGamma, true);
+
+    thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE);
+    thrust::fill(h_caustic_gamma.begin(), h_caustic_gamma.end(), 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
+    subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
+    dot_params.CMF_Gamma = subspaceInfo.CMFCausticGamma;
 
     thrust::device_ptr<float> CausticRatio;
     MyThrustOp::get_caustic_frac(CausticRatio);
@@ -945,7 +1064,7 @@ void initCameraState(const sutil::Scene& scene)
 {
     camera = scene.camera();
     camera_changed = true;
-
+    params.image_resize();
     trackball.setCamera(&camera);
     trackball.setMoveSpeed(10.0f);
     trackball.setReferenceFrame(make_float3(1.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 1.0f), make_float3(0.0f, 1.0f, 0.0f));
@@ -1126,12 +1245,13 @@ int main( int argc, char* argv[] )
                     t0 = t1;
 
                     if (render_alg[render_alg_id] == std::string("SPCBPT_eye"))
-                    {
-                        launchLVCTrace(TScene);
+                    { 
+                        launchLVCTrace(TScene); 
                         updateDropOutTracingParams();
+                        updateDropOutTracingCombineWeight();
                     }
-
                     launchSubframe(output_buffer, TScene);
+                     
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
                     sum_render_time += render_time;

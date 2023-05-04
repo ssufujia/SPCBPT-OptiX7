@@ -4,15 +4,17 @@
 #include <optix.h>
 #include"random.h"
 #include"decisionTree/classTree_common.h"
+#include"DOT_PG_trainingParams.h"
 //#include"sutil/vec_math.h"
 //using namespace optix;
 namespace dropOut_tracing
 {
     const int slot_number = 5;
-    const int default_specularSubSpaceNumber = 20;
+    const int default_specularSubSpaceNumber = 21;
     const int default_surfaceSubSpaceNumber = 20; 
     const int record_buffer_width = 1;
     const int max_u = 5;
+    const unsigned pixel_unit_size = 10;
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
 
@@ -28,6 +30,7 @@ namespace dropOut_tracing
     const int max_loop = 1000;
 
 #define DOT_EMPTY_SURFACEID 0
+#define DOT_INVALID_SURFACEID 0
     enum class DropOutType
     {
         LS,
@@ -67,12 +70,19 @@ namespace dropOut_tracing
     {
         statistics_data_struct* host_data;
         statistics_data_struct* device_data;
+        PGParams* host_PGParams;
+        PGParams* device_PGParams;
+
         int size;
         bool on_GPU;
          
         RT_FUNCTION __host__ statistics_data_struct& operator[](int i)
         {
             return on_GPU ? device_data[i] : host_data[i];
+        }
+        RT_FUNCTION __host__ PGParams& getPGParams(int i)
+        {
+            return on_GPU ? device_PGParams[i] : host_PGParams[i];
         }
     };
 
@@ -109,7 +119,27 @@ namespace dropOut_tracing
             return data;
         }
     };
+    struct pixelRecord
+    {
+        float record;
 
+        short specularId;
+        short eyeId;
+        bool is_caustic_record;
+        bool is_valid;
+        __host__ bool is_caustic()const
+        {
+            return is_caustic_record;
+        }
+        __host__ bool valid()const
+        {
+            return is_valid;
+        }
+        RT_FUNCTION __host__ operator float() const
+        {
+            return abs(record);
+        }
+    };
     struct dropOutTracing_params
     {
         bool is_init;
@@ -118,6 +148,15 @@ namespace dropOut_tracing
         classTree::tree_node* specularSubSpace;
         classTree::tree_node* surfaceSubSpace;
         statistic_record* record_buffer;
+
+        pixelRecord* pixel_record;
+        float* pixel_caustic_refract;
+        
+        //average specular path number for Q
+        float* specular_Q;
+
+        float* CMF_Gamma;
+
         int record_buffer_core;
         int record_buffer_padding;
 
@@ -127,8 +166,7 @@ namespace dropOut_tracing
         // 当计数为0时，说明尚未有任何的统计数据被统计，注意不要在此时使用统计数据来做别的操作，所有的统计数据在此时都会被设为0
         int statistics_iteration_count;
         float selection_const;
-       
-
+        bool pixel_dirty;
 
         statistics_data data; 
 
@@ -137,6 +175,20 @@ namespace dropOut_tracing
         { return surfaceSubSpace? classTree::tree_index(surfaceSubSpace, position, normal, dir) : 0; }
         RT_FUNCTION __host__ int spaceId2DataId(int specular_id, int surface_id) { return surface_id * specularSubSpaceNumber + specular_id; }
         RT_FUNCTION __host__ int2 dataId2SpaceId(int data_id) { return make_int2(data_id % specularSubSpaceNumber, int(data_id / specularSubSpaceNumber)); }
+        RT_FUNCTION __host__ PGParams* get_PGParams_pointer(DropOutType type, int specular_id, int surface_id)
+        {
+            if (!statistic_available() && data.on_GPU == true)
+            {
+                return nullptr;
+                //printf("warn: you are using the PG data in DEVICE WITHOUT ANY data collected\n");
+            }
+
+            int slot_bias = 0;
+            slot_bias += int(type) * specularSubSpaceNumber * surfaceSubSpaceNumber;
+
+            int one_dim_id = spaceId2DataId(specular_id, surface_id);
+            return &data.getPGParams(one_dim_id);
+        }
         RT_FUNCTION __host__ statistics_data_struct& get_statistic_data(DropOutType type, int specular_id, int surface_id)
         {
             if (record_buffer == nullptr)
@@ -149,12 +201,7 @@ namespace dropOut_tracing
                 printf("warn: you are using the statistic data in DEVICE WITHOUT ANY data collected\n");
             }
 
-            int slot_bias = 0;
-            //if (type == DropOutType::LS)
-            //{
-            //    return data[slot_bias + specular_id * slot_number + data_slot];
-            //} 
-            //slot_bias += specularSubSpaceNumber * slot_number;
+            int slot_bias = 0; 
             slot_bias += int(type) * specularSubSpaceNumber * surfaceSubSpaceNumber ;
              
             int one_dim_id = spaceId2DataId(specular_id, surface_id);
@@ -165,17 +212,54 @@ namespace dropOut_tracing
             if(data_slot == SlotUsage::Average)
                 return get_statistic_data(type, specular_id, surface_id).average;
             printf("dataslot undefined\n");
-            return get_statistic_data(type, specular_id, surface_id).average;
-            
+            return get_statistic_data(type, specular_id, surface_id).average; 
         }
          
         RT_FUNCTION __host__ bool statistic_available()
         {
             return statistics_iteration_count != 0;
         }
-        RT_FUNCTION __host__ float selection_ratio(DropOutType type, int specular_id, int surface_id)
+        RT_FUNCTION __host__ float selection_ratio(int eye_id, int specular_id)
         {
-            return selection_const;
+            //return selection_const;
+            float weight = CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id];
+            if (specular_id >= 1)
+                weight -= CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id - 1];
+            return weight / specular_Q[specular_id] * selection_const;
+        }
+        __host__ void image_resize()
+        {
+            pixel_dirty = true;
+        }
+
+         
+
+        RT_FUNCTION __host__ unsigned pixel2unitId(uint2 pixel, uint2 size)const
+        {
+            uint2 pixel_unit = make_uint2(pixel.x / dropOut_tracing::pixel_unit_size, pixel.y / dropOut_tracing::pixel_unit_size);
+            size.x /= dropOut_tracing::pixel_unit_size;
+            size.y /= dropOut_tracing::pixel_unit_size;
+            return pixel_unit.x * size.y + pixel_unit.y; 
+        }
+         
+        RT_FUNCTION __host__ uint2 Id2pixel(unsigned id, uint2 size)const
+        {
+            return make_uint2(id / size.y, id % size.y);
+        }
+
+        RT_FUNCTION __host__ unsigned pixel2Id(uint2 xy, uint2 size)const
+        {
+            return xy.x * size.y + xy.y;
+        }
+
+        RT_FUNCTION float get_caustic_prob(uint2 pixel, uint2 wh)
+        {
+            if (pixel_dirty)return 0.5;
+            else 
+            {
+                int id = pixel2unitId(pixel, wh);
+                return pixel_caustic_refract[id];
+            }
         }
     };
 

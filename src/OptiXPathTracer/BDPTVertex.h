@@ -6,6 +6,24 @@
 #include"rt_function.h" 
 #include"light_parameters.h" 
 #include"MaterialData.h"
+
+//struct specularIdRecord
+//{
+//    short id;
+//    RT_FUNCTION __host__ short get()const
+//    {
+//        return abs(id);
+//    }
+//    RT_FUNCTION __host__ short set(unsigned a)
+//    {
+//        return id = static_cast<short> (-a);
+//    }
+//    RT_FUNCTION __host__ bool is_specular()const
+//    {
+//        return id < 0;
+//    }
+//    RT_FUNCTION __host__ specularIdRecord() :id(0) {}
+//};
 struct BDPTVertex
 {
     float3 position;
@@ -47,12 +65,13 @@ struct BDPTVertex
     // --- Latest Update ---
     float inverPdfEst;
 
+    long long path_record;//consider to remove
+    short specular_record;
     short materialId;
 
     short subspaceId;//subspace ID, consider to rename
     short depth;
 
-    long long path_record;
 
     //used for RMIS computing
     short lastZoneId;
@@ -70,7 +89,7 @@ struct BDPTVertex
 
     bool isLastVertex_direction; //if this vertex comes from the directional light 
 
-    __host__ __device__ BDPTVertex() :isBrdf(false), lastBrdf(false), path_record(0) {}
+    __host__ __device__ BDPTVertex() :isBrdf(false), lastBrdf(false), path_record(0), specular_record() {}
     __host__ __device__ bool is_LL_DIRECTION()const { return isLastVertex_direction; }
     __host__ __device__ bool is_DIRECTION()const { return type == BDPTVertex::Type::DIRECTION||type == BDPTVertex::Type::ENV; }
     __host__ __device__ bool hit_lightSource()const { return type == BDPTVertex::Type::ENV_MISS||type == BDPTVertex::Type::HIT_LIGHT_SOURCE; }
@@ -89,6 +108,18 @@ struct BDPTVertex
         return mat;
     }
 
+    RT_FUNCTION __host__ short get_specular_id()const
+    {
+        return abs(specular_record);
+    }
+    RT_FUNCTION __host__ void set_specular_id(unsigned a)
+    {
+        specular_record = -a;
+    }
+    RT_FUNCTION __host__ bool is_specluar()const
+    {
+        return specular_record < 0;
+    }
 };
 
 struct BDPTPath
