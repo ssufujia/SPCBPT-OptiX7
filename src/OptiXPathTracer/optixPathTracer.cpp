@@ -528,8 +528,8 @@ void env_params_setup(const sutil::Scene& scene)
 }
 void lt_params_setup(const sutil::Scene& scene)
 {
-    lt_params.M_per_core = 1;
-    lt_params.core_padding = 80;
+    lt_params.M_per_core = 10;
+    lt_params.core_padding = 800;
     lt_params.num_core = 1000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
     lt_params.launch_frame = 0;
@@ -586,11 +586,14 @@ void launchLVCTrace(sutil::Scene& scene)
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
     auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count()); 
     params.sampler = sampler;
-    sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials); 
-    params.sampler.glossy_count = sampler.glossy_count;
-    params.sampler.glossy_index = sampler.glossy_index;
-    params.sampler.glossy_subspace_bias = sampler.glossy_subspace_bias;
-    params.sampler.glossy_subspace_num = sampler.glossy_subspace_num;  
+    if (!SPCBPT_PURE)
+    {
+        sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials);
+        params.sampler.glossy_count = sampler.glossy_count;
+        params.sampler.glossy_index = sampler.glossy_index;
+        params.sampler.glossy_subspace_bias = sampler.glossy_subspace_bias;
+        params.sampler.glossy_subspace_num = sampler.glossy_subspace_num;
+    }
 
 }
 int launchPretrace(sutil::Scene& scene)
@@ -669,7 +672,10 @@ void dropOutTracingParamsInit()
 }
 void dropOutTracingParamsSetup(sutil::Scene& scene)
 {
+    if (SPCBPT_PURE)return;
+
     dot_params.pixel_dirty = true;
+    dot_params.discard_ratio = dropOut_tracing::light_subpath_caustic_discard_ratio;
     dot_params.specularSubSpaceNumber = dropOut_tracing::default_specularSubSpaceNumber;
     dot_params.surfaceSubSpaceNumber = dropOut_tracing::default_surfaceSubSpaceNumber;
     dot_params.data.on_GPU = false;
@@ -737,6 +743,7 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
 //update the probability for caustic subspace sampling and caustic frac
 void updateDropOutTracingCombineWeight()
 {
+    if (SPCBPT_PURE) return;
     static thrust::host_vector<float> h_frac(params.width * params.height, 0.5);
     static thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
     static vector<float> normal_weight(params.width * params.height, 0);
@@ -793,6 +800,7 @@ void updateDropOutTracingCombineWeight()
         for (int i = 0; i < h_record.size(); i++)
         {
             if (!h_record[i].valid())continue;
+            if (h_record[i].record < 0)continue;
             //if (abs(h_record[i].record) == 0)continue;
             uint2 pixel_label = dot_params.Id2pixel(i, make_uint2(params.width,params.height)); 
             int final_label = dot_params.pixel2unitId(pixel_label, make_uint2(params.width, params.height));
@@ -828,7 +836,8 @@ void updateDropOutTracingCombineWeight()
 
 
 void updateDropOutTracingParams()
-{ 
+{
+    if (SPCBPT_PURE) return;
     bool disable_print = true;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
@@ -1014,14 +1023,17 @@ void preprocessing(sutil::Scene& scene)
     //thrust::device_ptr<float> CausticGamma;
     //MyThrustOp::preprocess_getGamma(CausticGamma, true);
 
-    thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE);
-    thrust::fill(h_caustic_gamma.begin(), h_caustic_gamma.end(), 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
-    subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
-    dot_params.CMF_Gamma = subspaceInfo.CMFCausticGamma;
+    if (!SPCBPT_PURE)
+    { 
+        thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE);
+        thrust::fill(h_caustic_gamma.begin(), h_caustic_gamma.end(), 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
+        subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
+        dot_params.CMF_Gamma = subspaceInfo.CMFCausticGamma;
 
-    thrust::device_ptr<float> CausticRatio;
-    MyThrustOp::get_caustic_frac(CausticRatio);
-    subspaceInfo.caustic_ratio = thrust::raw_pointer_cast(CausticRatio);
+        thrust::device_ptr<float> CausticRatio;
+        MyThrustOp::get_caustic_frac(CausticRatio);
+        subspaceInfo.caustic_ratio = thrust::raw_pointer_cast(CausticRatio);
+    }
 }
 void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene& scene)
 {
@@ -1146,12 +1158,12 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
 
-        // scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
+         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
 
 
@@ -1165,7 +1177,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
@@ -1214,7 +1226,7 @@ int main( int argc, char* argv[] )
 
         if(false)
         {
-            params.estimate_pr. ref_buffer = nullptr;
+            params.estimate_pr.ref_buffer = nullptr;
             if (estimation::es.estimation_mode == true)
             {
                 thrust::device_ptr<float4> ref_buffer;

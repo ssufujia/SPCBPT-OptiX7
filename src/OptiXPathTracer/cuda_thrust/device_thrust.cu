@@ -423,7 +423,7 @@ namespace MyThrustOp
         static thrust_dev_int d_Vsubspace_info(countRange);
         static thrust_host_int h_Vsubspace_info(countRange);
         static thrust_dev_float d_weight(countRange); 
-        int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>());
+        //int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>());
         //copy necessary info------subspace info 
         {
             thrust::for_each(
@@ -441,7 +441,8 @@ namespace MyThrustOp
         for (int i = 0; i < countRange; i++)
         {
             if (!h_valid_glossy[i])
-                continue; 
+                continue;
+            if (h_Vsubspace_info[i] == DOT_INVALID_SPECULARID)continue;
             
             h_indexes.push_back(i);
         }
