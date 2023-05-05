@@ -718,10 +718,10 @@ extern "C" __global__ void __raygen__shift_combine()
     const int    subframe_index = Tracer::params.subframe_index;
 
     float3 normalizeV = normalize(V);
-    // Generate camera ray
+    /* Generate camera ray */
     unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
 
-    // The center of each pixel is at fraction (0.5,0.5)
+    /* The center of each pixel is at fraction(0.5, 0.5) */
     const float2 subpixel_jitter =
         subframe_index == 0 ? make_float2(0.5f, 0.5f) : make_float2(rnd(seed), rnd(seed));
 
@@ -737,7 +737,7 @@ extern "C" __global__ void __raygen__shift_combine()
     payload.seed = seed;
     payload.ray_direction = ray_direction;
     payload.origin = ray_origin;
-    /* 视子路初始化 */  
+    /* Initialize eye subpath */  
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
     BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
@@ -746,7 +746,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
     unsigned first_hit_id;
 
-    /* 视子路追踪主循环 */
+    /* Eye subpath main loop */
     while (true)
     {
         ray_direction = payload.ray_direction;
@@ -754,7 +754,7 @@ extern "C" __global__ void __raygen__shift_combine()
         if (payload.done || payload.depth > 50)
             break;
         int begin_depth = payload.path.size;
-        /* 视子路追踪 */
+        /* Trace eye subpath */
         Tracer::traceEyeSubPath(
             Tracer::params.handle, ray_origin, ray_direction,
             SCENE_EPSILON,  // tmin
@@ -762,17 +762,17 @@ extern "C" __global__ void __raygen__shift_combine()
             &payload
         );
         
-        /* 没打中 */
+        /* If hit nothing */
         if (payload.path.size == begin_depth)
             break;
 
-        /* 记录一下历史路径 */
+        /* Record path info */
         payload.path_record = (payload.path_record) |
             ((long long)Shift::glossy(payload.path.currentVertex()) << payload.depth);
         payload.depth += 1;
         pathBuffer[buffer_size++] = payload.path.currentVertex(); 
 
-        /* 如果打中了光源 */
+        /* If hit light */
         float3 res = make_float3(0.0);
         if (payload.path.hit_lightSource())
         {
@@ -800,8 +800,10 @@ extern "C" __global__ void __raygen__shift_combine()
                 {  
                     float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
                     float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
+#ifdef MIS_ENABLE
                     res += contri / pdf;
                     res *= (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size)); 
+#endif // MIS_ENABLE
                 }
                 //else if (Shift::IsCausticPath(pathBuffer, buffer_size) && (buffer_size == 5) && !Shift::glossy(pathBuffer[1]) && Shift::glossy(pathBuffer[2]) &&Shift::glossy(pathBuffer[3]))
                 //{
@@ -836,7 +838,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
         BDPTVertex& eye_vertex = payload.path.currentVertex();
          
-        /* 视子路和光子路连接 */
+        /* Connections betwewen eye-subpath and light-subpath */
         for (int it = 0; it < CONNECTION_N; it++)
         {
             float caustic_connection_prob;
@@ -890,7 +892,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 if (
                     /* 暂时取消LSDE这样的光路筛选方式，改用dropoutTracing_common.h里根据四参数的形式来决定是否连接的方式，仅要求视子路为diffuse */
                     (Shift::pathRecord_is_causticEyesubpath(payload.path_record, payload.depth)) &&
-                    /* 其他约束条件 */
+                    /* Other constraints */
                     (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
                     (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
                 { 
@@ -904,7 +906,7 @@ extern "C" __global__ void __raygen__shift_combine()
                         Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                         Shift::PathContainer finalPath(light_sub_new, 1);
                           
-                        //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
+                        /* If CP = NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info */
                         BDPTVertex CP,SP;
                         int u;
                         float3 WC;
@@ -912,7 +914,12 @@ extern "C" __global__ void __raygen__shift_combine()
                         u = Shift::get_imcomplete_subpath_info(originPath, SP, CP, WC);
                         if (!Shift::valid_specular(CP, SP, u, WC) || dropOut_tracing::debug_PT_ONLY) continue;
                         //printLightSubpath(SP.depth, SP.path_record);
+#ifdef GENERAL_U
+                        bool retrace_success = Shift::retracing_new(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
+#else
                         bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
+#endif // GENERAL_U
+
                         if (retrace_success == false) continue;
 
                         int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, u, finalPath, originPath);
@@ -1110,23 +1117,24 @@ extern "C" __global__ void __raygen__lightTrace()
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
 
-
                 if (Shift::glossy(curVertex) && curVertex.depth < SHIFT_VALID_SIZE)
                 {
                     Shift::PathContainer light_subpath(&(Tracer::params.lt.ans[lightVertexCount + bufferBias - 1]), -1, curVertex.depth + 1);
                      
-                    // @param CP: BDPTVertex, control point
-                    // @param SP: BDPTVertex, specular point
-                    // @param WC: float3, control direction
-                    // @param u: integer, step size
-                    // @param statistic_prd: statistic_payload, interface for using statistic information
+                    /*
+                    * @param CP: BDPTVertex, control point
+                    * @param SP: BDPTVertex, specular point
+                    * @param WC: float3, control direction
+                    * @param u: integer, step size
+                    * @param statistic_prd: statistic_payload, interface for using statistic information
+                    */
+
                     BDPTVertex CP,SP; 
                     float3 WC;
                     int u;
-                    //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
+                    /* if CP = NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info */
                     u = Shift::get_imcomplete_subpath_info(light_subpath, SP, CP, WC); 
-
-                    if (Shift::valid_specular(CP, SP, u, WC)&& dropOut_tracing::debug_PT_ONLY == false)
+                    if (Shift::valid_specular(CP, SP, u, WC)&& !dropOut_tracing::debug_PT_ONLY)
                     {  
                         statistic_payload statistic_prd;
                         statistic_prd.build(curVertex, CP, WC, u);
@@ -1134,28 +1142,24 @@ extern "C" __global__ void __raygen__lightTrace()
                         statistic_prd.bufferBias = DOT_buffer_bias;
                         float3 tempV;
                         if (statistic_prd.data.valid == false)
-                            statistic_prd.data.bound = 1;// Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
+                            statistic_prd.data.bound = 1; // Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
                         if (statistic_prd.data.bound > dropOut_tracing::max_bound)statistic_prd.data.bound = dropOut_tracing::max_bound;
 
                         if (statistic_prd.subspace_valid())
                         {
                             float pdf_inverse = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd); 
                             light_subpath.get(0).inverPdfEst = pdf_inverse;
-                            /////////////////////////////////////////////////////////////////////
-                            /////////////////////Average Record Create///////////////////////////
-                            /////////////////////////////////////////////////////////////////////
+
+                            /********************* Average Record Create ************************/
                             DOT_record dot_record = statistic_prd.generate_record(DOT_usage::Average);
                             dot_record = pdf_inverse;
                             DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
-                            /////////////////////////////////////////////////////////////////////
-                            /////////////////////Average Record Finish///////////////////////////
-                            /////////////////////////////////////////////////////////////////////
+                            /********************* Average Record Finish ************************/
                         }
                         else
                         {
                             light_subpath.get(0).inverPdfEst = 0;
                         }
-
                     }
                 }
             }

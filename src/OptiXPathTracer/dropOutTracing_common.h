@@ -6,24 +6,39 @@
 #include"decisionTree/classTree_common.h"
 //#include"sutil/vec_math.h"
 //using namespace optix;
+
+//#define GENERAL_U
+#define MIS_ENABLE
+
 namespace dropOut_tracing
 {
     const int slot_number = 5;
     const int default_specularSubSpaceNumber = 20;
     const int default_surfaceSubSpaceNumber = 20; 
     const int record_buffer_width = 1;
+#ifdef GENERAL_U 
+    const int max_u = 1;
+#else
     const int max_u = 5;
+#endif // GENERAL_U 
+
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
+    
+    /*
+    * 1 1 1 0 0 = LSDE  enable
+    * 1 0 1 0 1 = LDSDE enable
+    * 1 0 0 1 1 = L(A)*D(D)*DSDE enable 
+    */
 
-    const bool multi_bounce_disable = true; // if true, u mush be 1
-    const bool CP_disable = true; // if true, only no control point is valid
-    const bool CP_lightsource_only = false; // if true, CP must be on light source
-    const bool CP_lightsource_disable = false; // if true, CP can't be on light source
-    const bool CP_require = false; // if true, control point is required
-    //true  true  true  false false = LSDE  enable
-    //true  false true  false true  = LDSDE enable
-    //true  false false true  true  = L(A)*DSDE enable 
+    /* THIS IS DISABLED IN THIS VERSION !!! */
+    const bool multi_bounce_disable = 0;                                /* If set true, u mush be 1 */
+    const bool CP_disable = 0;                                                  /* If set true, only no control point is valid */
+    const bool CP_lightsource_only = 0;                                   /* If set true, CP must be on light source */
+    const bool CP_lightsource_disable = 0;                               /* If set true, CP can't be on light source */
+    const bool CP_require = 0;                                                  /* If set true, control point is required */
+    /* THIS IS DISABLED IN THIS VERSION !!! */
+
     const int max_bound = 20;
     const int max_loop = 1000;
 
@@ -137,6 +152,10 @@ namespace dropOut_tracing
         RT_FUNCTION __host__ int2 dataId2SpaceId(int data_id) { return make_int2(data_id % specularSubSpaceNumber, int(data_id / specularSubSpaceNumber)); }
         RT_FUNCTION __host__ statistics_data_struct& get_statistic_data(DropOutType type, int specular_id, int surface_id)
         {
+#ifdef GENERAL_U
+            type = pathLengthToDropOutType(1);
+#endif // GENERAL_U
+
             if (record_buffer == nullptr)
             {
                 printf("dot params is Not Initialized Yet\n");

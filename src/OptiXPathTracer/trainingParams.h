@@ -13,6 +13,7 @@
 struct trainingParams
 {
 	float grid[GRID_SIZE][GRID_SIZE];
+
 	/* prefixSum[i] = grid[0] + grid[1] + ... + grid[i] */
 	float prefixSum[GRID_SIZE * GRID_SIZE];
 
