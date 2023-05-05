@@ -1158,12 +1158,15 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
+         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+
+
         // scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
 
          //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
-         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
 
 
@@ -1177,8 +1180,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene"); 
+        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
 
