@@ -2001,6 +2001,8 @@ struct statistic_payload
     unsigned bufferBias;
     unsigned SP_label;
     unsigned CP_label;
+    float2 uv;
+    bool uvvalid;
     dropOut_tracing::DropOutType type;
     dropOut_tracing::statistics_data_struct data;
     bool CP_NOVERTEX;
@@ -2047,19 +2049,36 @@ struct statistic_payload
             data.bound = 1;
         }
         type = dropOut_tracing::pathLengthToDropOutType(u);
+        pg_p=dot_params.get_PGParams_pointer(type, SP_label, CP_label);
+        uvvalid = pg_p->hasLoadln;
+        printf("we get %d at first\n", uvvalid);
     }
     RT_FUNCTION float3 getInitialDirection(float3 normal, unsigned& seed)
     {
         float3 dir;
-        Onb onb(RR_TEST(seed, 0.5) ? normal : -normal);
-        cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
-        onb.inverse_transform(dir);
+        if (!uvvalid) {
+            Onb onb(RR_TEST(seed, 0.5) ? normal : -normal);
+            cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+            onb.inverse_transform(dir);
+            uv = dir2uv(dir);
+        }
+        else
+        {
+           pg_p->predict(uv);
+           dir = uv2dir(uv);
+           printf("use to use at %f %f %f\n", dir.x, dir.y, dir.z);
+        }
         return dir;
     }
     RT_FUNCTION float getInitialDirectionPdf(float3 normal, float3 direction)
     {
-        //Sample in two hemisphere
-        return 1.0 / M_PI / 2;
+        if (!uvvalid) {
+            //Sample in two hemisphere
+            return 1.0 / M_PI / 2;
+        }
+        else {
+            return pg_p->pdf(dir2uv(direction));
+        }
     }
 
     RT_FUNCTION bool NO_CP()
@@ -3511,13 +3530,14 @@ namespace Shift
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
 
-            if()
-            ////statistic collection
-            dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
-            dirction_record.data = max_B;
-            dirction_record.data2 = max_B;
-            DOT_pushRecordToBuffer(dirction_record, statistic_prd);
-            ////statistic collection end
+            if (!DOT_IS_ALTERNATE_PATH_INVALID(path)) {
+                ////statistic collection
+                dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
+                dirction_record.data = statistic_prd.uv.x;
+                dirction_record.data2 = statistic_prd.uv.y;
+                DOT_pushRecordToBuffer(dirction_record, statistic_prd);
+                ////statistic collection end
+            }
             
             float factor = 1 - p / (B * q);
             res += factor / B * sign;

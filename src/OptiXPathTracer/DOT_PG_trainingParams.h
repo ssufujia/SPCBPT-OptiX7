@@ -15,7 +15,7 @@ namespace dropOut_tracing
 {
     class PGParams {
     public:
-        PGParams() : hasLoadln(false) {}
+        RT_FUNCTION __host__ PGParams() : hasLoadln(false) {}
         inline __host__ void loadIn(const std::vector<float2>& points);
         inline __host__ void predict_array(float2* point, int num);
         RT_FUNCTION __host__ float predict(float2& point);
@@ -39,7 +39,7 @@ namespace dropOut_tracing
     };
 
     __host__ void PGParams::loadIn(const std::vector<float2>& points) {
-        if (!hasLoadln)
+//        if (!hasLoadln)
             initializeGMM(points);
         hasLoadln = 1;
         updateGaussian(points);

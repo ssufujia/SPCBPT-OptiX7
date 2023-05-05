@@ -829,7 +829,7 @@ void updateDropOutTracingCombineWeight()
 
 void updateDropOutTracingParams()
 { 
-    bool disable_print = true;
+    bool disable_print = false;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
     dot_params.data.host_data = statics_data.data();
@@ -937,9 +937,11 @@ void updateDropOutTracingParams()
             for (int j = 0; j < dot_params.specularSubSpaceNumber; j++)
                 for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
                 {
+                    int num = tempVector[i][j][k].size();
+                    if (num == 0) continue;
                     dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->loadIn(tempVector[i][j][k]);
                     if (!disable_print){
-                        printf("PG traning for ID S:%d C:%d U:%d with size %d\n", j, k, i, tempVector[i][j][k].size());
+                        printf("PG traning for ID S:%d C:%d U:%d with size %d\n", j, k, i, num);
                     }
                 }
         }
@@ -974,6 +976,7 @@ void updateDropOutTracingParams()
 
     dot_params.selection_const = lt_params.M_per_core * lt_params.num_core;// / float(params.sampler.glossy_count);
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
+
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
 }
 
@@ -1014,7 +1017,6 @@ void preprocessing(sutil::Scene& scene)
     while (current_Q_samples < target_Q_samples)
     {
         //launchLightTrace(scene);
-
         launchLVCTrace(scene);
         auto p_v = thrust::device_pointer_cast(params.lt.ans);
         auto p_valid = thrust::device_pointer_cast(params.lt.validState); 
