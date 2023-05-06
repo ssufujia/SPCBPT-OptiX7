@@ -243,7 +243,7 @@ RT_FUNCTION float3 lightStraghtHit(BDPTVertex& a)
     float3 contri = a.flux;
     float pdf = a.pdf;
     float inver_weight = a.RMIS_pointer;
-
+    inver_weight = 1;//modified
     float3 ans = contri / pdf / inver_weight;
     if (ISINVALIDVALUE(ans))
     {
@@ -329,7 +329,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         //break;
         for (int it = 0; it < CONNECTION_N; it++)
         {
-
+            //break;
             int light_id = 0;
             float pmf_firstStage = 1;
             if (Tracer::params.subspace_info.light_tree)
