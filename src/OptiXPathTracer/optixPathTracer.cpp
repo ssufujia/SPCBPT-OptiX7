@@ -794,6 +794,7 @@ void updateDropOutTracingCombineWeight()
                 h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j] =
                     gamma_non_normalized[i * dropOut_tracing::default_specularSubSpaceNumber + j] / gamma_sum[i] * (1-CONSERVATIVE_RATE) + 
                     1.0 / dropOut_tracing::default_specularSubSpaceNumber * (CONSERVATIVE_RATE);
+                //printf("eye %d-%d pmf %f\n",i , j, h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j]);
             }
         }
 
@@ -971,10 +972,10 @@ void preprocessing(sutil::Scene& scene)
 
     MyThrustOp::sample_reweight();
     auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 10000);
-    auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, min(300, NUM_SUBSPACE), 0);
+    auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE, 0);
 
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
-    auto h_light_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, min(300, NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE), 0);
+    auto h_light_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE, 0);
 
     auto d_DecisionTree = MyThrustOp::eye_tree_to_device(h_eye_tree.v, h_eye_tree.size);
     subspaceInfo.eye_tree = d_DecisionTree;
@@ -1160,7 +1161,7 @@ int main( int argc, char* argv[] )
 
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
 
 
         // scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");

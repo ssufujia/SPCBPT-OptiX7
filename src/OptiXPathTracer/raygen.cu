@@ -227,7 +227,9 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
     //printf("connect info %f %f %f\n", temp_vec.x, temp_vec.y, temp_vec.z);
     float3 contri = a.flux * b.flux * fa * fb * G;
     float pdf = a.pdf * b.pdf; 
-    float3 ans = contri / pdf *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
+    //float3 ans = contri / pdf *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
+    float3 ans = (a.flux / a.pdf) * (b.flux / b.pdf) * fa * fb * G
+        *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
 
 
     if (ISINVALIDVALUE(ans))
@@ -819,7 +821,6 @@ extern "C" __global__ void __raygen__shift_combine()
                 {
                     res = lightStraghtHit(payload.path.currentVertex());
                 }
-
             }  
             result += res;
             break;
@@ -841,7 +842,7 @@ extern "C" __global__ void __raygen__shift_combine()
                     make_uint2(launch_idx.x, launch_idx.y), make_uint2(launch_dims.x, launch_dims.y));
                 //result = make_float3(caustic_connection_prob);
                 //printf("caustic ratio%f %d %d\n", caustic_connection_prob, launch_idx.x, launch_idx.y);
-                //caustic_connection_prob = 0.5;
+                //caustic_connection_prob = 1;
                 //if(caustic_connection_prob<0|| caustic_connection_prob>1)
                 //    printf("conn %f\n", caustic_connection_prob);
                 dropOut_tracing::pixelRecord& pixel_record =
@@ -856,7 +857,7 @@ extern "C" __global__ void __raygen__shift_combine()
                     float guide_ratio = 1 - CONSERVATIVE_RATE;
                     guide_ratio = 1;
                     const BDPTVertex* light_subpath_p;
-                    if (rnd(payload.seed) > guide_ratio)
+                    if (RR_TEST(seed, guide_ratio) == false)
                     {
                         if (Tracer::params.sampler.glossy_count == 0)continue;
                         const BDPTVertex& light_subpath =
@@ -981,14 +982,16 @@ extern "C" __global__ void __raygen__shift_combine()
                 const BDPTVertex& light_subpath =
                     reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
                 if (Shift::glossy(light_subpath))continue;
+                if (Shift::glossy(eye_vertex))continue;
                 if ((Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
                 {
                     float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
 
                     float3 res;
                     res = connectVertex_SPCBPT(eye_vertex, light_subpath) / pmf;
-                    
-                    if (Shift::pathRecord_alreadyCaustic(payload.path_record, payload.depth)&& light_subpath.depth + 1<SHIFT_VALID_SIZE)
+                     
+
+                    if (Shift::pathRecord_alreadyCaustic(payload.path_record, payload.depth) && light_subpath.depth + 1 < SHIFT_VALID_SIZE)
                     {  
                         Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                         int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, 0, originPath, originPath);
@@ -1132,16 +1135,20 @@ extern "C" __global__ void __raygen__lightTrace()
                     //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
                     u = Shift::get_imcomplete_subpath_info(light_subpath, SP, CP, WC); 
 
-                    if (Shift::valid_specular(CP, SP, u, WC)&& dropOut_tracing::debug_PT_ONLY == false)
-                    {  
+                    if (Shift::valid_specular(CP, SP, u, WC) && dropOut_tracing::debug_PT_ONLY == false)
+                    {
                         statistic_payload statistic_prd;
                         statistic_prd.build(curVertex, CP, WC, u);
                         statistic_prd.putId = &DOT_record_count;
                         statistic_prd.bufferBias = DOT_buffer_bias;
                         float3 tempV;
                         if (statistic_prd.data.valid == false)
-                            statistic_prd.data.bound = 1;// Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
+                            statistic_prd.data.bound = 1;
                         if (statistic_prd.data.bound > dropOut_tracing::max_bound)statistic_prd.data.bound = dropOut_tracing::max_bound;
+                        if (false&&statistic_prd.type == dropOut_tracing::pathLengthToDropOutType(1))
+                        { 
+                            statistic_prd.data.bound = Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
+                        }
 
                         if (statistic_prd.subspace_valid())
                         {

@@ -10,8 +10,8 @@
 namespace dropOut_tracing
 {
     const int slot_number = 5;
-    const int default_specularSubSpaceNumber = 21;
-    const int default_surfaceSubSpaceNumber = 20; 
+    const int default_specularSubSpaceNumber = 101;
+    const int default_surfaceSubSpaceNumber = 10; 
     const int record_buffer_width = 1;
     const int max_u = 5;
     const unsigned pixel_unit_size = 10;
@@ -26,7 +26,7 @@ namespace dropOut_tracing
     //true  true  true  false false = LSDE  enable
     //true  false true  false true  = LDSDE enable
     //true  false false true  true  = L(A)*DSDE enable 
-    const int max_bound = 20;
+    const int max_bound = 100;
     const int max_loop = 1000;
     const float light_subpath_caustic_discard_ratio = 0.9;
 
