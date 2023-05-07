@@ -18,7 +18,7 @@ namespace dropOut_tracing
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
 
-    const bool multi_bounce_disable = true; // if true, u mush be 1
+    const bool multi_bounce_disable = false; // if true, u mush be 1
     const bool CP_disable = true; // if true, only no control point is valid
     const bool CP_lightsource_only = false; // if true, CP must be on light source
     const bool CP_lightsource_disable = false; // if true, CP can't be on light source
@@ -179,8 +179,9 @@ namespace dropOut_tracing
         RT_FUNCTION __host__ int2 dataId2SpaceId(int data_id) { return make_int2(data_id % specularSubSpaceNumber, int(data_id / specularSubSpaceNumber)); }
         RT_FUNCTION __host__ PGParams* get_PGParams_pointer(DropOutType type, int specular_id, int surface_id)
         {
-            if (!statistic_available() && data.on_GPU == true)
+            if (false&&!statistic_available() && data.on_GPU == true)
             {
+                printf("warn: you are using the PG data in DEVICE WITHOUT ANY data collected\n");
                 return nullptr;
                 //printf("warn: you are using the PG data in DEVICE WITHOUT ANY data collected\n");
             }

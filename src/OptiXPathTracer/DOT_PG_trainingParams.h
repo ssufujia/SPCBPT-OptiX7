@@ -13,12 +13,48 @@
 #define GRID_SIZE 1
 namespace dropOut_tracing
 {
+    // 正态分布随机数生成函数
+    RT_FUNCTION __host__ float randn(float mean, float stdDev, unsigned int& seed) {
+        static bool hasSpare = false;
+        static float spare;
+        if (hasSpare) {
+            hasSpare = false;
+            return mean + stdDev * spare;
+        }
+        hasSpare = true;
+        float u, v, s;
+        do {
+            u = rnd(seed) * 2.0f - 1.0f;
+            v = rnd(seed) * 2.0f - 1.0f;
+            s = u * u + v * v;
+        } while (s >= 1.0f || s == 0.0f);
+        s = std::sqrt(-2.0f * std::log(s) / s);
+        spare = v * s;
+        return mean + stdDev * u * s;
+    }
+
+    // 离散分布随机数生成函数
+    RT_FUNCTION __host__ int randd(const float* weights, int numWeights, unsigned int& seed) {
+        float sum = 0.0f;
+        for (int i = 0; i < numWeights; ++i) {
+            sum += weights[i];
+        }
+        float r = rnd(seed) * sum;
+        for (int i = 0; i < numWeights; ++i) {
+            if (r < weights[i]) {
+                return i;
+            }
+            r -= weights[i];
+        }
+        return numWeights - 1;
+    }
+
     class PGParams {
     public:
         RT_FUNCTION __host__ PGParams() : hasLoadln(false) {}
         inline __host__ void loadIn(const std::vector<float2>& points);
         inline __host__ void predict_array(float2* point, int num);
-        RT_FUNCTION __host__ float predict(float2& point);
+        RT_FUNCTION __host__ float predict(float2& point, unsigned int& seed);
         RT_FUNCTION __host__ float pdf(float2& dirction);
         bool hasLoadln;
     private:
@@ -40,7 +76,7 @@ namespace dropOut_tracing
 
     __host__ void PGParams::loadIn(const std::vector<float2>& points) {
 //        if (!hasLoadln)
-            initializeGMM(points);
+        initializeGMM(points);
         hasLoadln = 1;
         updateGaussian(points);
     }
@@ -189,23 +225,16 @@ namespace dropOut_tracing
         }
     }
 
-    RT_FUNCTION __host__ float PGParams::predict(float2& point) {
+    RT_FUNCTION __host__ float PGParams::predict(float2& point,unsigned int& seed) {
         if (!hasLoadln) {
+            printf("error\n");
+            point = make_float2(0.14, 0.54);
             return 0.f;
         }
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::vector<std::normal_distribution<float>> distX(numComponents), distY(numComponents);
-        std::discrete_distribution<int> componentDist(weights, weights + numComponents);
 
-        for (int j = 0; j < numComponents; ++j) {
-            distX[j] = std::normal_distribution<float>(means[j].x, stdDevs[j].x);
-            distY[j] = std::normal_distribution<float>(means[j].y, stdDevs[j].y);
-        }
-
-        int component = componentDist(gen);
-        point.x = distX[component](gen);
-        point.y = distY[component](gen);
+        int component = randd(weights, numComponents,seed);
+        point.x = randn(means[component].x, stdDevs[component].x, seed);
+        point.y = randn(means[component].y, stdDevs[component].y, seed);
 
         point.x = lerp(0.0f, 1.0f, point.x);
         point.y = lerp(0.0f, 1.0f, point.y);
@@ -214,7 +243,7 @@ namespace dropOut_tracing
         for (int j = 0; j < numComponents; ++j) {
             pdf += weights[j] * gaussianProbability(point, j);
         }
-
+        
         return pdf;
     }
 

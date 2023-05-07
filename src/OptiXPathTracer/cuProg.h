@@ -1986,6 +1986,7 @@ RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId,
     const DropOutTracing_params& dot_params = Tracer::params.dot_params;
     if (putId > dot_params.record_buffer_padding)
     {
+        return;
         printf("error in drop out tracing: pushing more record than the record buffer padding\n \
             will discord the over-flowing record\n \
             consider to increase record_buffer_width in dropOutTracing_common.h to assign more memory for record buffer\n");
@@ -2001,7 +2002,6 @@ struct statistic_payload
     unsigned bufferBias;
     unsigned SP_label;
     unsigned CP_label;
-    float2 uv;
     bool uvvalid;
     dropOut_tracing::DropOutType type;
     dropOut_tracing::statistics_data_struct data;
@@ -2051,7 +2051,6 @@ struct statistic_payload
         type = dropOut_tracing::pathLengthToDropOutType(u);
         pg_p=dot_params.get_PGParams_pointer(type, SP_label, CP_label);
         uvvalid = pg_p->hasLoadln;
-        printf("we get %d at first\n", uvvalid);
     }
     RT_FUNCTION float3 getInitialDirection(float3 normal, unsigned& seed)
     {
@@ -2060,13 +2059,13 @@ struct statistic_payload
             Onb onb(RR_TEST(seed, 0.5) ? normal : -normal);
             cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
             onb.inverse_transform(dir);
-            uv = dir2uv(dir);
         }
         else
         {
-           pg_p->predict(uv);
+            float2 uv{0.54,0.14};
+           pg_p->predict(uv,seed);
+           //printf("predict uv is %f %f and hasloadin is %d\n", uv.x, uv.y,pg_p->hasLoadln);
            dir = uv2dir(uv);
-           printf("use to use at %f %f %f\n", dir.x, dir.y, dir.z);
         }
         return dir;
     }
@@ -3530,11 +3529,13 @@ namespace Shift
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
 
-            if (!DOT_IS_ALTERNATE_PATH_INVALID(path)) {
+            if (p>0) {
                 ////statistic collection
                 dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
-                dirction_record.data = statistic_prd.uv.x;
-                dirction_record.data2 = statistic_prd.uv.y;
+                float3 dir = normalize(path.get(0).position - SP.position);
+                float2 uv = dir2uv(dir);
+                dirction_record.data = uv.x;
+                dirction_record.data2 = uv.y;
                 DOT_pushRecordToBuffer(dirction_record, statistic_prd);
                 ////statistic collection end
             }

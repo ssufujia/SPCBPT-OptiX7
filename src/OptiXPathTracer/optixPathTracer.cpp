@@ -928,7 +928,7 @@ void updateDropOutTracingParams()
             auto& record = records[i];
             if (record.data_slot == DOT_usage::Dirction)
             {
-                if (isinf(record))continue;
+                //printf("PG record for ID S:%d C:%d U:%d with uv %f %f\n", record.specular_subspaceId, record.surface_subspaceId, int(record.type), record.data, record.data2);
                 tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId].push_back(float2{ record.data,record.data2 });
             }
         }
@@ -976,7 +976,7 @@ void updateDropOutTracingParams()
 
     dot_params.selection_const = lt_params.M_per_core * lt_params.num_core;// / float(params.sampler.glossy_count);
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
-
+    //system("pause");
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
 }
 
