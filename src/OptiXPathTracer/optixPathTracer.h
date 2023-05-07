@@ -28,7 +28,7 @@
 #ifndef OPTIXPATHTRACER_H
 #define OPTIXPATHTRACER_H
 
-#define NUM_SUBSPACE 1000
+#define NUM_SUBSPACE 300
 #define NUM_SUBSPACE_LIGHTSOURCE (int(0.2 * NUM_SUBSPACE))
 
 #define RR_MIN_LIMIT
@@ -41,8 +41,8 @@
 #define RMIS_FLAG true
 
 /* Path Guiding 开关 */
-static const bool PG_ENABLE = 0;
-
+static const bool PG_ENABLE = false;
+const bool SPCBPT_PURE = false;
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"

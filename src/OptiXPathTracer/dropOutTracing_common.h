@@ -10,15 +10,15 @@
 namespace dropOut_tracing
 {
     const int slot_number = 5;
-    const int default_specularSubSpaceNumber = 21;
-    const int default_surfaceSubSpaceNumber = 20; 
+    const int default_specularSubSpaceNumber = 101;
+    const int default_surfaceSubSpaceNumber = 10; 
     const int record_buffer_width = 1;
     const int max_u = 5;
     const unsigned pixel_unit_size = 10;
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
 
-    const bool multi_bounce_disable = false; // if true, u mush be 1
+    const bool multi_bounce_disable = true; // if true, u mush be 1
     const bool CP_disable = true; // if true, only no control point is valid
     const bool CP_lightsource_only = false; // if true, CP must be on light source
     const bool CP_lightsource_disable = false; // if true, CP can't be on light source
@@ -26,11 +26,12 @@ namespace dropOut_tracing
     //true  true  true  false false = LSDE  enable
     //true  false true  false true  = LDSDE enable
     //true  false false true  true  = L(A)*DSDE enable 
-    const int max_bound = 20;
+    const int max_bound = 100;
     const int max_loop = 1000;
+    const float light_subpath_caustic_discard_ratio = 0.9;
 
 #define DOT_EMPTY_SURFACEID 0
-#define DOT_INVALID_SURFACEID 0
+#define DOT_INVALID_SPECULARID 0
     enum class DropOutType
     {
         LS,
@@ -166,9 +167,9 @@ namespace dropOut_tracing
         // It is important not to use statistics data for other operations when the count is 0, as all statistics data will be set to 0 at this time.
         // 当计数为0时，说明尚未有任何的统计数据被统计，注意不要在此时使用统计数据来做别的操作，所有的统计数据在此时都会被设为0
         int statistics_iteration_count;
-        float selection_const;
-       
-        bool pixel_dirty;
+        float selection_const; 
+        float discard_ratio;
+        bool pixel_dirty; 
 
         statistics_data data; 
 
@@ -228,7 +229,7 @@ namespace dropOut_tracing
             float weight = CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id];
             if (specular_id >= 1)
                 weight -= CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id - 1];
-            return weight / specular_Q[specular_id] * selection_const;
+            return weight / specular_Q[specular_id] * selection_const * (1 - discard_ratio);
         }
         __host__ void image_resize()
         {

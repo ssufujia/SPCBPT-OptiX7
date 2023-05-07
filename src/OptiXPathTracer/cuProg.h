@@ -1097,7 +1097,7 @@ namespace Tracer
 
 
         float mateta = mat.eta;
-        float eta = mateta;
+        float eta = 1 / mateta;
         if (NDotL > 0)
         {
             eta = 1 / eta;
@@ -1106,7 +1106,7 @@ namespace Tracer
 
         if (NDotL == 0 || NDotV == 0) return make_float3(0);
         float refract;
-        if ((1 - NDotV * NDotV) / (eta * eta) >= 1)// ȫ����
+        if ((1 - NDotV * NDotV) * eta * eta >= 1)// ȫ    
             refract = 1;
         else
             refract = 0;
@@ -1116,55 +1116,31 @@ namespace Tracer
         float3 Cspec0 = lerp(mat.specular * 0.08f * lerp(make_float3(1.0f), Ctint, mat.specularTint), Cdlin, mat.metallic);
 
         // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-        float3 wh = normalize(L * eta + V);
+        float3 wh = normalize(L + V * eta);
         if (dot(wh, N) < 0) wh = -wh;
 
         // Same side?
         if (dot(L, wh) * dot(V, wh) > 0) return make_float3(0);
 
-        float sqrtDenom = eta * dot(L, wh) + dot(V, wh);
-        float factor = 1;// modify
+        float sqrtDenom = dot(L, wh) + eta * dot(V, wh);
+        float factor = 1 / eta;
         float3 T = mat.trans * make_float3(sqrt(mat.base_color.x), sqrt(mat.base_color.y), sqrt(mat.base_color.z));
-        //printf("%f\n", mat.trans);
         float roughg = sqr(mat.roughness * 0.5f + 0.5f);
         float Gs = 1 / (1 + Lambda(V, N) + Lambda(L, N));
-        //float Gs = smithG_GGX(abs(NDotL), roughg) * smithG_GGX(abs(NDotV), roughg);
         float a = max(0.001f, mat.roughness);
-        float Ds = GTR2(dot(N, wh), a);//D(wh, N);
-        //GTR2(dot(wh,N), a);
+        float Ds = GTR2(dot(N, wh), a);
         float FH = SchlickFresnel(dot(V, wh));
         float3 Fs = lerp(Cspec0, make_float3(1.0f), FH);
-        //float F = fresnel(abs(dot(V, wh)), abs(dot(L, wh)), eta);
-        //printf("Fresnel: %f\n", F);
-        float F = 0;
-        float cosI = abs(NDotV);
-        float sin2T = (1 - NDotV * NDotV) / (eta * eta);
-
-        if (sin2T <= 1)
-        {
-            float cosT = sqrt(1 - sin2T);
-            F = fresnel(cosI, cosT, eta);
-        }
-        //if(NDotL<-0.8)
-            //printf("NDotV:%f, NDotL:%f, NDotWh:%f, Ds:%f\n", NDotV, NDotL, dot(wh, N), Ds);
+        float F = fresnel(abs(dot(V, wh)), abs(dot(L, wh)), eta);
         float3 out = (1 - refract) * (1.f - F) * T *
             std::abs(Ds * Gs * eta * eta *
                 abs(dot(L, wh)) * abs(dot(V, wh)) * factor * factor /
-                (sqrtDenom * sqrtDenom));
-        /*
-        if (isRefract(N, V, L))
-        {
-            out *= eta * eta;
-        }
-        */
-        //if(out.x!=0)
-        //    printf("trans: %f,%f,%f\n", out.x, out.y, out.z); 
+                (NDotL * NDotL * sqrtDenom * sqrtDenom));
         return out;
 
     }
     RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
     {
-
         float3 N = normal;
 
         float mateta = mat.eta;
@@ -1173,7 +1149,6 @@ namespace Tracer
         float eta = 1 / mateta;
         if (NDotL * NDotV <= 0.0f)
             return Eval_Transmit(mat, normal, V, L);
-
         //return make_float3(0);
 
         if (NDotL < 0.0f && NDotV < 0.0f)
@@ -1189,7 +1164,7 @@ namespace Tracer
         float VDotH = dot(V, H);
 
         float refract;
-        if ((1 - NDotV * NDotV) * eta * eta >= 1)// ȫ����
+        if ((1 - NDotV * NDotV) * eta * eta >= 1)// ȫ    
             refract = 1;
         else
             refract = 0;
@@ -1255,18 +1230,15 @@ namespace Tracer
             out = out + Gs * Ds * (1 - trans * (1 - refract) * (1 - F));
         else
             out = out + Gs * Ds * Fs;
-        //printf("%f %f\n", cosThetaI,F);
-            //+ Gs * Ds * (1 - trans * F);// (1 - (1 - F));// *(1 - refract));
-            //+ 0.25f * mat.clearcoat * Gr * Fr * Dr;
-        //printf("eval: %f,%f,%f\n", out.x, out.y, out.z);
         return out;
-    }
+    } 
+    
     RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed, float3 position = make_float3(0.0), bool use_pg = false)
     {
         if (use_pg && Tracer::params.pg_params.pg_enable)
         {
             //printf("A %f\n", Tracer::params.pg_params.guide_ratio);
-            if(rnd(seed) < Tracer::params.pg_params.guide_ratio)
+            if (rnd(seed) < Tracer::params.pg_params.guide_ratio)
                 return Tracer::params.pg_params.sample(seed, position);
         }
 
@@ -1336,8 +1308,10 @@ namespace Tracer
         float diffuseRatio = 0.5f * (1.0f - mat.metallic);// *(1 - transRatio);
         if (transprob < transRatio) // sample transmit
         {
-            //refractRatio = 1 - fresnel(NdotV, sqrt(1 - sin2ThetaT), eta);
-            refractRatio = 0.5;
+            float refractRatio = 0;
+            float temp = (1 - NdotV * NdotV) * (eta * eta);
+            if (temp < 1)
+                refractRatio = 1 - fresnel(NdotV, sqrt(1 - temp), eta);
             if (refractprob < refractRatio)
             {
                 Onb onb(normal); // basis
@@ -1409,7 +1383,7 @@ namespace Tracer
 
         //return abs(dot(L, normal)) * (.5f / M_PIf);
 
-         
+
 #ifdef BRDF
         if (mat.brdf)
             return 1.0f;// return abs(dot(L, normal));
@@ -1451,13 +1425,17 @@ namespace Tracer
         float pdfSpec = lerp(pdfGTR1, pdfGTR2, ratio) / (4.0 * abs(dot(L, half)));
         float pdfDiff = abs(dot(L, n)) * (1.0f / M_PIf);
 
-        //float refractRatio = 1 - fresnel(NdotV, sqrt(1 - sin2ThetaT), eta);
-        float refractRatio = 0.5;
-        pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * (1 - transRatio * refractRatio);// normal reflect
-
         float cosThetaI = abs(dot(wh, V));
         float sin2ThetaI = 1 - cosThetaI * cosThetaI;
         float sin2ThetaT = 1 / (eta * eta) * sin2ThetaI;
+
+        float refractRatio = 0;
+        float temp = (1 - NdotV * NdotV) / (eta * eta);
+        if (temp < 1)
+            refractRatio = 1 - fresnel(NdotV, sqrt(1 - temp), eta);
+        //float refractRatio = 0.5;
+
+        pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * (1 - transRatio * refractRatio);// normal reflect
 
         if (sin2ThetaT <= 1 && dot(L, wh) * dot(V, wh) < 0)//refract
         {
@@ -1495,16 +1473,15 @@ namespace Tracer
                 pdf /= (mat.eta * mat.eta);
             }
         }*/
-         
+
 
         if (use_pg && Tracer::params.pg_params.pg_enable)
-        { 
+        {
             pdf *= 1 - Tracer::params.pg_params.guide_ratio;
             pdf += Tracer::params.pg_params.guide_ratio * Tracer::params.pg_params.pdf(position, L);
         }
         return pdf;
     }
-
     RT_FUNCTION float rrRate(float3 color)
     {
         float rr_rate = fmaxf(color);
@@ -2145,7 +2122,7 @@ namespace Shift
 
     RT_FUNCTION bool glossy(const MaterialData::Pbr& mat)
     {
-        return mat.roughness < 0.4 && max(mat.metallic, mat.trans) >= 0.99;
+        return mat.roughness < 0.2 && max(mat.metallic, mat.trans) >= 0.99;
     }
     RT_FUNCTION bool glossy(const BDPTVertex& v)
     {
@@ -2169,38 +2146,6 @@ namespace Shift
         return false;
     }
 
-    RT_FUNCTION bool getCausticPathInfo(const BDPTVertex* path, int path_size, BDPTVertex& SP, BDPTVertex& CP, int& u, float3 & WC)
-    {
-        for (int i = 1; i < path_size - 1; i++)
-        {
-            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == false)
-                break;
-
-            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == true)
-            {
-                SP = path[i + 1];
-                CP.type = BDPTVertex::Type::DROPOUT_NOVERTEX;
-                u = 1;
-                for (u = 1; i + u + 1 < path_size; u++)
-                {
-                    if (!glossy(path[i + u + 1]))
-                    {
-                        if (i + u + 2 < path_size)
-                        {
-                            CP = path[i + u + 2];
-                        }
-                        if (i + u + 3 < path_size)
-                        {
-                            WC = normalize(path[i + u + 3].position - path[i + u + 2].position);
-                        }
-                        break;
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
-    }
 
     RT_FUNCTION bool RefractionCase(const BDPTVertex& v)
     {
@@ -2272,6 +2217,39 @@ namespace Shift
         }
     };
 
+    RT_FUNCTION bool getCausticPathInfo(const BDPTVertex* path, int path_size, BDPTVertex& SP, BDPTVertex& CP, int& u, float3& WC)
+    {
+        for (int i = 1; i < path_size - 1; i++)
+        {
+            if (path_size - i - 1 >= SHIFT_VALID_SIZE)return false;
+            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == false)
+                break;
+
+            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == true)
+            {
+                SP = path[i + 1];
+                CP.type = BDPTVertex::Type::DROPOUT_NOVERTEX;
+                u = 1;
+                for (u = 1; i + u + 1 < path_size; u++)
+                {
+                    if (!glossy(path[i + u + 1]))
+                    {
+                        if (i + u + 2 < path_size)
+                        {
+                            CP = path[i + u + 2];
+                        }
+                        if (i + u + 3 < path_size)
+                        {
+                            WC = normalize(path[i + u + 3].position - path[i + u + 2].position);
+                        }
+                        break;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
     RT_FUNCTION float3 etaCheck(float3 in_dir, float3 ref_dir, float3 normal)
     {
         float cosA = abs(dot(ref_dir, normal));
@@ -3434,7 +3412,7 @@ namespace Shift
         }
         else
         {
-            pdf = tracingPdf(CP, path.get(-1), WC, false, true);
+            pdf = tracingPdf(CP, path.get(-1), WC, false, false);
         }
         for (int i = 1; i < u; i++)
         {
@@ -3518,6 +3496,7 @@ namespace Shift
         //above code: information setup
 
         float res = 1 / B;
+        res = 0;
         BDPTVertex buffer[SHIFT_VALID_SIZE];
         PathContainer path(buffer, 1, 0);
         splitingStack spliting_stack;
@@ -3541,7 +3520,8 @@ namespace Shift
             }
             
             float factor = 1 - p / (B * q);
-            res += factor / B * sign;
+    //        res += factor / B * sign;
+            res += 1 / B * sign;
             //if (sample_success)printf("p %f q%f B%f u%d\n", p, q, B, path.size());
             float RRS = abs(factor);
             float rr_rate = RRS - int(RRS);
@@ -3639,6 +3619,18 @@ namespace Shift
             record = record >> 1;
         }
         return true;
+    }
+
+    RT_FUNCTION bool pathRecord_alreadyCaustic(long long record, int depth)
+    {
+        if (depth > 32)return false;
+        for (int i = 0; i < depth; i++)
+        {
+            //if (i != depth - 1 && record % 2 != 1)return false;
+            if (i != depth - 1 && record % 2 == 0 && (record >> 1) % 2 == 1)return true;
+            record = record >> 1;
+        }
+        return false;
     }
 }
 
