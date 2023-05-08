@@ -17,6 +17,7 @@ namespace dropOut_tracing
     const unsigned pixel_unit_size = 10;
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
+    const bool PG_reciprocal_estimation_enable = false;
 
     const bool multi_bounce_disable = true; // if true, u mush be 1
     const bool CP_disable = true; // if true, only no control point is valid
@@ -48,7 +49,7 @@ namespace dropOut_tracing
      */
     enum class SlotUsage
     {
-        Average, Bound, SlotUsageNumber
+        Average, Bound,Dirction, SlotUsageNumber
     };
 
     RT_FUNCTION __host__ DropOutType pathLengthToDropOutType(int num) {
@@ -91,6 +92,7 @@ namespace dropOut_tracing
     struct statistic_record
     {
         float data;
+        float data2;
         short specular_subspaceId;
         short surface_subspaceId;
         SlotUsage data_slot;
@@ -179,8 +181,9 @@ namespace dropOut_tracing
         RT_FUNCTION __host__ int2 dataId2SpaceId(int data_id) { return make_int2(data_id % specularSubSpaceNumber, int(data_id / specularSubSpaceNumber)); }
         RT_FUNCTION __host__ PGParams* get_PGParams_pointer(DropOutType type, int specular_id, int surface_id)
         {
-            if (!statistic_available() && data.on_GPU == true)
+            if (false&&!statistic_available() && data.on_GPU == true)
             {
+                printf("warn: you are using the PG data in DEVICE WITHOUT ANY data collected\n");
                 return nullptr;
                 //printf("warn: you are using the PG data in DEVICE WITHOUT ANY data collected\n");
             }

@@ -939,6 +939,35 @@ void updateDropOutTracingParams()
                 }
     }
 
+    //PG training
+    {
+        std::vector<std::vector<std::vector<std::vector<float2>>>> tempVector(dropOut_tracing::max_u,
+            std::vector<std::vector<std::vector<float2>>>(dot_params.specularSubSpaceNumber,
+                std::vector<std::vector<float2>>(dot_params.surfaceSubSpaceNumber, 
+                    std::vector<float2>())));
+
+        for (int i = 0; i < records.size(); i++)
+        {
+            auto& record = records[i];
+            if (record.data_slot == DOT_usage::Dirction)
+            {
+                //printf("PG record for ID S:%d C:%d U:%d with uv %f %f\n", record.specular_subspaceId, record.surface_subspaceId, int(record.type), record.data, record.data2);
+                tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId].push_back(float2{ record.data,record.data2 });
+            }
+        }
+
+        for (int i = 0; i < dropOut_tracing::max_u; i++)
+            for (int j = 0; j < dot_params.specularSubSpaceNumber; j++)
+                for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
+                {
+                    int num = tempVector[i][j][k].size();
+                    if (num == 0) continue;
+                    dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->loadIn(tempVector[i][j][k]);
+                    if (!disable_print){
+                        printf("PG traning for ID S:%d C:%d U:%d with size %d\n", j, k, i, num);
+                    }
+                }
+        }
 
     dot_params.statistics_iteration_count++;
     printf("received %lld valid records in the Light Tracing\n",records.size());
@@ -970,6 +999,7 @@ void updateDropOutTracingParams()
 
     dot_params.selection_const = lt_params.M_per_core * lt_params.num_core;// / float(params.sampler.glossy_count);
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
+    //system("pause");
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
 }
 
@@ -1010,7 +1040,6 @@ void preprocessing(sutil::Scene& scene)
     while (current_Q_samples < target_Q_samples)
     {
         //launchLightTrace(scene);
-
         launchLVCTrace(scene);
         auto p_v = thrust::device_pointer_cast(params.lt.ans);
         auto p_valid = thrust::device_pointer_cast(params.lt.validState); 

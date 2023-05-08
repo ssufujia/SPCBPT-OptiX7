@@ -2181,6 +2181,7 @@ RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId,
     const DropOutTracing_params& dot_params = Tracer::params.dot_params;
     if (putId > dot_params.record_buffer_padding)
     {
+        return;
         printf("error in drop out tracing: pushing more record than the record buffer padding\n \
             will discord the over-flowing record\n \
             consider to increase record_buffer_width in dropOutTracing_common.h to assign more memory for record buffer\n");
@@ -2196,6 +2197,7 @@ struct statistic_payload
     unsigned bufferBias;
     unsigned SP_label;
     unsigned CP_label;
+    bool uvvalid;
     dropOut_tracing::DropOutType type;
     dropOut_tracing::statistics_data_struct data;
     bool CP_NOVERTEX;
@@ -2242,19 +2244,35 @@ struct statistic_payload
             data.bound = 1;
         }
         type = dropOut_tracing::pathLengthToDropOutType(u);
+        pg_p=dot_params.get_PGParams_pointer(type, SP_label, CP_label);
+        uvvalid = pg_p->hasLoadln;
     }
     RT_FUNCTION float3 getInitialDirection(float3 normal, unsigned& seed)
     {
         float3 dir;
-        Onb onb(RR_TEST(seed, 0.5) ? normal : -normal);
-        cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
-        onb.inverse_transform(dir);
+        if (!uvvalid) {
+            Onb onb(RR_TEST(seed, 0.5) ? normal : -normal);
+            cosine_sample_hemisphere(rnd(seed), rnd(seed), dir);
+            onb.inverse_transform(dir);
+        }
+        else
+        {
+            float2 uv{0.54,0.14};
+           pg_p->predict(uv,seed);
+           //printf("predict uv is %f %f and hasloadin is %d\n", uv.x, uv.y,pg_p->hasLoadln);
+           dir = uv2dir(uv);
+        }
         return dir;
     }
     RT_FUNCTION float getInitialDirectionPdf(float3 normal, float3 direction)
     {
-        //Sample in two hemisphere
-        return 1.0 / M_PI / 2;
+        if (!uvvalid) {
+            //Sample in two hemisphere
+            return 1.0 / M_PI / 2;
+        }
+        else {
+            return pg_p->pdf(dir2uv(direction));
+        }
     }
 
     RT_FUNCTION bool NO_CP()
@@ -3771,6 +3789,18 @@ namespace Shift
             bool sample_success = alternate_path_sample(seed, path, CP, SP, WC, u, statistic_prd);
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
+
+            if (p>0) {
+                ////statistic collection
+                dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
+                float3 dir = normalize(path.get(0).position - SP.position);
+                float2 uv = dir2uv(dir);
+                dirction_record.data = uv.x;
+                dirction_record.data2 = uv.y;
+                DOT_pushRecordToBuffer(dirction_record, statistic_prd);
+                ////statistic collection end
+            }
+            
             float factor = 1 - p / (B * q);
     //        res += factor / B * sign;
             res += 1 / B * sign;
