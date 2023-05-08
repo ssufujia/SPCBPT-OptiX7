@@ -2180,8 +2180,7 @@ RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId,
 {
     const DropOutTracing_params& dot_params = Tracer::params.dot_params;
     if (putId > dot_params.record_buffer_padding)
-    {
-        return;
+    { 
         printf("error in drop out tracing: pushing more record than the record buffer padding\n \
             will discord the over-flowing record\n \
             consider to increase record_buffer_width in dropOutTracing_common.h to assign more memory for record buffer\n");
@@ -2244,9 +2243,11 @@ struct statistic_payload
             data.bound = 1;
         }
         type = dropOut_tracing::pathLengthToDropOutType(u);
-        pg_p=dot_params.get_PGParams_pointer(type, SP_label, CP_label);
+        if (dropOut_tracing::PG_reciprocal_estimation_enable == true)pg_p = dot_params.get_PGParams_pointer(type, SP_label, CP_label);
+
         uvvalid = pg_p->hasLoadln;
-    }
+        if (dropOut_tracing::PG_reciprocal_estimation_enable == false)uvvalid = false;
+     }
     RT_FUNCTION float3 getInitialDirection(float3 normal, unsigned& seed)
     {
         float3 dir;
@@ -3790,7 +3791,7 @@ namespace Shift
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
 
-            if (p>0) {
+            if (p>0 && dropOut_tracing::PG_reciprocal_estimation_enable) {
                 ////statistic collection
                 dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
                 float3 dir = normalize(path.get(0).position - SP.position);

@@ -940,6 +940,7 @@ void updateDropOutTracingParams()
     }
 
     //PG training
+    if(dropOut_tracing::PG_reciprocal_estimation_enable)
     {
         std::vector<std::vector<std::vector<std::vector<float2>>>> tempVector(dropOut_tracing::max_u,
             std::vector<std::vector<std::vector<float2>>>(dot_params.specularSubSpaceNumber,
