@@ -9,7 +9,7 @@ using namespace path_guiding;
 namespace path_guiding
 {
 
-    float pg_quad_min_area = 0.000001;
+    float pg_quad_min_area = 0.001;
     float pg_rho = 0.01;
     struct quad_tree_group
     {
@@ -391,7 +391,7 @@ namespace path_guiding
 
 
             int max_k = 12;
-            int div_limit = 24000 * 8;
+            int div_limit = 24000;
             if (path_k >= max_k)
             {
                 //div_limit *= pow(2, path_k - max_k);

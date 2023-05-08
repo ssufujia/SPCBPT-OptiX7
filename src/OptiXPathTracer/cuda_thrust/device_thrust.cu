@@ -1025,6 +1025,7 @@ namespace MyThrustOp
             { 
                 path_guiding::PG_training_mat mat;
                 mat.lum = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+                if (mat.lum > 10000)mat.lum = 10000;
                 mat.position = h_neat_conns[j].A_position;
                 mat.uv = dir2uv(normalize(h_neat_conns[j].B_position - h_neat_conns[j].A_position));
                 mat.valid = true;

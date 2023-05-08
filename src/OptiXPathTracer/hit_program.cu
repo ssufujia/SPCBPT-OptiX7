@@ -150,6 +150,7 @@ extern "C" __global__ void __closesthit__lightsource()
     float3 ray_direction = optixGetWorldRayDirection();
 
     if ( /* 打中的光源法向要求与光线方向相反 */
+        
         (dot(prd->ray_direction, light_sample.normal()) <= 0) && (true||
             /* 光源直击, L - E */
             (LE_ENABLE && prd->depth == 0) || (
@@ -282,8 +283,8 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
     //    if (dot(N, ray_direction) > 0.f)
     //        N = -N;
-    prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed);
-    prd->pdf = Tracer::Pdf(currentPbr, N, inver_ray_direction, prd->ray_direction);
+    prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed, geom.P, true);
+    prd->pdf = Tracer::Pdf(currentPbr, N, inver_ray_direction, prd->ray_direction, geom.P, true);
     prd->origin = geom.P;
     if (!(prd->pdf > 0.0f))
         prd->done = true;

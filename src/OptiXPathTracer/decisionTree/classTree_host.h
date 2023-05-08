@@ -8,6 +8,7 @@
 #include<algorithm>
 #include<map> 
 #include<optix.h>
+#include<vector>
 #include"../rt_function.h"
 #include"../optixPathTracer.h"
 namespace classTree
@@ -89,6 +90,7 @@ namespace classTree
         };
         std::vector<devide_node> v;
         int label_id;
+        int max_label;
         std::vector<float3> block_size;
         std::vector<float3> direction_block_size;
 
@@ -260,7 +262,7 @@ namespace classTree
             }
             if (need_split)
             {
-                float weights[NUM_SUBSPACE] = { 0 };
+                std::vector<float> weights(max_label + 1,0);
                 float max_weight = 0.0;
                 int max_weight_id = t.label;
                 for (int i = 0; i < t.v.size(); i++)
@@ -343,7 +345,7 @@ namespace classTree
         
         tree operator()(std::vector<divide_weight_with_label>& samples,float threshold, int max_depth = 15, int refer_num_class = 100)
         {
-            int max_label = 0;
+            max_label = 0;
             //weight normalization
             para_initial(samples, max_depth);
 
@@ -356,13 +358,15 @@ namespace classTree
             v[0].mid = (bbox_max + bbox_min) / 2;
             printf("bounding box max: %f %f %f\n", bbox_max.x, bbox_max.y, bbox_max.z);
             printf("bounding box min: %f %f %f\n", bbox_min.x, bbox_min.y, bbox_min.z);
+
+            for (int i = 0; i < samples.size(); i++)
+                max_label = max(samples[i].label, max_label);
             color(0);
             //printf("root correct_weight %f\n", v[0].correct_weight);
             float c_w = v[0].correct_weight;
 
             for (int i = 0; i < v.size(); i++)
             {
-                max_label = max(v[i].label, max_label); 
                 if (v[i].need_split() && v[i].depth < max_depth && threshold>c_w)
                 {
                     c_w -= v[i].correct_weight;
@@ -370,6 +374,7 @@ namespace classTree
 
                 } 
             }
+            printf("A\n");
             //printf("bbox_min: %f %f %f\n", bbox_min.x, bbox_min.y, bbox_min.z);
             //printf("%d", v[0].v.size());
             //exit(0);
@@ -392,12 +397,14 @@ namespace classTree
             printf("acc:%d/%d %e %e\n", valid_id, sum_id, c_w, float(valid_id) / sum_id);
 
             tree_node* p = new tree_node[v.size()];
-            float3* centers = new float3[NUM_SUBSPACE];
-            for (int i = 0; i < NUM_SUBSPACE; i++)
+            float3* centers = new float3[max_label + 1];
+            for (int i = 0; i < max_label + 1; i++)
             {
                 centers[i] = make_float3(0.0);
             }
-            float center_weight[NUM_SUBSPACE] = { 0 };
+            float* center_weight = new float[max_label + 1];
+            for (int i = 0; i < max_label + 1; i++)center_weight[i] = 0;
+
             for (int i = 0; i < v.size(); i++)
             {
                 p[i] = v[i];
@@ -412,10 +419,11 @@ namespace classTree
                     float3 t = centers[v[i].label] / center_weight[v[i].label];
                 }
             }
-            for (int i = 0; i < NUM_SUBSPACE; i++)
+            for (int i = 0; i < max_label + 1; i++)
             {
                 centers[i] = center_weight[i] == 0.0 ? make_float3(0.0) : centers[i] / center_weight[i];
             } 
+            delete[] center_weight;
             tree t;
             t.v = p;
             t.center = centers;

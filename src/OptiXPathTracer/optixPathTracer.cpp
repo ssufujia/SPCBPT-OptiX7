@@ -690,10 +690,10 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
         current_sample_count += launchPretrace(scene);
     }
 
-    auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000);
+    auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000); 
     auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber-1, 1);
     dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
-     
+
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
     // surface Id 0 is remain for EMPTY SURFACEID
     auto normalsurfaceSubspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.surfaceSubSpaceNumber - 1, 1);
@@ -751,6 +751,8 @@ void updateDropOutTracingCombineWeight()
     static vector<float> caustic_weight(params.width * params.height, 0);
     static vector<int> caustic_count(params.width * params.height, 0);
     static vector<float> gamma_non_normalized(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0.000001);
+    static vector<float> gamma_non_normalized_single(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0.000001);
+    static vector<int> gamma_count(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0);
     if (dot_params.pixel_dirty)
     {  
         h_frac.resize(params.width * params.height);
@@ -775,15 +777,24 @@ void updateDropOutTracingCombineWeight()
         {
             if (h_record[i].valid() == false||h_record[i].is_caustic() == false)continue;
             if (isnan(h_record[i].record) || isinf(h_record[i].record))continue;
-            if (abs(h_record[i].record) > 1000)continue;
-            gamma_non_normalized[h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId] += abs(h_record[i].record);
+            float weight = abs(h_record[i].record);
+            if (weight > 1000000) weight = 1000000;
+            unsigned id = h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId;
+            gamma_count[id] += 1;
+            gamma_non_normalized[id] += weight *weight;
+            gamma_non_normalized_single[id] = lerp(gamma_non_normalized_single[id], weight * weight, 1.0 / gamma_count[id]);
+            //gamma_non_normalized_single[id] = gamma_non_normalized[id];
+
         }
         vector<float> gamma_sum(NUM_SUBSPACE, 0);
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
             for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
             {
-                gamma_sum[i] += gamma_non_normalized[j + i * dropOut_tracing::default_specularSubSpaceNumber];
+                unsigned id = j + i * dropOut_tracing::default_specularSubSpaceNumber;
+                //gamma_sum[i] +=sqrt( gamma_non_normalized[j + i * dropOut_tracing::default_specularSubSpaceNumber]);
+                //gamma_sum[i] += gamma_non_normalized[j + i * dropOut_tracing::default_specularSubSpaceNumber];
+                gamma_sum[i] += sqrt(gamma_non_normalized_single[id]);
             }
         }
 
@@ -791,8 +802,10 @@ void updateDropOutTracingCombineWeight()
         {
             for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
             {
-                h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j] =
-                    gamma_non_normalized[i * dropOut_tracing::default_specularSubSpaceNumber + j] / gamma_sum[i] * (1-CONSERVATIVE_RATE) + 
+                unsigned id = j + i * dropOut_tracing::default_specularSubSpaceNumber;
+                h_caustic_gamma[id] =
+                    //sqrt(gamma_non_normalized[i * dropOut_tracing::default_specularSubSpaceNumber + j]) / gamma_sum[i] * (1-CONSERVATIVE_RATE) +
+                    sqrt(gamma_non_normalized_single[id]) / gamma_sum[i] * (1-CONSERVATIVE_RATE) +
                     1.0 / dropOut_tracing::default_specularSubSpaceNumber * (CONSERVATIVE_RATE);
                 //printf("eye %d-%d pmf %f\n",i , j, h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j]);
             }
@@ -1159,7 +1172,7 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
 
@@ -1172,9 +1185,9 @@ int main( int argc, char* argv[] )
 
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
+        scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
         
