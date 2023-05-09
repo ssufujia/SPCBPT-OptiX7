@@ -29,7 +29,7 @@ namespace dropOut_tracing
     //true  false false true  true  = L(A)*DSDE enable 
     const int max_bound = 100;
     const int max_loop = 1000;
-    const float light_subpath_caustic_discard_ratio = 0.0;
+    const float light_subpath_caustic_discard_ratio = 0.9;
 
 #define DOT_EMPTY_SURFACEID 0
 #define DOT_INVALID_SPECULARID 0

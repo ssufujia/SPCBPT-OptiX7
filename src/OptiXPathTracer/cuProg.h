@@ -1001,6 +1001,14 @@ namespace Tracer {
 namespace Shift
 {
 
+    RT_FUNCTION bool glossy(const MaterialData::Pbr& mat)
+    {
+        return mat.roughness < 0.2 && max(mat.metallic, mat.trans) >= 0.99;
+    }
+    RT_FUNCTION bool glossy(const BDPTVertex& v)
+    {
+        return v.type == BDPTVertex::Type::NORMALHIT && glossy(Tracer::params.materials[v.materialId]);
+    }
 #define ROUGHNESS_A_LIMIT 0.001f
     RT_FUNCTION float2 sample_reverse_half(float a, float3 half)
     {
@@ -1457,7 +1465,7 @@ namespace Tracer
 
     RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed, float3 position = make_float3(0.0), bool use_pg = false)
     {
-        if (use_pg && Tracer::params.pg_params.pg_enable)
+        if (use_pg && Tracer::params.pg_params.pg_enable && Shift::glossy(mat) == false)
         {
             //printf("A %f\n", Tracer::params.pg_params.guide_ratio);
             if (rnd(seed) < Tracer::params.pg_params.guide_ratio)
@@ -1693,7 +1701,7 @@ namespace Tracer
         }*/
 
 
-        if (use_pg && Tracer::params.pg_params.pg_enable)
+        if (use_pg && Tracer::params.pg_params.pg_enable && Shift::glossy(mat) == false)
         {
             pdf *= 1 - Tracer::params.pg_params.guide_ratio;
             pdf += Tracer::params.pg_params.guide_ratio * Tracer::params.pg_params.pdf(position, L);
@@ -1751,6 +1759,64 @@ namespace Tracer
         }
         return throughput;
     }
+    RT_FUNCTION float SPCBPT_MIS_sum_compute(const BDPTVertex* path, int path_size)
+    {
+        float eye_pdf[MAX_PATH_LENGTH_FOR_MIS];
+        float3 light_contri[MAX_PATH_LENGTH_FOR_MIS];
+        light_contri[path_size - 1] = path[path_size - 1].flux;
+        eye_pdf[0] = 1;
+        eye_pdf[1] = path[1].pdf;
+        float pdf_sum = 0;
+        for (int i = 2; i < path_size; i++)
+        {
+            const BDPTVertex& midVertex = path[i];
+            const BDPTVertex& lastVertex = path[i - 1];
+            float3 LL_pos = path[i - 2].position;
+            float3 diff = midVertex.position - lastVertex.position;
+            float3 in_dir = normalize(LL_pos - lastVertex.position);
+            float3 out_dir = normalize(diff);
+            MaterialData::Pbr mat = VERTEX_MAT(lastVertex);
+            float rr_rate = Tracer::rrRate(mat);
+            eye_pdf[i] = eye_pdf[i - 1] * Tracer::Pdf(mat, lastVertex.normal, in_dir, out_dir, lastVertex.position, true)
+                / dot(diff,diff) * abs(dot(out_dir,midVertex.normal)) * rr_rate;
+        }
+        for (int i = path_size - 2; i >= 2; i--)
+        {
+            const BDPTVertex& midVertex = path[i];
+            const BDPTVertex& lastVertex = path[i + 1];
+            float3 LL_pos = path[i + 2].position;
+              
+            float3 diff = midVertex.position - lastVertex.position;
+            float3 in_dir = normalize(LL_pos - lastVertex.position);
+            float3 out_dir = normalize(diff);
+            float G = abs(dot(out_dir, midVertex.normal)) * abs(dot(out_dir, lastVertex.normal)) / dot(diff, diff);
+            if (i == path_size - 2)light_contri[i] = light_contri[i + 1] * G * M_1_PI;
+            else
+            {
+                MaterialData::Pbr mat = VERTEX_MAT(lastVertex);
+                float3 f = Tracer::Eval(mat, lastVertex.normal, in_dir, out_dir);
+                light_contri[i] = light_contri[i + 1] * G * f;
+            }
+        }
+        for (int i = 2; i <= path_size - 2; i++)
+        {
+            labelUnit eye_label_unit(path[i].position, path[i].normal, normalize(path[i - 1].position - path[i].position), false);
+            int eye_label = eye_label_unit.getLabel(); 
+
+            labelUnit light_label_unit(path[i + 1].position, path[i + 1].normal, normalize(path[i + 2].position - path[i + 1].position), false);
+            int light_label = i == path_size - 2 ? path[path_size - 1].subspaceId : light_label_unit.getLabel();
+            pdf_sum += eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1]));
+            //if (eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1])) < 0)
+            //{
+            //    printf("zero minus%d %d %f %f %f \n", i, path_size - i - 1, eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1])),
+            //        eye_pdf[i], connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1]))
+            //    );
+            //}
+        }
+
+        return pdf_sum;
+    }
+
     RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy_id)
     {
 
@@ -2339,14 +2405,6 @@ namespace Shift
 
     }
 
-    RT_FUNCTION bool glossy(const MaterialData::Pbr& mat)
-    {
-        return mat.roughness < 0.2 && max(mat.metallic, mat.trans) >= 0.99;
-    }
-    RT_FUNCTION bool glossy(const BDPTVertex& v)
-    {
-        return v.type == BDPTVertex::Type::NORMALHIT && glossy(Tracer::params.materials[v.materialId]);
-    }
     RT_FUNCTION bool RefractionCase(const MaterialData::Pbr& mat)
     {
         return mat.trans > 0.9;

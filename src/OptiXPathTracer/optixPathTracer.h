@@ -35,15 +35,15 @@
 #define MIN_RR_RATE 0.3
 #define CONSERVATIVE_RATE 0.2
 #define CONNECTION_N 1
+#define MAX_PATH_LENGTH_FOR_MIS 8
 
-#define DIR_JUDGE 0
-#define TRAIN_CAUSTIC_WEIGHT 10.0f
+#define DIR_JUDGE 0 
 #define RMIS_FLAG true
 
 /* Path Guiding 开关 */
-static const bool PG_ENABLE = true;
+static const bool PG_ENABLE = false;
 const bool SPCBPT_PURE = false;
-const bool FIX_ITERATION = false;
+const bool FIX_ITERATION = true;
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
@@ -90,6 +90,7 @@ struct PreTraceParams
     int iteration;
     preTracePath* paths;
     preTraceConnection* conns;
+    bool PG_mode;
     __host__ int get_element_count()
     {
         return padding * num_core;
@@ -405,6 +406,14 @@ namespace TrainData
         __host__ RT_FUNCTION float3 A_dir()const
         {
             return A_dir_d;
+        }
+        __host__ RT_FUNCTION void set_PG_weight(float w)
+        {//use the space for peak_pdf
+            peak_pdf = w;
+        }
+        __host__ RT_FUNCTION float get_PG_weight()
+        {
+            return peak_pdf;
         }
     };
     struct pathInfo_sample

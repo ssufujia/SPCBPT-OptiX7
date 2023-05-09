@@ -139,7 +139,7 @@ namespace MyThrustOp
     void get_caustic_frac(thrust::device_ptr<float>& frac);
 
     thrust::device_ptr<float> envMapCMFBuild(float* pmf, int size);
-    std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas = -1);
+    std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas = -1, bool UPT_ONLY = false);
 
     void clear_training_set();
     std::vector<classTree::divide_weight> getCausticCentroidCandidate(bool eye_side, int max_size);

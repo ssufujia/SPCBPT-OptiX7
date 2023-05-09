@@ -1013,24 +1013,29 @@ namespace MyThrustOp
         return thrust::raw_pointer_cast(d_vec.data());
     }
 
-    std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas)
+    std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas, bool UPT_ONLY)
     {
         thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
         thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
         std::vector<path_guiding::PG_training_mat> ans;
         int slice_range = num_datas == -1 ? h_neat_conns.size() : (num_datas < h_neat_conns.size() ? num_datas : h_neat_conns.size());
         for (int i = 0; i < h_neat_paths.size(); i++)
-        {
+        { 
             for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
             { 
                 path_guiding::PG_training_mat mat;
-                mat.lum = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
-                if (mat.lum > 10000)mat.lum = 10000;
+                if(!UPT_ONLY)
+                    mat.lum = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+                else
+                   mat.lum = h_neat_conns[j].get_PG_weight();
+                if (mat.lum > 100000)mat.lum = 100000;
+                if (isnan(mat.lum) || isinf(mat.lum))continue;
                 mat.position = h_neat_conns[j].A_position;
                 mat.uv = dir2uv(normalize(h_neat_conns[j].B_position - h_neat_conns[j].A_position));
                 mat.valid = true;
                 ans.push_back(mat);
                 if (ans.size() >= slice_range)return ans;
+                //break;
             }
         }
         return ans;

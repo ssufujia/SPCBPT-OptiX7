@@ -9,7 +9,8 @@ using namespace path_guiding;
 namespace path_guiding
 {
 
-    float pg_quad_min_area = 0.001;
+    float pg_quad_min_area = 1.0/(64 +1);
+    //float pg_quad_min_area = 0.000001;
     float pg_rho = 0.01;
     struct quad_tree_group
     {
@@ -384,13 +385,19 @@ namespace path_guiding
         {
             mats_cache = light_trace_result;
         }
+        void online_training()
+        {
+            mats = mats_cache;
+            sd_light_field_construct();
+
+        }
         bool build_tree()
         {
             if(!PG_ENABLE)
                 return false;
 
 
-            int max_k = 12;
+            int max_k = 14;
             int div_limit = 24000;
             if (path_k >= max_k)
             {

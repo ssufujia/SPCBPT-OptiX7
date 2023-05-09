@@ -554,6 +554,7 @@ void preTracer_params_setup(const sutil::Scene& scene)
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pretrace_conn_ptr), sizeof(preTraceConnection) * pr_params.get_element_count()));
     pr_params.paths = pretrace_path_ptr;
     pr_params.conns = pretrace_conn_ptr;
+    pr_params.PG_mode = false;
 }
 void launchLightTrace(sutil::Scene& scene)
 {
@@ -627,7 +628,10 @@ int launchPretrace(sutil::Scene& scene)
 }
 void path_guiding_params_setup(sutil::Scene& scene)
 {
-    int pg_training_data_batch = 5;
+    //pr_params.PG_mode = true;
+    int pg_training_data_batch = 10;
+    int pg_training_data_online_batch = 0;
+    const int batch_sample_count = 1000000;
     
     if (!PG_ENABLE) {
         params.pg_params.pg_enable = 0;
@@ -635,18 +639,17 @@ void path_guiding_params_setup(sutil::Scene& scene)
     }
     
     std::vector<path_guiding::PG_training_mat> g_mats;
-    g_mats = MyThrustOp::get_data_for_path_guiding();
+    //g_mats = MyThrustOp::get_data_for_path_guiding();
     for (int i = 0; i < pg_training_data_batch; i++)
     {
         MyThrustOp::clear_training_set();
-        const int target_sample_count = 1000000;
         int current_sample_count = 0;
-        while (current_sample_count < target_sample_count)
+        while (current_sample_count < batch_sample_count)
         {
             current_sample_count += launchPretrace(scene);
             printf("regenerate data for pg %d %d\n", current_sample_count, g_mats.size());
         }
-        auto n_mats = MyThrustOp::get_data_for_path_guiding();
+        auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, false);
         g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
         MyThrustOp::clear_training_set();
     }
@@ -656,11 +659,26 @@ void path_guiding_params_setup(sutil::Scene& scene)
     //build the tree until we reach max iteration (and the function return false) 
     while (PGTrainer_api.build_tree())  {} 
 
+    for (int i = 0; i < pg_training_data_online_batch; i++)
+    {
+        g_mats.clear();
+        MyThrustOp::clear_training_set();
+        int current_sample_count = 0;
+        while (current_sample_count < batch_sample_count)
+        {
+            current_sample_count += launchPretrace(scene);
+        }
+        printf("online training for pg batch %d \n", i);
+        auto n_mats = MyThrustOp::get_data_for_path_guiding();
+        PGTrainer_api.set_training_set(n_mats);
+        PGTrainer_api.online_training(); 
+    }
     params.pg_params.spatio_trees = MyThrustOp::spatio_tree_to_device(PGTrainer_api.s_tree.nodes.data(), PGTrainer_api.s_tree.nodes.size());
     params.pg_params.quad_trees = MyThrustOp::quad_tree_to_device(PGTrainer_api.q_tree_group.nodes.data(), PGTrainer_api.q_tree_group.nodes.size());
     params.pg_params.pg_enable = 1;
     params.pg_params.epsilon_lum = 0.001;
     params.pg_params.guide_ratio = 0.5;
+    pr_params.PG_mode = false;
     //printf("pg tree check %f %f %f\n", PGTrainer_api.s_tree.getNode(0).m_mid.x, PGTrainer_api.s_tree.getNode(0).m_mid.y, PGTrainer_api.s_tree.getNode(0).m_mid.z);
 }
 void dropOutTracingParamsInit()
@@ -1202,7 +1220,7 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
 
@@ -1216,7 +1234,7 @@ int main( int argc, char* argv[] )
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
