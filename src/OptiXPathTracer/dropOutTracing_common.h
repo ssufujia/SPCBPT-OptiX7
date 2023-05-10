@@ -10,7 +10,7 @@
 namespace dropOut_tracing
 {
     const int slot_number = 5;
-    const int default_specularSubSpaceNumber = 201;
+    const int default_specularSubSpaceNumber = 101;
     const int default_surfaceSubSpaceNumber = 1; 
     const int record_buffer_width = 1;
     const int max_u = 5;
@@ -19,7 +19,7 @@ namespace dropOut_tracing
     const bool debug_PT_ONLY = false;
     const bool PG_reciprocal_estimation_enable = false;
 
-    const bool multi_bounce_disable = true; // if true, u mush be 1
+    const bool multi_bounce_disable = false; // if true, u mush be 1
     const bool CP_disable = true; // if true, only no control point is valid
     const bool CP_lightsource_only = true; // if true, CP must be on light source
     const bool CP_lightsource_disable = false; // if true, CP can't be on light source
@@ -29,8 +29,10 @@ namespace dropOut_tracing
     //true  false false true  true  = L(A)*DSDE enable 
     const int max_bound = 100;
     const int max_loop = 1000;
-    const float light_subpath_caustic_discard_ratio = 0.9;
-
+    const float light_subpath_caustic_discard_ratio = 0.95;
+    const int reciprocal_iteration = 5;
+    const bool connection_uniform_sample = false;
+    const int iteration_stop_learning = 40;
 #define DOT_EMPTY_SURFACEID 0
 #define DOT_INVALID_SPECULARID 0
     enum class DropOutType
@@ -226,7 +228,8 @@ namespace dropOut_tracing
         }
         RT_FUNCTION __host__ float selection_ratio(int eye_id, int specular_id)
         {
-            //return selection_const;
+            if(dropOut_tracing::connection_uniform_sample)
+                return selection_const;
             float weight = CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id];
             if (specular_id >= 1)
                 weight -= CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id - 1];

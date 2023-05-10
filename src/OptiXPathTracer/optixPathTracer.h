@@ -43,7 +43,7 @@
 /* Path Guiding 开关 */
 static const bool PG_ENABLE = false;
 const bool SPCBPT_PURE = false;
-const bool FIX_ITERATION = true;
+const bool FIX_ITERATION = false;
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"

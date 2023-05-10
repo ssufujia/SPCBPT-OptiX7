@@ -150,7 +150,6 @@ extern "C" __global__ void __closesthit__lightsource()
     float3 ray_direction = optixGetWorldRayDirection();
 
     if ( /* 打中的光源法向要求与光线方向相反 */
-        
         (dot(prd->ray_direction, light_sample.normal()) <= 0) && (true||
             /* 光源直击, L - E */
             (LE_ENABLE && prd->depth == 0) || (

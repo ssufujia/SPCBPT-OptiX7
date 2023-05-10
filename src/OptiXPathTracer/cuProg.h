@@ -1466,10 +1466,12 @@ namespace Tracer
     RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed, float3 position = make_float3(0.0), bool use_pg = false)
     {
         if (use_pg && Tracer::params.pg_params.pg_enable && Shift::glossy(mat) == false)
-        {
-            //printf("A %f\n", Tracer::params.pg_params.guide_ratio);
+        { 
             if (rnd(seed) < Tracer::params.pg_params.guide_ratio)
+            {
+                //printf("into PG %d\n", Tracer::params.pg_params.spatio_trees[0].count);
                 return Tracer::params.pg_params.sample(seed, position);
+            }
         }
 
         //float3 N = normal;
@@ -3951,7 +3953,7 @@ namespace Shift
         if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0)return false;
         if (dropOut_tracing::CP_require && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX) return false;
         if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP))return false;
-        if (u > dropOut_tracing::max_u)return false;
+        if (u > dropOut_tracing::max_u)return false; 
         return true;
     }
     RT_FUNCTION bool pathRecord_is_causticEyesubpath(long long record, int depth)

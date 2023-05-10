@@ -324,6 +324,10 @@ extern "C" __global__ void __raygen__SPCBPT()
             break;
         }
         BDPTVertex& eye_subpath = payload.path.currentVertex();
+        //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
+        //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
+        //result = make_float3(rnd(PG_id), rnd(PG_id), rnd(PG_id));
+        //break;
         for (int it = 0; it < CONNECTION_N; it++)
         {
 
@@ -828,7 +832,11 @@ extern "C" __global__ void __raygen__shift_combine()
                 {
                     res = lightStraghtHit(payload.path.currentVertex());
                 }
-            }  
+            }
+            if (ISINVALIDVALUE(res))
+            {
+                res =  make_float3(0.0f);
+            }
             result += res;
             break;
         }
@@ -881,17 +889,17 @@ extern "C" __global__ void __raygen__shift_combine()
 
 
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
-                if (Shift::path_alreadyCaustic(pathBuffer,buffer_size, originPath,light_subpath.depth)&& 
-                    light_subpath.depth + 1 < SHIFT_VALID_SIZE && buffer_size + light_subpath.depth + 1<MAX_PATH_LENGTH_FOR_MIS)
+                if (Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
+                    light_subpath.depth + 1 < SHIFT_VALID_SIZE && buffer_size + light_subpath.depth + 1 < MAX_PATH_LENGTH_FOR_MIS)
                 {
                     Shift::PathContainer tempPath(const_cast<BDPTVertex*>(&light_subpath), -1, 0);
                     int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, 0, tempPath, originPath);
- 
+
                     if (Shift::getCausticPathInfo(pathBuffer, path_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
-                    { 
-                        res *=  (1 - dropOutTracing_MISWeight(pathBuffer, path_size));
+                    {
+                        res *= (1 - dropOutTracing_MISWeight(pathBuffer, path_size));
                     }
-                }
+                } 
                 if (!ISINVALIDVALUE(res))
                 {
                     result += res / CONNECTION_N;
@@ -921,15 +929,22 @@ extern "C" __global__ void __raygen__shift_combine()
 
             float pmf_firstStage = 1;
             float pmf_secondStage; 
-
-            int light_subspaceId =
-                reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossyFirstStage(eye_vertex.subspaceId, payload.seed, pmf_firstStage);
-
-            if (Tracer::params.sampler.glossy_subspace_num[light_subspaceId] == 0
-                || light_subspaceId == DOT_INVALID_SPECULARID)continue;
-            const BDPTVertex& light_subpath =
-                reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossySecondStage(light_subspaceId, payload.seed, pmf_secondStage);
- 
+             
+            const BDPTVertex* light_subpath_p;
+            if (dropOut_tracing::connection_uniform_sample)
+            {
+                const BDPTVertex& light_glossy = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleGlossy(payload.seed, pmf_secondStage);
+                light_subpath_p = &light_glossy;
+            }
+            else
+            {
+                int light_subspaceId = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossyFirstStage(eye_vertex.subspaceId, payload.seed, pmf_firstStage);
+                if (Tracer::params.sampler.glossy_subspace_num[light_subspaceId] == 0 || light_subspaceId == DOT_INVALID_SPECULARID)continue;
+                const BDPTVertex& light_glossy = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossySecondStage(light_subspaceId, payload.seed, pmf_secondStage);
+                light_subpath_p = &light_glossy;
+            }
+            const BDPTVertex& light_subpath = *light_subpath_p;
+             
              
 
             float final_pmf = (pmf_firstStage * pmf_secondStage);
@@ -1129,8 +1144,15 @@ extern "C" __global__ void __raygen__lightTrace()
 
                         if (statistic_prd.subspace_valid())
                         {
-                            float pdf_inverse = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd); 
-                            glossy_vertex.inverPdfEst = pdf_inverse;
+                            float pdf_inverse = 0;
+                            for (int it = 0; it < dropOut_tracing::reciprocal_iteration; it++)
+                            {
+                                float t = 1.0 / (1 + it);
+                                float recip = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd);
+                                pdf_inverse = pdf_inverse * (1 - t) + recip * t;
+                            }                                                        
+                            if (isnan(pdf_inverse) || isinf(pdf_inverse) || pdf_inverse < 0)glossy_vertex.inverPdfEst = 0;
+                            else glossy_vertex.inverPdfEst = pdf_inverse;
                             /////////////////////////////////////////////////////////////////////
                             /////////////////////Average Record Create///////////////////////////
                             /////////////////////////////////////////////////////////////////////
@@ -1350,7 +1372,7 @@ extern "C" __global__ void __raygen__TrainData()
     const PreTraceParams& pretracer_params = Tracer::params.pre_tracer;
     const int    subframe_index = pretracer_params.iteration;
     unsigned int seed = tea<16>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
-    if (launch_idx.x == 0 && launch_idx.y == 0)printf("subframe_index %d\n", subframe_index);
+    //if (launch_idx.x == 0 && launch_idx.y == 0)printf("subframe_index %d\n", subframe_index);
 
     const float3 eye = Tracer::params.eye;
     const float3 U = Tracer::params.U;

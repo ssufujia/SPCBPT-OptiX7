@@ -632,6 +632,8 @@ namespace MyThrustOp
     {
         acc_num_nodes = 0;
         acc_num_samples = 0;
+        neat_conns.resize(0);
+        neat_paths.resize(0);
     }
     int valid_sample_gather(thrust::device_ptr<preTracePath> raw_paths, int maxPathSize, 
         thrust::device_ptr<preTraceConnection> raw_conns,int maxConns)
@@ -665,7 +667,7 @@ namespace MyThrustOp
 
         acc_num_nodes += node_count;
         acc_num_samples += sample_count;
-        printf("pretrace get %d/%d paths and %d conns\n", sample_count, acc_num_samples,acc_num_nodes);
+        //printf("pretrace get %d/%d paths and %d conns\n", sample_count, acc_num_samples,acc_num_nodes);
 
          
         return sample_count; 
@@ -1002,14 +1004,16 @@ namespace MyThrustOp
     path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size)
     {
         thrust::host_vector<path_guiding::quad_tree_node> h_vec(a, a + size);
-        static thrust::device_vector<path_guiding::quad_tree_node> d_vec = h_vec;        
+        static thrust::device_vector<path_guiding::quad_tree_node> d_vec;
+        d_vec = h_vec;
         return thrust::raw_pointer_cast(d_vec.data());
     }
 
     path_guiding::Spatio_tree_node* spatio_tree_to_device(path_guiding::Spatio_tree_node* a, int size)
     {
         thrust::host_vector<path_guiding::Spatio_tree_node> h_vec(a, a + size);
-        static thrust::device_vector<path_guiding::Spatio_tree_node> d_vec = h_vec;
+        static thrust::device_vector<path_guiding::Spatio_tree_node> d_vec;
+        d_vec = h_vec;
         return thrust::raw_pointer_cast(d_vec.data());
     }
 
@@ -1019,7 +1023,7 @@ namespace MyThrustOp
         thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
         std::vector<path_guiding::PG_training_mat> ans;
         int slice_range = num_datas == -1 ? h_neat_conns.size() : (num_datas < h_neat_conns.size() ? num_datas : h_neat_conns.size());
-        for (int i = 0; i < h_neat_paths.size(); i++)
+        for (int i = 0; i < acc_num_samples; i++)
         { 
             for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
             { 

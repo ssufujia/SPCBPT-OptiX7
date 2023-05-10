@@ -374,7 +374,6 @@ namespace classTree
 
                 } 
             }
-            printf("A\n");
             //printf("bbox_min: %f %f %f\n", bbox_min.x, bbox_min.y, bbox_min.z);
             //printf("%d", v[0].v.size());
             //exit(0);

@@ -1,6 +1,6 @@
 #pragma once
 
-#define PT_BRDF_STRATEGY_ONLY
+//#define PT_BRDF_STRATEGY_ONLY
 //#define PT_NEE_STRATEGY_ONLY
 
 
