@@ -9,7 +9,8 @@ using namespace path_guiding;
 namespace path_guiding
 {
 
-    float pg_quad_min_area = 0.000001;
+    float pg_quad_min_area = 1.0/(64 +1);
+    //float pg_quad_min_area = 0.000001;
     float pg_rho = 0.01;
     struct quad_tree_group
     {
@@ -384,21 +385,21 @@ namespace path_guiding
         {
             mats_cache = light_trace_result;
         }
-        bool build_tree()
+        void online_training()
+        {
+            mats = mats_cache;
+            sd_light_field_construct();
+
+        }
+        bool build_tree(int div_limit = 24000 * 2, int path_num = -1)
         {
             if(!PG_ENABLE)
                 return false;
 
-
-            int max_k = 12;
-            int div_limit = 24000 * 8;
-            if (path_k >= max_k)
-            {
-                //div_limit *= pow(2, path_k - max_k);
-                return false;
-            }
+              
             int k_2 = pow(2, path_k);
-            int path_num = 12000 * k_2;
+            if (path_num == -1)path_num = 12000 * k_2;
+            //int path_num = 12000 * k_2;
             path_num = path_num < mats_cache.size() ? path_num : mats_cache.size();
             mats = vector<PG_training_mat>(mats_cache.begin(), mats_cache.begin() + path_num);
             //lunch_for_training materials 
@@ -426,7 +427,7 @@ namespace path_guiding
                     lum_sum += mats[i].lum;
                 }
             }
-            printf("%d/%d %d valid pgMats %f luminance\n", valid_mats_num, mats_cache.size(), k_2, lum_sum);
+            printf("%d/%d valid pgMats %f luminance\n", valid_mats_num, mats_cache.size(), lum_sum);
             s_tree_p->quad_struct_transform();
             s_tree_p->subdivide_check(0, div_limit);
 

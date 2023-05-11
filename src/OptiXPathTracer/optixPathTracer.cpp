@@ -563,6 +563,7 @@ void preTracer_params_setup(const sutil::Scene& scene)
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pretrace_conn_ptr), sizeof(preTraceConnection) * pr_params.get_element_count()));
     pr_params.paths = pretrace_path_ptr;
     pr_params.conns = pretrace_conn_ptr;
+    pr_params.PG_mode = false;
 }
 void launchLightTrace(sutil::Scene& scene)
 {
@@ -636,26 +637,76 @@ int launchPretrace(sutil::Scene& scene)
 }
 void path_guiding_params_setup(sutil::Scene& scene)
 {
-    int pg_training_data_batch = 5;
+    int pg_training_data_batch = 10;
+    int pg_training_data_online_batch = 0;
+    const int batch_sample_count = 1000000;
     
     if (!PG_ENABLE) {
         params.pg_params.pg_enable = 0;
         return;
     }
-    
+    //pr_params.PG_mode = true;
+
+
     std::vector<path_guiding::PG_training_mat> g_mats;
-    g_mats = MyThrustOp::get_data_for_path_guiding();
+    int build_iteration_max = 12;
+    //g_mats = MyThrustOp::get_data_for_path_guiding();
+
+    //int initial_path = 1000;
+    //int split_limit = initial_path;
+    //int target_path = initial_path;
+    //PGTrainer_api.init(scene.aabb());
+    //for (int i = 0; i < build_iteration_max; i++)
+    //{ 
+    //    MyThrustOp::clear_training_set();
+    //    int current_sample_count = 0;
+    //    int accm_sample_count = 0;
+    //    int accm_it = 0;
+    //    while (current_sample_count + accm_sample_count < target_path)
+    //    { 
+    //        current_sample_count += launchPretrace(scene);
+    //        accm_it++;
+    //        //printf("regenerate data for pg %d %d\n", current_sample_count + accm_sample_count, g_mats.size());
+
+    //        if (current_sample_count > batch_sample_count)
+    //        {
+    //            accm_sample_count += current_sample_count;
+    //            current_sample_count = 0;
+    //            auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
+    //            g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
+    //            MyThrustOp::clear_training_set();
+    //        }
+    //    }
+    //    auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
+    //    g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
+    //    MyThrustOp::clear_training_set();
+
+
+    //    printf("get %d samples for pg building iteration %d; target path%d; split-limit %d; average nodes %f \n",
+    //        g_mats.size(), i, target_path, split_limit, float(g_mats.size())/accm_it);
+    //    PGTrainer_api.set_training_set(g_mats);
+    //    PGTrainer_api.build_tree(split_limit, g_mats.size());
+    //    params.pg_params.spatio_trees = MyThrustOp::spatio_tree_to_device(PGTrainer_api.s_tree.nodes.data(), PGTrainer_api.s_tree.nodes.size());
+    //    params.pg_params.quad_trees = MyThrustOp::quad_tree_to_device(PGTrainer_api.q_tree_group.nodes.data(), PGTrainer_api.q_tree_group.nodes.size()); 
+    //    params.pg_params.pg_enable = 1;
+    //    params.pg_params.epsilon_lum = 0.001;
+    //    params.pg_params.guide_ratio = 0.5;
+
+    //    target_path *= 2;
+    //    split_limit *= sqrt(2); 
+    //    g_mats.clear();
+    //}  
+
     for (int i = 0; i < pg_training_data_batch; i++)
     {
         MyThrustOp::clear_training_set();
-        const int target_sample_count = 1000000;
         int current_sample_count = 0;
-        while (current_sample_count < target_sample_count)
+        while (current_sample_count < batch_sample_count)
         {
             current_sample_count += launchPretrace(scene);
             printf("regenerate data for pg %d %d\n", current_sample_count, g_mats.size());
         }
-        auto n_mats = MyThrustOp::get_data_for_path_guiding();
+        auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
         g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
         MyThrustOp::clear_training_set();
     }
@@ -663,13 +714,31 @@ void path_guiding_params_setup(sutil::Scene& scene)
     PGTrainer_api.set_training_set(g_mats); 
     PGTrainer_api.init(scene.aabb());
     //build the tree until we reach max iteration (and the function return false) 
-    while (PGTrainer_api.build_tree())  {} 
+    for (int i = 0; i < build_iteration_max; i++) { PGTrainer_api.build_tree(); }
 
+    for (int i = 0; i < pg_training_data_online_batch; i++)
+    {
+        g_mats.clear();
+        MyThrustOp::clear_training_set();
+        int current_sample_count = 0;
+        while (current_sample_count < batch_sample_count)
+        {
+            current_sample_count += launchPretrace(scene);
+        }
+        printf("online training for pg batch %d \n", i);
+        auto n_mats = MyThrustOp::get_data_for_path_guiding();
+        PGTrainer_api.set_training_set(n_mats);
+        PGTrainer_api.online_training(); 
+    }
+    PGTrainer_api.mats_cache.clear();
+    PGTrainer_api.mats.clear();
+    g_mats.clear();
     params.pg_params.spatio_trees = MyThrustOp::spatio_tree_to_device(PGTrainer_api.s_tree.nodes.data(), PGTrainer_api.s_tree.nodes.size());
     params.pg_params.quad_trees = MyThrustOp::quad_tree_to_device(PGTrainer_api.q_tree_group.nodes.data(), PGTrainer_api.q_tree_group.nodes.size());
     params.pg_params.pg_enable = 1;
     params.pg_params.epsilon_lum = 0.001;
     params.pg_params.guide_ratio = 0.5;
+    pr_params.PG_mode = false;
     //printf("pg tree check %f %f %f\n", PGTrainer_api.s_tree.getNode(0).m_mid.x, PGTrainer_api.s_tree.getNode(0).m_mid.y, PGTrainer_api.s_tree.getNode(0).m_mid.z);
 }
 void dropOutTracingParamsInit()
@@ -699,10 +768,10 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
         current_sample_count += launchPretrace(scene);
     }
 
-    auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000);
+    auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000); 
     auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber-1, 1);
     dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
-     
+
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
     // surface Id 0 is remain for EMPTY SURFACEID
     auto normalsurfaceSubspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.surfaceSubSpaceNumber - 1, 1);
@@ -752,6 +821,9 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
 //update the probability for caustic subspace sampling and caustic frac
 void updateDropOutTracingCombineWeight()
 {
+    static int train_iter = 0;
+    if (train_iter > 0 && train_iter> dropOut_tracing::iteration_stop_learning)return;
+    train_iter++;
     if (SPCBPT_PURE) return;
     static thrust::host_vector<float> h_frac(params.width * params.height, 0.5);
     static thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
@@ -760,6 +832,8 @@ void updateDropOutTracingCombineWeight()
     static vector<float> caustic_weight(params.width * params.height, 0);
     static vector<int> caustic_count(params.width * params.height, 0);
     static vector<float> gamma_non_normalized(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0.000001);
+    static vector<float> gamma_non_normalized_single(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0.000001);
+    static vector<int> gamma_count(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0);
     if (dot_params.pixel_dirty)
     {  
         h_frac.resize(params.width * params.height);
@@ -784,15 +858,24 @@ void updateDropOutTracingCombineWeight()
         {
             if (h_record[i].valid() == false||h_record[i].is_caustic() == false)continue;
             if (isnan(h_record[i].record) || isinf(h_record[i].record))continue;
-            if (abs(h_record[i].record) > 1000)continue;
-            gamma_non_normalized[h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId] += abs(h_record[i].record);
+            float weight = abs(h_record[i].record);
+            if (weight > 1000000) weight = 1000000;
+            unsigned id = h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId;
+            gamma_count[id] += 1;
+            gamma_non_normalized[id] += weight *weight;
+            gamma_non_normalized_single[id] = lerp(gamma_non_normalized_single[id], weight * weight, 1.0 / gamma_count[id]);
+            //gamma_non_normalized_single[id] = gamma_non_normalized[id];
+
         }
         vector<float> gamma_sum(NUM_SUBSPACE, 0);
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
             for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
             {
-                gamma_sum[i] += gamma_non_normalized[j + i * dropOut_tracing::default_specularSubSpaceNumber];
+                unsigned id = j + i * dropOut_tracing::default_specularSubSpaceNumber;
+                //gamma_sum[i] +=sqrt( gamma_non_normalized[j + i * dropOut_tracing::default_specularSubSpaceNumber]);
+                //gamma_sum[i] += gamma_non_normalized[j + i * dropOut_tracing::default_specularSubSpaceNumber];
+                gamma_sum[i] += sqrt(gamma_non_normalized_single[id]);
             }
         }
 
@@ -800,8 +883,10 @@ void updateDropOutTracingCombineWeight()
         {
             for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
             {
-                h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j] =
-                    gamma_non_normalized[i * dropOut_tracing::default_specularSubSpaceNumber + j] / gamma_sum[i] * (1-CONSERVATIVE_RATE) + 
+                unsigned id = j + i * dropOut_tracing::default_specularSubSpaceNumber;
+                h_caustic_gamma[id] =
+                    //sqrt(gamma_non_normalized[i * dropOut_tracing::default_specularSubSpaceNumber + j]) / gamma_sum[i] * (1-CONSERVATIVE_RATE) +
+                    sqrt(gamma_non_normalized_single[id]) / gamma_sum[i] * (1-CONSERVATIVE_RATE) +
                     1.0 / dropOut_tracing::default_specularSubSpaceNumber * (CONSERVATIVE_RATE);
                 //printf("eye %d-%d pmf %f\n",i , j, h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j]);
             }
@@ -946,6 +1031,7 @@ void updateDropOutTracingParams()
     }
 
     //PG training
+    if(dropOut_tracing::PG_reciprocal_estimation_enable)
     {
         int count = 0;
 
@@ -1005,7 +1091,8 @@ void updateDropOutTracingParams()
     dot_params.data.on_GPU = true;
 
 
-    dot_params.selection_const = lt_params.M_per_core * lt_params.num_core;// / float(params.sampler.glossy_count);
+    dot_params.selection_const = dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
+        : lt_params.M_per_core * lt_params.num_core;
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
     //system("pause");
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
@@ -1214,7 +1301,7 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
 
 
-        // scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
 
          //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
@@ -1222,9 +1309,9 @@ int main( int argc, char* argv[] )
 
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/empty.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
         

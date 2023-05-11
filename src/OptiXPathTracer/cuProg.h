@@ -1001,6 +1001,14 @@ namespace Tracer {
 namespace Shift
 {
 
+    RT_FUNCTION bool glossy(const MaterialData::Pbr& mat)
+    {
+        return mat.roughness < 0.2 && max(mat.metallic, mat.trans) >= 0.99;
+    }
+    RT_FUNCTION bool glossy(const BDPTVertex& v)
+    {
+        return v.type == BDPTVertex::Type::NORMALHIT && glossy(Tracer::params.materials[v.materialId]);
+    }
 #define ROUGHNESS_A_LIMIT 0.001f
     RT_FUNCTION float2 sample_reverse_half(float a, float3 half)
     {
@@ -1232,14 +1240,238 @@ namespace Tracer
             out = out + Gs * Ds * Fs;
         return out;
     } 
-    
-    RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed, float3 position = make_float3(0.0), bool use_pg = false)
+
+    RT_FUNCTION float3 Sample_force
+        (const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed, float refract_force = 0, float3 position = make_float3(0.0), bool use_pg = false)
     {
         if (use_pg && Tracer::params.pg_params.pg_enable)
         {
             //printf("A %f\n", Tracer::params.pg_params.guide_ratio);
             if (rnd(seed) < Tracer::params.pg_params.guide_ratio)
                 return Tracer::params.pg_params.sample(seed, position);
+        }
+
+        //float3 N = normal;
+        //float3 V = in_dir;
+        //prd.origin = state.fhp;
+        float r1 = rnd(seed);
+        float r2 = rnd(seed);
+        float r3 = rnd(seed);
+        float r4 = rnd(seed);
+        float3 dir;
+        float3 normal = N;
+        {
+            Onb onb(normal);
+            cosine_sample_hemisphere(r1, r2, dir);
+            float r3 = rnd(seed);
+            if (r3 < 0.5f)
+                dir = -dir;
+            onb.inverse_transform(dir);
+            //return dir;
+        }
+
+
+        float mateta = mat.eta;
+        float eta = 1 / mateta;
+        if (dot(normal, V) < 0)
+        {
+            eta = 1 / eta;
+            normal = -N;
+        } 
+
+        float NdotV = abs(dot(normal, V));
+        float transRatio = mat.trans;
+        float transprob = rnd(seed);
+        float refractRatio;
+        float refractprob = rnd(seed);
+        float probability = rnd(seed);
+        float diffuseRatio = 0.5f * (1.0f - mat.metallic);// *(1 - transRatio);
+        if (transprob < transRatio) // sample transmit
+        {
+            float refractRatio = 0;
+            float temp = (1 - NdotV * NdotV) * (eta * eta);
+            if (temp < 1)
+                refractRatio = 1 - fresnel(NdotV, sqrt(1 - temp), eta);
+            if (RR_TEST(seed, refract_force))
+            {
+                Onb onb(normal); // basis
+                float a = mat.roughness;
+
+                float phi = r3 * 2.0f * M_PIf;
+
+                float cosTheta = sqrtf((1.0f - r4) / (1.0f + (a * a - 1.0f) * r4));
+                float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+                float sinPhi = sinf(phi);
+                float cosPhi = cosf(phi);
+                float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+                onb.inverse_transform(half);
+
+                if (dot(V, normal) == 0) return -V;
+
+                float cosThetaI = dot(half, V);
+                float sin2ThetaI = 1 - cosThetaI * cosThetaI;
+                float sin2ThetaT = eta * eta * sin2ThetaI;
+
+                if (sin2ThetaT <= 1)
+                {
+                    float cosThetaT = sqrt(1 - sin2ThetaT);
+                    //float y = -sqrt(1 - cosThetaI * cosThetaI * eta * eta)/sqrt(sin2ThetaI);
+                    //float x = -(y + eta) * cosThetaI;
+                    float3 L = normalize(eta * -V + (eta * cosThetaI - cosThetaT) * half);
+
+                    if (cosThetaI < 0)//V与half在两侧。要求VdotH*LdotH<0
+                    {
+                        float LdotH = dot(L, half);
+                        L = L - 2 * LdotH * half;
+                    }
+                    return L;
+                }
+                else
+                {
+                    return half * 2 * dot(half, V) - V; // ȫ����
+                }
+            }
+        }
+        Onb onb(normal); // basis
+
+        if (probability < diffuseRatio) // sample diffuse
+        {
+            cosine_sample_hemisphere(r1, r2, dir);
+            onb.inverse_transform(dir);
+        }
+        else
+        {
+            float a = mat.roughness;
+
+            float phi = r1 * 2.0f * M_PIf;
+
+            float cosTheta = sqrtf((1.0f - r2) / (1.0f + (a * a - 1.0f) * r2));
+            float sinTheta = sqrtf(1.0f - (cosTheta * cosTheta));
+            float sinPhi = sinf(phi);
+            float cosPhi = cosf(phi);
+
+            float3 half = make_float3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+            onb.inverse_transform(half);
+
+            dir = 2.0f * dot(V, half) * half - V; //reflection vector
+        }
+        return dir;
+    }
+
+
+    RT_FUNCTION float Pdf_force(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L, float refract_force = 0, float3 position = make_float3(0.0), bool use_pg = false, bool force_refract = false)
+    {
+#ifdef BRDF
+        if (mat.brdf)
+            return 1.0f;// return abs(dot(L, normal));
+#endif
+
+        float transRatio = mat.trans;
+        float3 n = normal;
+        float mateta = mat.eta;
+        //        float eta = dot(L, n) > 0 ? (mateta) : (1/mateta);     
+        float eta = mateta;
+        if (dot(n, V) < 0)
+        {
+            eta = 1 / eta;
+            n = -normal;
+        }
+        float pdf = 0;
+        float NdotV = abs(dot(V, n));
+        float NdotL = abs(dot(L, n));
+        float3 wh = -normalize(V + L * eta);
+
+        float HdotV = abs(dot(V, wh));
+        float HdotL = abs(dot(L, wh));
+
+        float specularAlpha = mat.roughness;
+        float clearcoatAlpha = lerp(0.1f, 0.001f, mat.clearcoatGloss);
+
+        float diffuseRatio = 0.5f * (1.f - mat.metallic);// *(1 - transRatio);
+        float specularRatio = 1.f - diffuseRatio;
+
+        float3 half;
+        half = normalize(L + V);
+
+        float cosTheta = abs(dot(half, n));
+        float pdfGTR2 = GTR2(cosTheta, specularAlpha) * cosTheta;
+        float pdfGTR1 = GTR1(cosTheta, clearcoatAlpha) * cosTheta;
+
+        // calculate diffuse and specular pdfs and mix ratio
+        float ratio = 1.0f / (1.0f + mat.clearcoat);
+        float pdfSpec = lerp(pdfGTR1, pdfGTR2, ratio) / (4.0 * abs(dot(L, half)));
+        float pdfDiff = abs(dot(L, n)) * (1.0f / M_PIf);
+
+        float cosThetaI = abs(dot(wh, V));
+        float sin2ThetaI = 1 - cosThetaI * cosThetaI;
+        float sin2ThetaT = 1 / (eta * eta) * sin2ThetaI;
+
+        float refractRatio = 0;
+        float temp = (1 - NdotV * NdotV) / (eta * eta);
+        if (temp < 1)
+            refractRatio = 1 - fresnel(NdotV, sqrt(1 - temp), eta);
+        //float refractRatio = 0.5;
+        refractRatio = refract_force;
+
+
+        pdf = (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * (1 - transRatio * refractRatio);// normal reflect
+
+        if (sin2ThetaT <= 1 && dot(L, wh) * dot(V, wh) < 0)//refract
+        {
+            // Compute change of variables _dwh\_dwi_ for microfacet transmission
+            float sqrtDenom = eta * dot(L, wh) + dot(V, wh);
+            float dwh_dwi =
+                std::abs((eta * eta * dot(L, wh)) / (sqrtDenom * sqrtDenom));
+            float a = max(0.001f, mat.roughness);
+            float Ds = GTR2(abs(dot(wh, n)), a);
+            float pdfTrans = Ds * abs(dot(n, wh)) * dwh_dwi;
+            //printf("r pdf: %f\n", transRatio * pdfTrans * refractRatio);
+            pdf += transRatio * pdfTrans * refractRatio;
+        }
+
+        cosThetaI = abs(dot(
+            half, V));
+        sin2ThetaI = 1 - cosThetaI * cosThetaI;
+        sin2ThetaT = 1 / (eta * eta) * sin2ThetaI;
+
+        if (sin2ThetaT > 1)// full reflect
+        {
+            //printf("l pdf: %f\n", (diffuseRatio * pdfDiff + specularRatio * pdfSpec));
+            pdf += (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * transRatio * refractRatio;
+        }
+
+        /*
+        if (mat.trans > 0 && isRefract(normal, V, L))
+        {
+            if (dot(normal, V) > 0)
+            {
+                pdf *= (mat.eta * mat.eta);
+            }
+            else
+            {
+                pdf /= (mat.eta * mat.eta);
+            }
+        }*/
+
+
+        if (use_pg && Tracer::params.pg_params.pg_enable)
+        {
+            pdf *= 1 - Tracer::params.pg_params.guide_ratio;
+            pdf += Tracer::params.pg_params.guide_ratio * Tracer::params.pg_params.pdf(position, L);
+        }
+        return pdf;
+    }
+
+
+    RT_FUNCTION float3 Sample(const MaterialData::Pbr& mat, const float3& N, const float3& V, unsigned int& seed, float3 position = make_float3(0.0), bool use_pg = false)
+    {
+        if (use_pg && Tracer::params.pg_params.pg_enable && Shift::glossy(mat) == false)
+        { 
+            if (rnd(seed) < Tracer::params.pg_params.guide_ratio)
+            {
+                //printf("into PG %d\n", Tracer::params.pg_params.spatio_trees[0].count);
+                return Tracer::params.pg_params.sample(seed, position);
+            }
         }
 
         //float3 N = normal;
@@ -1379,11 +1611,7 @@ namespace Tracer
     }
 
     RT_FUNCTION float Pdf(MaterialData::Pbr& mat, float3 normal, float3 V, float3 L, float3 position = make_float3(0.0), bool use_pg = false)
-    {
-
-        //return abs(dot(L, normal)) * (.5f / M_PIf);
-
-
+    { 
 #ifdef BRDF
         if (mat.brdf)
             return 1.0f;// return abs(dot(L, normal));
@@ -1475,7 +1703,7 @@ namespace Tracer
         }*/
 
 
-        if (use_pg && Tracer::params.pg_params.pg_enable)
+        if (use_pg && Tracer::params.pg_params.pg_enable && Shift::glossy(mat) == false)
         {
             pdf *= 1 - Tracer::params.pg_params.guide_ratio;
             pdf += Tracer::params.pg_params.guide_ratio * Tracer::params.pg_params.pdf(position, L);
@@ -1533,6 +1761,64 @@ namespace Tracer
         }
         return throughput;
     }
+    RT_FUNCTION float SPCBPT_MIS_sum_compute(const BDPTVertex* path, int path_size)
+    {
+        float eye_pdf[MAX_PATH_LENGTH_FOR_MIS];
+        float3 light_contri[MAX_PATH_LENGTH_FOR_MIS];
+        light_contri[path_size - 1] = path[path_size - 1].flux;
+        eye_pdf[0] = 1;
+        eye_pdf[1] = path[1].pdf;
+        float pdf_sum = 0;
+        for (int i = 2; i < path_size; i++)
+        {
+            const BDPTVertex& midVertex = path[i];
+            const BDPTVertex& lastVertex = path[i - 1];
+            float3 LL_pos = path[i - 2].position;
+            float3 diff = midVertex.position - lastVertex.position;
+            float3 in_dir = normalize(LL_pos - lastVertex.position);
+            float3 out_dir = normalize(diff);
+            MaterialData::Pbr mat = VERTEX_MAT(lastVertex);
+            float rr_rate = Tracer::rrRate(mat);
+            eye_pdf[i] = eye_pdf[i - 1] * Tracer::Pdf(mat, lastVertex.normal, in_dir, out_dir, lastVertex.position, true)
+                / dot(diff,diff) * abs(dot(out_dir,midVertex.normal)) * rr_rate;
+        }
+        for (int i = path_size - 2; i >= 2; i--)
+        {
+            const BDPTVertex& midVertex = path[i];
+            const BDPTVertex& lastVertex = path[i + 1];
+            float3 LL_pos = path[i + 2].position;
+              
+            float3 diff = midVertex.position - lastVertex.position;
+            float3 in_dir = normalize(LL_pos - lastVertex.position);
+            float3 out_dir = normalize(diff);
+            float G = abs(dot(out_dir, midVertex.normal)) * abs(dot(out_dir, lastVertex.normal)) / dot(diff, diff);
+            if (i == path_size - 2)light_contri[i] = light_contri[i + 1] * G * M_1_PI;
+            else
+            {
+                MaterialData::Pbr mat = VERTEX_MAT(lastVertex);
+                float3 f = Tracer::Eval(mat, lastVertex.normal, in_dir, out_dir);
+                light_contri[i] = light_contri[i + 1] * G * f;
+            }
+        }
+        for (int i = 2; i <= path_size - 2; i++)
+        {
+            labelUnit eye_label_unit(path[i].position, path[i].normal, normalize(path[i - 1].position - path[i].position), false);
+            int eye_label = eye_label_unit.getLabel(); 
+
+            labelUnit light_label_unit(path[i + 1].position, path[i + 1].normal, normalize(path[i + 2].position - path[i + 1].position), false);
+            int light_label = i == path_size - 2 ? path[path_size - 1].subspaceId : light_label_unit.getLabel();
+            pdf_sum += eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1]));
+            //if (eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1])) < 0)
+            //{
+            //    printf("zero minus%d %d %f %f %f \n", i, path_size - i - 1, eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1])),
+            //        eye_pdf[i], connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1]))
+            //    );
+            //}
+        }
+
+        return pdf_sum;
+    }
+
     RT_FUNCTION float pdfCompute(const BDPTVertex* path, int path_size, int strategy_id)
     {
 
@@ -1600,7 +1886,7 @@ namespace Tracer
             MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
             mat.base_color = make_float4(midPoint.color, 1.0);
             float rr_rate = rrRate(mat);
-            pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
+            pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position, true) * rr_rate;
         }
         return pdf;
     }
@@ -1962,8 +2248,7 @@ RT_FUNCTION void DOT_pushRecordToBuffer(DOT_record& record, unsigned int& putId,
 {
     const DropOutTracing_params& dot_params = Tracer::params.dot_params;
     if (putId > dot_params.record_buffer_padding)
-    {
-        return;
+    { 
         printf("error in drop out tracing: pushing more record than the record buffer padding\n \
             will discord the over-flowing record\n \
             consider to increase record_buffer_width in dropOutTracing_common.h to assign more memory for record buffer\n");
@@ -2026,9 +2311,11 @@ struct statistic_payload
             data.bound = 1;
         }
         type = dropOut_tracing::pathLengthToDropOutType(u);
-        pg_p=dot_params.get_PGParams_pointer(type, SP_label, CP_label);
+        if (dropOut_tracing::PG_reciprocal_estimation_enable == true)pg_p = dot_params.get_PGParams_pointer(type, SP_label, CP_label);
+
         uvvalid = pg_p->hasLoadln;
-    }
+        if (dropOut_tracing::PG_reciprocal_estimation_enable == false)uvvalid = false;
+     }
     RT_FUNCTION float3 getInitialDirection(float3 normal, unsigned& seed)
     {
         float3 dir;
@@ -2120,14 +2407,6 @@ namespace Shift
 
     }
 
-    RT_FUNCTION bool glossy(const MaterialData::Pbr& mat)
-    {
-        return mat.roughness < 0.2 && max(mat.metallic, mat.trans) >= 0.99;
-    }
-    RT_FUNCTION bool glossy(const BDPTVertex& v)
-    {
-        return v.type == BDPTVertex::Type::NORMALHIT && glossy(Tracer::params.materials[v.materialId]);
-    }
     RT_FUNCTION bool RefractionCase(const MaterialData::Pbr& mat)
     {
         return mat.trans > 0.9;
@@ -2206,7 +2485,7 @@ namespace Shift
 
             if (i >= m_size || i < 0)
             {
-                printf("wrong Path Container index\n");
+                printf("wrong Path Container index %d\n", i);
                 return *v;
             }
             if (i >= SHIFT_VALID_SIZE)
@@ -3214,6 +3493,70 @@ namespace Shift
         }
         return true;
     }
+    RT_FUNCTION bool retracing_with_reference(unsigned& seed, PathContainer& path, 
+        const BDPTVertex& SP, const BDPTVertex& CP, float3 incident, int u, float& pdf, PathContainer& path_ref)
+    {
+        path.setSize(u);
+        pdf = 1;
+        float3 in_dir = incident;
+        for (int i = 0; i < u; i++)
+        {
+            const BDPTVertex& currentRef = path_ref.get(i);
+            float3 ref_dir = i == 0 ? in_dir : normalize(path_ref.get(i - 1).position - currentRef.position);
+            float3 ref_dir2 = normalize(path_ref.get(i + 1).position - currentRef.position);
+            bool is_refract_ref = isRefract(currentRef.normal, ref_dir, ref_dir2);
+            float refract_force = is_refract_ref ? 1 : 0;
+
+            const BDPTVertex& currentVertex = i == 0 ? SP : path.get(i - 1);
+            
+            MaterialData::Pbr mat = VERTEX_MAT(currentVertex); 
+            float3 out_dir = Tracer::Sample_force(mat, currentVertex.normal, in_dir, seed, refract_force);
+
+            bool success_hit;
+            path.get(i) = Tracer::FastTrace(currentVertex, out_dir, success_hit);
+            if (success_hit == false)
+            {
+                return false;
+            }
+            if (i == u - 1 && Shift::glossy(path.get(i)))
+            {
+                return false;
+            }
+            if (i != u - 1 && !Shift::glossy(path.get(i)))
+            {
+                return false;
+            }
+            if (path.get(i).type == BDPTVertex::HIT_LIGHT_SOURCE)
+            {
+                if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX && i == u - 1)
+                {
+                    int light_id = path.get(i).materialId;
+                    const Light& light = Tracer::params.lights[light_id];
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, path.get(i).uv);
+                    init_vertex_from_lightSample(light_sample, path.get(i));
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX && i == u - 1)
+            {
+                return false;
+            }
+            float3 diff = currentVertex.position - path.get(i).position;
+            pdf *= Tracer::Pdf_force(mat, currentVertex.normal, in_dir, out_dir, refract_force);
+            pdf *= abs(dot(out_dir, path.get(i).normal)) / dot(diff, diff);
+            //pdf *= tracingPdf(currentVertex, path.get(i), in_dir, true, true);
+            in_dir = -out_dir;
+        }
+        if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && !Tracer::visibilityTest(Tracer::params.handle, path.get(-1), CP))
+        {
+            return false;
+        }
+        return true;
+    }
 
 
     #define DOT_INVALIDATE_ALTERNATE_PATH(path) (path.setSize(0))
@@ -3508,7 +3851,7 @@ namespace Shift
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
 
-            if (p>0) {
+            if (p>0 && dropOut_tracing::PG_reciprocal_estimation_enable) {
                 ////statistic collection
                 dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
                 float3 dir = normalize(path.get(0).position - SP.position);
@@ -3587,16 +3930,20 @@ namespace Shift
     */
     RT_FUNCTION int dropoutTracing_concatenate(BDPTVertex * buffer, int begin, int u, PathContainer g, PathContainer h_y)
     {
-        buffer[begin] = h_y.get(0);
+        int count = begin;
+        buffer[count] = h_y.get(0);
+        count += 1;
         for (int i = 0; i < g.size(); i++)
         {
-            buffer[begin + i + 1] = g.get(i);
-        }
+            buffer[count] = g.get(i);
+            count += 1;
+        }        
         for (int i = u + 1; i < h_y.size(); i++)
         {
-            buffer[begin + i] = h_y.get(i);
+            buffer[count] = h_y.get(i);
+            count += 1;
         }
-        return begin + h_y.size() - u + g.size();
+        return count;
     }
     RT_FUNCTION bool valid_specular(BDPTVertex& CP, BDPTVertex& SP, int u, float3 WC)
     {
@@ -3606,7 +3953,7 @@ namespace Shift
         if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0)return false;
         if (dropOut_tracing::CP_require && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX) return false;
         if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP))return false;
-        if (u > dropOut_tracing::max_u)return false;
+        if (u > dropOut_tracing::max_u)return false; 
         return true;
     }
     RT_FUNCTION bool pathRecord_is_causticEyesubpath(long long record, int depth)
@@ -3632,6 +3979,25 @@ namespace Shift
         }
         return false;
     }
-}
+    RT_FUNCTION bool path_alreadyCaustic(const BDPTVertex* eye_buffer, int buffer_size, PathContainer light_subpath, int light_depth)
+    {
+        if (light_subpath.size() >= SHIFT_VALID_SIZE)return false;
+        int size = buffer_size + light_depth + 1;
+        for (int i = 1; i < size - 1; i++)
+        { 
+            const BDPTVertex& a = i < buffer_size ? eye_buffer[i] : light_subpath.get(i - buffer_size);
+            const BDPTVertex& b = i + 1 < buffer_size ? eye_buffer[i + 1] : light_subpath.get(i - buffer_size + 1);
+            if (Shift::glossy(a) == false)
+            {
+                if (Shift::glossy(b) == true && size - i < SHIFT_VALID_SIZE)
+                {
+                    return true;
+                }
+                return false;
+            }
 
+        }
+        return false;
+    }
+}
 #endif // !CUPROG_H
