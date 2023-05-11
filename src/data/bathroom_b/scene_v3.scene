@@ -272,9 +272,11 @@ material GoldBSDF
 
 material FoamBSDF
 {
-   color 0.531049 0.531049 0.531049
-   roughness 0.5
-   metallic 0.0
+	color 0.725 0.71 0.68
+	roughness 0.5
+    metallic 1.0
+	trans 1.0
+    eta 1.4
    albedoTex bathroom_b/textures/foam_bump.jpg
 }
 
