@@ -10,8 +10,8 @@
 namespace dropOut_tracing
 {
     const int slot_number = 5;
-    const int default_specularSubSpaceNumber =21;
-    const int default_surfaceSubSpaceNumber = 10; 
+    const int default_specularSubSpaceNumber =101;
+    const int default_surfaceSubSpaceNumber = 1; 
     const int record_buffer_width = 1;
     const int max_u = 3;
     const unsigned pixel_unit_size = 10;

@@ -294,7 +294,7 @@ mesh
 
 mesh
 {
-	file bathroom_b\Mesh238.obj
+	file bathroom_b\Mesh238_2.obj
 	material FoamBSDF
 }
 

@@ -1309,7 +1309,7 @@ int main( int argc, char* argv[] )
 
         //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4.scene");
 
 
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");

@@ -470,7 +470,7 @@ namespace MyThrustOp
         }
         for (int i = 0; i < dropOut_tracing::default_specularSubSpaceNumber; i++)
         {
-            //printf("get %d vertex at specular subspace %d\n", h_subspace_vertex_count[i], i);
+            printf("get %d vertex at specular subspace %d\n", h_subspace_vertex_count[i], i);
         }
         static thrust_dev_int d_indexes;
         d_indexes = h_indexes_rearrange;
