@@ -8,6 +8,7 @@
 #include <vector>
 #include <random>
 #include <limits>
+#include <iostream>
 #include "rt_function.h"
 
 #define GRID_SIZE 1
@@ -75,10 +76,11 @@ namespace dropOut_tracing
     };
 
     __host__ void PGParams::loadIn(const std::vector<float2>& points) {
-//        if (!hasLoadln)
+        //if (!hasLoadln)
         initializeGMM(points);
         hasLoadln = 1;
-        updateGaussian(points);
+        try { updateGaussian(points); }
+        catch (const std::exception& e) { std::cout << "error"<<e.what() << std::endl; hasLoadln = 0; }
     }
 
     __host__ void PGParams::predict_array(float2* point, int num) {
@@ -201,7 +203,6 @@ namespace dropOut_tracing
 
         return normalization * exp(exponent);
     }
-
 
     __host__ void PGParams::generatePoints(float2* point, int num) {
 

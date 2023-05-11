@@ -10,7 +10,7 @@
 namespace dropOut_tracing
 {
     const int slot_number = 5;
-    const int default_specularSubSpaceNumber = 101;
+    const int default_specularSubSpaceNumber =21;
     const int default_surfaceSubSpaceNumber = 10; 
     const int record_buffer_width = 1;
     const int max_u = 5;
@@ -28,7 +28,7 @@ namespace dropOut_tracing
     //true  false false true  true  = L(A)*DSDE enable 
     const int max_bound = 100;
     const int max_loop = 1000;
-    const float light_subpath_caustic_discard_ratio = 0.9;
+    const float light_subpath_caustic_discard_ratio = 0.1;
 
 #define DOT_EMPTY_SURFACEID 0
 #define DOT_INVALID_SPECULARID 0

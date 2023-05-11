@@ -64,6 +64,7 @@
 #include"sceneLoader.h"
 #include"scene_shift.h"
 #include<sutil/Record.h>
+#include <io.h>
 
 #include<thrust/device_vector.h>
 #include<thrust/host_vector.h>
@@ -71,6 +72,7 @@
 #include"decisionTree/classTree_host.h"
 #include"PG_host.h"
 #include"frame_estimation.h"
+#include <direct.h>
 
 using namespace std;
  
@@ -199,6 +201,13 @@ void img_save(double render_time=-1,int frame=0)
     // 获取当前时间
     auto now = std::chrono::system_clock::now();
     std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // 检测当前目录下是否存在名为 "data" 的文件夹
+    if (_access_s("data", 0) != 0) {
+        _mkdir("data");
+    }
+    else
+        std::cout <<"already has data" << std::endl;
 
     // 将时间格式化为字符串
     std::stringstream ss;
@@ -834,7 +843,17 @@ void updateDropOutTracingCombineWeight()
     }
 }
 
+std::vector<std::vector<std::vector<std::vector<float2>>>> TrainVector(dropOut_tracing::max_u,
+    std::vector<std::vector<std::vector<float2>>>(dropOut_tracing::default_specularSubSpaceNumber,
+        std::vector<std::vector<float2>>(dropOut_tracing::default_surfaceSubSpaceNumber,
+            std::vector<float2>())));
 
+std::vector<std::vector<std::vector<bool>>> TrainFinish(dropOut_tracing::max_u,
+    std::vector<std::vector<bool>>(dropOut_tracing::default_specularSubSpaceNumber,
+        std::vector<bool>(dropOut_tracing::default_surfaceSubSpaceNumber,
+            0)));
+
+const int capacity=10000;
 
 void updateDropOutTracingParams()
 {
@@ -928,10 +947,7 @@ void updateDropOutTracingParams()
 
     //PG training
     {
-        std::vector<std::vector<std::vector<std::vector<float2>>>> tempVector(dropOut_tracing::max_u,
-            std::vector<std::vector<std::vector<float2>>>(dot_params.specularSubSpaceNumber,
-                std::vector<std::vector<float2>>(dot_params.surfaceSubSpaceNumber, 
-                    std::vector<float2>())));
+        int count = 0;
 
         for (int i = 0; i < records.size(); i++)
         {
@@ -939,7 +955,9 @@ void updateDropOutTracingParams()
             if (record.data_slot == DOT_usage::Dirction)
             {
                 //printf("PG record for ID S:%d C:%d U:%d with uv %f %f\n", record.specular_subspaceId, record.surface_subspaceId, int(record.type), record.data, record.data2);
-                tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId].push_back(float2{ record.data,record.data2 });
+                count++;
+                if (TrainVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId].size() == capacity) continue;
+                TrainVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId].push_back(float2{ record.data,record.data2 });
             }
         }
 
@@ -947,15 +965,18 @@ void updateDropOutTracingParams()
             for (int j = 0; j < dot_params.specularSubSpaceNumber; j++)
                 for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
                 {
-                    int num = tempVector[i][j][k].size();
+                    int num = TrainVector[i][j][k].size();
                     if (num == 0) continue;
-                    dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->loadIn(tempVector[i][j][k]);
+                    if (num==capacity && TrainFinish[i][j][k]) continue;
+                    if (num == capacity) { TrainFinish[i][j][k] = true; printf("one vector train end!!!\n"); }
+                    dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->loadIn(TrainVector[i][j][k]);
                     if (!disable_print){
                         printf("PG traning for ID S:%d C:%d U:%d with size %d\n", j, k, i, num);
                     }
                 }
-        }
-
+        printf("we get %d record success\n", count);
+    }
+        
     dot_params.statistics_iteration_count++;
     printf("received %lld valid records in the Light Tracing\n",records.size());
     
@@ -1188,9 +1209,9 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
 
 
         // scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
