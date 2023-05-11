@@ -19,13 +19,11 @@ lookat  -2.179732 -1.415354 -2.400182
 light
 {
  
-	position -1.214626 1.988354 -1.697909
+	position -1.124205 1.864583 -2.386024
+	v1 -0.620121 1.864583 -2.386024
+	v2 -1.124205 1.783139 -2.344007
 
-	v1 -0.577160 1.988354 -1.697909
-	v2 -1.214626 1.659368 -1.525238
-
-
-    emission 70 50 40
+    emission 700 500 400
 	divLevel 1
     type Quad
 }
@@ -5417,5 +5415,16 @@ mesh
 	file bathroom_b\Light_0001.obj
 	material LightBSDF
 }
- 
+mesh
+{
+	file bathroom_b\geo-fake\lightrim.obj
+	material blackBSDF
+}
+
+mesh
+{
+	file bathroom_b\geo-fake\lightrim_0.obj
+	material WoodBSDF
+
+}
 

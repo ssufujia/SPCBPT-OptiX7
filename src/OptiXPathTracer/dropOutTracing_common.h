@@ -13,7 +13,7 @@ namespace dropOut_tracing
     const int default_specularSubSpaceNumber = 101;
     const int default_surfaceSubSpaceNumber = 1; 
     const int record_buffer_width = 1;
-    const int max_u = 5;
+    const int max_u = 3;
     const unsigned pixel_unit_size = 10;
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
@@ -33,6 +33,8 @@ namespace dropOut_tracing
     const int reciprocal_iteration = 5;
     const bool connection_uniform_sample = false;
     const int iteration_stop_learning = 40;
+    const int specular_connection_N = 1;
+#define DOT_VERY_CLOSE_DISTANCE2 0.04
 #define DOT_EMPTY_SURFACEID 0
 #define DOT_INVALID_SPECULARID 0
     enum class DropOutType

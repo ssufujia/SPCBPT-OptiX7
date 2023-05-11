@@ -849,7 +849,7 @@ void updateDropOutTracingCombineWeight()
         {
             if (h_record[i].valid() == false||h_record[i].is_caustic() == false)continue;
             if (isnan(h_record[i].record) || isinf(h_record[i].record))continue;
-            float weight = abs(h_record[i].record);
+            float weight = abs(h_record[i].record) * h_caustic_gamma[h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId];
             if (weight > 1000000) weight = 1000000;
             unsigned id = h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId;
             gamma_count[id] += 1;
@@ -910,7 +910,11 @@ void updateDropOutTracingCombineWeight()
                 h_frac[i] = 0.5;
             else
             {
-                h_frac[i] = 0.5 * t + (1 - t) * (caustic_weight[i] / (normal_weight[i] + caustic_weight[i]));
+                float recommend = (caustic_weight[i] / (normal_weight[i] + caustic_weight[i]));
+                if (recommend < 0.05)
+                    h_frac[i] = CONSERVATIVE_RATE;
+                else h_frac[i] = 1;
+
             }
         } 
         subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
@@ -923,6 +927,13 @@ void updateDropOutTracingCombineWeight()
 
 void updateDropOutTracingParams()
 {
+    static int train_iter = 0;
+    if (train_iter > 0 && train_iter > dropOut_tracing::iteration_stop_learning)
+    {
+        printf("iteration more than stop point, stop params learning\n");
+        return;
+    }
+    train_iter++;
     if (SPCBPT_PURE) return;
     bool disable_print = true;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
