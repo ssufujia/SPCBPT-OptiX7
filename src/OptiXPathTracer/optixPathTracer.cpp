@@ -774,6 +774,7 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
     {
+        //printf("% d\n", current_sample_count);
         current_sample_count += launchPretrace(scene);
     }
 
@@ -1308,6 +1309,7 @@ int main( int argc, char* argv[] )
         string scenePath = " ";
 
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4.scene");
 
@@ -1360,6 +1362,8 @@ int main( int argc, char* argv[] )
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
         env_params_setup(TScene);
+
+        render_alg[render_alg_id] = std::string("pt");
         //pre tracing
         { 
             handleCameraUpdate(params);

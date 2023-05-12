@@ -1,29 +1,33 @@
 cameraSetting
 {	
-	up      0.000000 1.000000 0.000000
-	eye     -0.121078 1.315564 -7.198549
-	lookat  0.000000 1.000000 0.000000
+up      0.000000 0.000000 1.000000
+eye     173.000000 379.999939 460.500000
+lookat  470.000000 -500.000000 15.000000
     fov 20
 }
 
+
+
+
+
 material acrylic_glass
 {
-	color 0.63 0.65 0.65
-	roughness 0.1
+	color 0.99 0.99 0.99
+	roughness 0.01
 	metallic 1.0
 	trans 1
-	eta 1.3
+	eta 1.5
 }
 
 mesh
 {
-	file lionbase.obj
+	file artware/lionbase.obj
 	material acrylic_glass
 }
 
 mesh
 {
-	file lion.obj
+	file artware/lion.obj
 	material acrylic_glass
 }
 
@@ -32,99 +36,165 @@ material tripod1
 	color 0.325 0.408 0.376
 	roughness 0.1
 	metallic 1.0
-	trans 0.2
+	trans 0.5
 	eta 1.5
 }
 
 mesh
 {
-	file tripod.obj
+	file artware/tripod1.obj
 	material tripod1
 }
 
 material tripod2
 {
 	# Cu
-	color 0.8 0.6 0.7
-	roughness 0.2
-	metallic 0.1
+	color 0.83 0.43 0.25
+	roughness 0.1
+	metallic 1.0
 }
 
 mesh
 {
-	file tripod2.obj
+	file artware/tripod2.obj
 	material tripod2
 }
 
-mesh
+material Ag
 {
-	file mirror.obj
-	material models/mirror.obj
+	color 0.99 0.99 0.99
+	roughness 0.001
+	metallic 1.0
 }
 
 mesh
 {
-	file frame.obj
-	material models/frame.obj
+	file artware/mirror.obj
+	material Ag
+}
+
+material TableWood
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    albedoTex artware/textures/wood5.jpg
 }
 
 mesh
 {
-	file shell.obj
-	material models/shell.obj
+	file artware/frame.obj
+	material TableWood
+}
+
+material shell
+{
+    color 0.1 0.4 0.9
+    roughness 0.2
 }
 
 mesh
 {
-	file reflector.obj
-	material models/reflector.obj
+	file artware/shell.obj
+	material shell
+}
+
+material Al
+{
+	color 0.99 0.99 0.99
+	roughness 0.1
+	metallic 1.0
 }
 
 mesh
 {
-	file base.obj
-	material models/base.obj
+	file artware/reflector.obj
+	material Al
 }
 
 mesh
 {
-	file bulb.obj
+	file artware/base.obj
+	material Al
+}
+
+mesh
+{
+	file artware/bulb.obj
 	material acrylic_glass
 }
 
 mesh
 {
-	file lens.obj
+	file artware/lens.obj
 	material acrylic_glass
 }
 
-mesh
+material floor
 {
-	file floor.obj
-	material models/floor.obj
+	color 0.98 0.98 0.92
+	roughness 0.5
 }
 
 mesh
 {
-	file wall1.obj
-	material models/wall1.obj
+	file artware/floor.obj
+	material floor
+}
+
+material wall1
+{
+	color 0.9 0.9 0.2
+	roughness 0.5
 }
 
 mesh
 {
-	file wall2.obj
-	material models/wall2.obj
+	file artware/wall1.obj
+	material wall1
+}
+
+material wall2
+{
+	color 0.9 0.9 0.9
+	roughness 0.5
 }
 
 mesh
 {
-	file filament.obj
-	material models/filament.obj
+	file artware/wall2.obj
+	material wall2
 }
 
-mesh
+
+light
 {
-	file light.obj
-	material models/light.obj
+	position 81.5436 59.7274 0.5863
+	v1 331.5435 59.7275 0.5863
+	v2 81.5436 59.7274 250.5863
+	emission 3 3 3
+    type Quad
+	divLevel 2
 }
+
+light
+{
+	position 241.887207 -375.348419 26.327789
+	v1 241.887207 -375.348419 15.327789
+	v2 241.887207 -385.348419 26.327789
+	emission 500 500 500
+    type Quad
+	divLevel 1
+}
+
+light
+{
+	position 240.887207 -375.348419 26.327789
+	v1 240.887207 -385.348419 26.327789
+	v1 240.887207 -375.348419 15.327789
+	emission 500 500 500
+    type Quad
+	divLevel 1
+}
+
+
 
