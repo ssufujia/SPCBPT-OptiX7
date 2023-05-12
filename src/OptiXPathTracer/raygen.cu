@@ -825,14 +825,14 @@ extern "C" __global__ void __raygen__shift_combine()
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
                  
-                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC)) 
+                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
                 {
                     //float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
                     //float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
                     //res = contri / pdf * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
                     res = lightStraghtHit(payload.path.currentVertex()) * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
-                } 
-                else
+                }
+                else if (!Tracer::params.caustic_path_only)
                 { 
                     res = lightStraghtHit(payload.path.currentVertex());
                 }
@@ -882,8 +882,8 @@ extern "C" __global__ void __raygen__shift_combine()
             float pmf_secondStage;
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
-            if (Shift::glossy(light_subpath))continue;
-            if (Shift::glossy(eye_vertex))continue;
+            //if (Shift::glossy(light_subpath))continue;
+            //if (Shift::glossy(eye_vertex))continue;
             if ((Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
             {
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
@@ -893,6 +893,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
 
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
+                bool caustic_flag = false;
                 if (Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
                     light_subpath.depth + 1 < SHIFT_VALID_SIZE && buffer_size + light_subpath.depth + 1 < MAX_PATH_LENGTH_FOR_MIS)
                 {
@@ -902,11 +903,14 @@ extern "C" __global__ void __raygen__shift_combine()
                     if (Shift::getCausticPathInfo(pathBuffer, path_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
                     {
                         res *= (1 - dropOutTracing_MISWeight(pathBuffer, path_size));
+                        caustic_flag = true;
                     }
                 }
+                
                 if (!ISINVALIDVALUE(res))
                 {
-                    result += res / CONNECTION_N;
+                    if(!(Tracer::params.caustic_path_only && caustic_flag == false))
+                        result += res / CONNECTION_N;
                     if (caustic_eye)
                     {
                         pixel_record.is_valid = true;
@@ -1007,7 +1011,34 @@ extern "C" __global__ void __raygen__shift_combine()
         }
         
 
-
+        if (eye_vertex.depth == 1 && Tracer::params.eye_subspace_visualize || Tracer::params.light_subspace_visualize || Tracer::params.specular_subspace_visualize
+            || Tracer::params.caustic_prob_visualize || Tracer::params.PG_grid_visualize)
+        {
+            unsigned vis_id = 0;
+            if (Tracer::params.eye_subspace_visualize) {
+                labelUnit lu(eye_vertex.position, eye_vertex.normal, eye_vertex.normal, false);
+                vis_id = lu.getLabel();
+            }
+            else if (Tracer::params.light_subspace_visualize) {
+                labelUnit lu(eye_vertex.position, eye_vertex.normal, eye_vertex.normal, true);
+                vis_id = lu.getLabel();
+            }
+            else if (Tracer::params.specular_subspace_visualize) {
+                vis_id = Tracer::params.dot_params.get_specular_label(eye_vertex.position, eye_vertex.normal);
+            }
+            else if (Tracer::params.PG_grid_visualize && Tracer::params.pg_params.pg_enable)
+            {
+                vis_id = Tracer::params.pg_params.getStreeId(eye_vertex.position);
+            }
+            result = make_float3(rnd(vis_id), rnd(vis_id), rnd(vis_id));
+            if (Tracer::params.caustic_prob_visualize)
+            { 
+                float caustic_connection_prob = Tracer::params.dot_params.get_caustic_prob(
+                    make_uint2(launch_idx.x, launch_idx.y), make_uint2(launch_dims.x, launch_dims.y));
+                result = make_float3(caustic_connection_prob);
+            }
+            break;
+        }
     }
     //
     // Update results 

@@ -10,7 +10,7 @@
 namespace dropOut_tracing
 {
     const int slot_number = 5;
-    const int default_specularSubSpaceNumber =101;
+    const int default_specularSubSpaceNumber = 101;
     const int default_surfaceSubSpaceNumber = 1; 
     const int record_buffer_width = 1;
     const int max_u = 3;
@@ -19,7 +19,7 @@ namespace dropOut_tracing
     const bool debug_PT_ONLY = false;
     const bool PG_reciprocal_estimation_enable = false;
 
-    const bool multi_bounce_disable = false; // if true, u mush be 1
+    const bool multi_bounce_disable = false; // if true, u must be 1
     const bool CP_disable = true; // if true, only no control point is valid
     const bool CP_lightsource_only = true; // if true, CP must be on light source
     const bool CP_lightsource_disable = false; // if true, CP can't be on light source

@@ -1802,8 +1802,8 @@ namespace Tracer
         }
         for (int i = 2; i <= path_size - 2; i++)
         {
-            if (Shift::glossy(path[i]) || Shift::glossy(path[i - 1]))
-                continue;
+            //if (Shift::glossy(path[i]) || Shift::glossy(path[i - 1]))
+            //    continue;
             labelUnit eye_label_unit(path[i].position, path[i].normal, normalize(path[i - 1].position - path[i].position), false);
             int eye_label = eye_label_unit.getLabel(); 
 
@@ -3531,7 +3531,7 @@ namespace Shift
     #define DOT_INVALIDATE_ALTERNATE_PATH(path) (path.setSize(0))
     #define DOT_IS_ALTERNATE_PATH_INVALID(path) (path.size() == 0)
     #define DOT_INVALID_ALTERNATE_PATH_PDF 1
-    #define DOT_SP_RATIO 0.5
+    #define DOT_SP_RATIO 0.0
     /**
      * This function samples an alternate path and stores it in the path container. Returns false if sampling fails.
      * CP stands for control point, SP stands for specular point, u is the step size, and WC stands for control direction.
@@ -3819,8 +3819,8 @@ namespace Shift
             bool sample_success = alternate_path_sample(seed, path, CP, SP, WC, u, statistic_prd);
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
-
-            if (p>0 && dropOut_tracing::PG_reciprocal_estimation_enable) {
+            //printf("p q  %f %f %f\n", p, q, p / q);
+            if (p > 0 && dropOut_tracing::PG_reciprocal_estimation_enable) {                
                 ////statistic collection
                 dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
                 float3 dir = normalize(path.get(0).position - SP.position);
