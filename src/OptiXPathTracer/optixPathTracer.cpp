@@ -964,6 +964,7 @@ void updateDropOutTracingParams()
         return;
     }
     train_iter++;
+    if (SPCBPT_PURE) return;
     bool disable_print = false;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
@@ -1311,8 +1312,9 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4.scene");
 
+        scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
@@ -1323,8 +1325,8 @@ int main( int argc, char* argv[] )
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
         
