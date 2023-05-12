@@ -1,0 +1,130 @@
+cameraSetting
+{	
+	up      0.000000 1.000000 0.000000
+	eye     -0.121078 1.315564 -7.198549
+	lookat  0.000000 1.000000 0.000000
+    fov 20
+}
+
+material acrylic_glass
+{
+	color 0.63 0.65 0.65
+	roughness 0.1
+	metallic 1.0
+	trans 1
+	eta 1.3
+}
+
+mesh
+{
+	file lionbase.obj
+	material acrylic_glass
+}
+
+mesh
+{
+	file lion.obj
+	material acrylic_glass
+}
+
+material tripod1
+{
+	color 0.325 0.408 0.376
+	roughness 0.1
+	metallic 1.0
+	trans 0.2
+	eta 1.5
+}
+
+mesh
+{
+	file tripod.obj
+	material tripod1
+}
+
+material tripod2
+{
+	# Cu
+	color 0.8 0.6 0.7
+	roughness 0.2
+	metallic 0.1
+}
+
+mesh
+{
+	file tripod2.obj
+	material tripod2
+}
+
+mesh
+{
+	file mirror.obj
+	material models/mirror.obj
+}
+
+mesh
+{
+	file frame.obj
+	material models/frame.obj
+}
+
+mesh
+{
+	file shell.obj
+	material models/shell.obj
+}
+
+mesh
+{
+	file reflector.obj
+	material models/reflector.obj
+}
+
+mesh
+{
+	file base.obj
+	material models/base.obj
+}
+
+mesh
+{
+	file bulb.obj
+	material acrylic_glass
+}
+
+mesh
+{
+	file lens.obj
+	material acrylic_glass
+}
+
+mesh
+{
+	file floor.obj
+	material models/floor.obj
+}
+
+mesh
+{
+	file wall1.obj
+	material models/wall1.obj
+}
+
+mesh
+{
+	file wall2.obj
+	material models/wall2.obj
+}
+
+mesh
+{
+	file filament.obj
+	material models/filament.obj
+}
+
+mesh
+{
+	file light.obj
+	material models/light.obj
+}
+
