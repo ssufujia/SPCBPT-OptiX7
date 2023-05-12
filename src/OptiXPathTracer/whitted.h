@@ -82,6 +82,12 @@ struct LaunchParams
     float3                   miss_color;
     OptixTraversableHandle   handle;
 
+    bool eye_subspace_visualize;
+    bool light_subspace_visualize;
+    bool caustic_path_only;
+    bool specular_subspace_visualize;
+    bool caustic_prob_visualize;
+    bool PG_grid_visualize;
 };
 
 struct PayloadRadiance

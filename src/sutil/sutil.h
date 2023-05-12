@@ -114,6 +114,17 @@ SUTILAPI void displayStats( std::chrono::duration<double>& state_update_time,
                             std::chrono::duration<double>& render_time,
                             std::chrono::duration<double>& display_time );
 
+SUTILAPI bool displayStatsControls(std::chrono::duration<double>& state_update_time,
+    std::chrono::duration<double>& render_time,
+    std::chrono::duration<double>& display_time,
+    bool& eye_subspace_visualize,
+    bool& light_subspace_visualize,
+    bool& caustic_path_only,
+    bool& specular_subspace_visualize,
+    bool& caustic_prob_visualize,
+    bool & PG_grid_visualize);
+
+
 // Display a short string starting at x,y.
 SUTILAPI void displayText( const char* text, float x, float y );
 

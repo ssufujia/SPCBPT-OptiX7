@@ -747,11 +747,95 @@ void displayStats( std::chrono::duration<double>& state_update_time,
         state_update_time = render_time = display_time = std::chrono::duration<double>::zero();
     }
     displayText( display_text, 10.0f, 10.0f );
+
+
+    static const ImGuiWindowFlags window_flags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoScrollbar;
+
+    ImGui::SetNextWindowPos(ImVec2(2.0f, 70.0f));
+    ImGui::Begin("controls", 0, window_flags);
+    static int vp_x = 0;
+    if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::SliderInt("vp_x", &vp_x, 1, 10)) {
+            printf("vp_x\n", vp_x);
+        }
+        
+    }
+    ImGui::End();
     endFrameImGui();
 
     ++total_subframe_count;
 }
 
+
+bool displayStatsControls(std::chrono::duration<double>& state_update_time,
+    std::chrono::duration<double>& render_time,
+    std::chrono::duration<double>& display_time,
+    bool &eye_subspace_visualize, 
+    bool &light_subspace_visualize, 
+    bool &caustic_path_only, 
+    bool &specular_subspace_visualize,
+    bool &caustic_prob_visualize,
+    bool & PG_grid_visualize
+    )
+{
+    constexpr std::chrono::duration<double> display_update_min_interval_time(0.5);
+    static int32_t                          total_subframe_count = 0;
+    static int32_t                          last_update_frames = 0;
+    static auto                             last_update_time = std::chrono::steady_clock::now();
+    static char                             display_text[128];
+
+    const auto cur_time = std::chrono::steady_clock::now();
+
+    beginFrameImGui();
+    last_update_frames++;
+
+    typedef std::chrono::duration<double, std::milli> durationMs;
+
+    if (cur_time - last_update_time > display_update_min_interval_time || total_subframe_count == 0)
+    {
+        sprintf(display_text,
+            "%5.1f fps\n\n"
+            "state update: %8.1f ms\n"
+            "render      : %8.1f ms\n"
+            "display     : %8.1f ms\n",
+            last_update_frames / std::chrono::duration<double>(cur_time - last_update_time).count(),
+            (durationMs(state_update_time) / last_update_frames).count(),
+            (durationMs(render_time) / last_update_frames).count(),
+            (durationMs(display_time) / last_update_frames).count());
+
+        last_update_time = cur_time;
+        last_update_frames = 0;
+        state_update_time = render_time = display_time = std::chrono::duration<double>::zero();
+    }
+    displayText(display_text, 10.0f, 10.0f);
+
+    static const ImGuiWindowFlags window_flags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoScrollbar;
+
+    ImGui::SetNextWindowPos(ImVec2(2.0f, 70.0f));
+    ImGui::Begin("controls", 0, window_flags); 
+    bool changed = false;
+    if (ImGui::CollapsingHeader("debugMode", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::Checkbox("eye subspace visible", &eye_subspace_visualize)) changed = true;
+        if (ImGui::Checkbox("light subspace visible", &light_subspace_visualize)) changed = true;
+        if (ImGui::Checkbox("caustic_path_only", &caustic_path_only))changed = true;
+        if (ImGui::Checkbox("specular_subspace_visualize", &specular_subspace_visualize))changed = true;
+        if (ImGui::Checkbox("caustic_prob_visualize", &caustic_prob_visualize))changed = true;
+        if (ImGui::Checkbox("PG_grid_visualize", &PG_grid_visualize))changed = true;
+    }
+    ImGui::End();
+    endFrameImGui();
+
+    ++total_subframe_count;
+    return changed;
+}
 
 void displayText( const char* text, float x, float y )
 {
