@@ -42,7 +42,7 @@ struct BDPTVertex
 
     //cache the RMIS weight for eye sub-path tracing
     float3 RMIS_pointer_3;
-
+    float3 shade_normal;
     //to save the uv coordinate of the light source
     float2 uv;
 
@@ -94,7 +94,14 @@ struct BDPTVertex
     __host__ __device__ bool is_DIRECTION()const { return type == BDPTVertex::Type::DIRECTION||type == BDPTVertex::Type::ENV; }
     __host__ __device__ bool hit_lightSource()const { return type == BDPTVertex::Type::ENV_MISS||type == BDPTVertex::Type::HIT_LIGHT_SOURCE; }
     __host__ __device__ float contri_float() { return flux.x + flux.y + flux.z; } 
-    
+    __host__ __device__ const float3& get_shade_normal()const
+    {
+        return shade_normal;
+    }
+    __host__ __device__ void set_shade_normal(float3 sn)
+    {
+        shade_normal = sn;
+    }
     template<typename B, typename T = MaterialData::Pbr>
     __host__ __device__ T  getMat(B mats)const
     {
@@ -105,6 +112,7 @@ struct BDPTVertex
         }
         T mat = mats[materialId];
         mat.base_color = make_float4(color, 1);
+        mat.shade_normal = get_shade_normal();
         return mat;
     }
 

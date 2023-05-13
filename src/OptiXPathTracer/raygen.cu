@@ -220,9 +220,8 @@ __device__ float3 direction_connect_ZGCBPT(const BDPTVertex& a, const BDPTVertex
     float3 L = make_float3(0.0f);
     float3 connectDir = -b.normal; 
     if (dot(a.normal, connectDir) > 0.0)
-    {
-        MaterialData::Pbr mat_a = Tracer::params.materials[a.materialId];
-        mat_a.base_color = make_float4(a.color, 1.0);
+    { 
+        MaterialData::Pbr mat_a = VERTEX_MAT(a); 
         float3 f = Tracer::Eval(mat_a, a.normal, normalize(a.lastPosition - a.position), connectDir)
             * dot(a.normal, connectDir);
         L = a.flux / a.pdf * f * b.flux / b.pdf * rmis::connection_direction_lightSource(a, b);
@@ -250,16 +249,14 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
 
     float3 fa, fb;
     float3 ADcolor;
-    MaterialData::Pbr mat_a = Tracer::params.materials[a.materialId];
-    mat_a.base_color = make_float4(a.color, 1.0);  
-    fa = Tracer::Eval(mat_a, a.normal, LA_DIR, -connectDir) / (mat_a.brdf ? abs(dot(a.normal, connectDir)) : 1.0f);
+    MaterialData::Pbr mat_a = VERTEX_MAT(a);
+    fa = Tracer::Eval(mat_a, a.normal, LA_DIR, -connectDir) ;
 
     MaterialData::Pbr mat_b;
     if (!b.isOrigin)
     {
-        mat_b = Tracer::params.materials[b.materialId];
-        mat_b.base_color = make_float4(b.color,1.0);
-        fb = Tracer::Eval(mat_b, b.normal, connectDir, LB_DIR) / (mat_b.brdf ? abs(dot(b.normal, connectDir)) : 1.0f);
+        mat_b = VERTEX_MAT(b);
+        fb = Tracer::Eval(mat_b, b.normal, connectDir, LB_DIR);
     }
     else
     {
@@ -499,9 +496,8 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
             const BDPTVertex& nextPoint = path[i + 1];
             float3 lastDirection = normalize(lastPoint.position - midPoint.position);
             float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-            MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-            mat.base_color = make_float4(midPoint.color, 1.0);
+             
+            MaterialData::Pbr mat = VERTEX_MAT(midPoint);
             float rr_rate = i>=specular_index?1: Tracer::rrRate(mat);
             pdf *= i >= specular_index ? 
                 Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate:
@@ -543,8 +539,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
                 float3 lastDirection = normalize(lastPoint.position - midPoint.position);
                 float3 nextDirection = normalize(nextPoint.position - midPoint.position);
 
-                MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-                mat.base_color = make_float4(midPoint.color, 1.0);
+                MaterialData::Pbr mat = VERTEX_MAT(midPoint);
                 float rr_rate = Tracer::rrRate(mat);
                 pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
             } 

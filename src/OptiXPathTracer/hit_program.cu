@@ -287,7 +287,8 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
-    if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
+    //if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : N;
     //    if (dot(N, ray_direction) > 0.f)
     //        N = -N;
     prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed, geom.P, true);
@@ -314,7 +315,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     {
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
     }
-    NextVertex.flux = Tracer::Eval(currentPbr, N, inver_ray_direction, prd->ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
+    NextVertex.flux = Tracer::Eval(currentPbr, N, inver_ray_direction, prd->ray_direction) ;
     NextVertex.singlePdf = prd->pdf;
 
     MidVertex.lastPosition = LastVertex.position;
@@ -324,6 +325,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     }
 
     MidVertex.color = make_float3(currentPbr.base_color);
+    MidVertex.set_shade_normal(currentPbr.shade_normal);
     MidVertex.lastNormalProjection = abs(dot(LastVertex.normal, ray_direction));
     MidVertex.materialId = hit_group_data->material_data.id;
 
@@ -410,7 +412,8 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.N;// NormalTexSample(geom, hit_group_data->material_data);
-    if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : N;
+    //if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
     //    if (dot(N, ray_direction) > 0.f)
     //        N = -N;
         //prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed); 
@@ -427,6 +430,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     MidVertex.normal = N;//这个在折射场景里需要进一步讨论
     MidVertex.type = BDPTVertex::Type::NORMALHIT;
     MidVertex.color = make_float3(currentPbr.base_color);
+    MidVertex.set_shade_normal(currentPbr.shade_normal);
 
     MidVertex.materialId = hit_group_data->material_data.id;
 
@@ -449,7 +453,8 @@ extern "C" __global__ void __closesthit__lightSubpath()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.N;
-    if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
+    //if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : N;
     // NormalTexSample(geom, hit_group_data->material_data);
     // if (dot(N, ray_direction) > 0.f)
     // N = -N;
@@ -476,7 +481,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
     else
         MidVertex.flux = MidVertex.flux * LastVertex.flux * pdf_G;
 
-    NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction, -ray_direction) / (currentPbr.brdf ? abs(dot(MidVertex.normal, prd->ray_direction)) : 1.0f);
+    NextVertex.flux = Tracer::Eval(currentPbr, N, prd->ray_direction, -ray_direction) ;
 
     NextVertex.singlePdf = prd->pdf;
 
@@ -485,6 +490,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
         MidVertex.lastPosition = MidVertex.position - ray_direction;
 
     MidVertex.color = make_float3(currentPbr.base_color);
+    MidVertex.set_shade_normal(currentPbr.shade_normal);
     MidVertex.lastNormalProjection = abs(dot(LastVertex.normal, ray_direction));
     MidVertex.materialId = hit_group_data->material_data.id;
 
@@ -529,8 +535,7 @@ extern "C" __global__ void __closesthit__radiance()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.N;
-    if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
-    
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : N;
     float3 in_dir = -prd->ray_direction;
     float3 result = make_float3(0.0f);
 

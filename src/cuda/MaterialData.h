@@ -84,6 +84,7 @@ struct MaterialData
     struct Pbr
     {
         float4               base_color;
+        float3               shade_normal;
         float                metallic;
         float                roughness;
         float                specular;

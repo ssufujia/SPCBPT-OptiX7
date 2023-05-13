@@ -1098,12 +1098,13 @@ namespace Tracer
 {
     RT_FUNCTION float3 Eval_Transmit(const MaterialData::Pbr& mat, const float3& normal, const float3& V_vec, const float3& L_vec)
     {
-        float3 N = normal;
+        //float3 gN = normal;
+        float3 N = mat.shade_normal;
         float3 V = V_vec;
         float3 L = L_vec;
         float NDotL = dot(N, L);
         float NDotV = dot(N, V);
-
+        //float gNDotL = dot(gN, L);
 
         float mateta = mat.eta;
         float eta = 1 / mateta;
@@ -1150,19 +1151,25 @@ namespace Tracer
     }
     RT_FUNCTION float3 Eval(const MaterialData::Pbr& mat, const float3& normal, const float3& V, const float3& L)
     {
-        float3 N = normal;
-
+        //printf("s normal %f %f %f gn %f %f %f\n", mat.shade_normal.x, mat.shade_normal.y, mat.shade_normal.z,normal.x,normal.y,normal.z);
+        //float3 N = normal; 
+        float3 N = mat.shade_normal;
+        float3 gN = normal; 
         float mateta = mat.eta;
         float NDotL = dot(N, L);
+        float gNDotL = dot(gN, L);
         float NDotV = dot(N, V);
-        float eta = 1 / mateta;
-        if (NDotL * NDotV <= 0.0f)
-            return Eval_Transmit(mat, normal, V, L);
+        float gNDotV = dot(gN, V);
+        float eta = 1 / mateta;        
+        if (mat.trans<0.1&& (gNDotL * gNDotV <= 0.0f || NDotL * NDotV <= 0))
+            return make_float3(0);// return Eval_Transmit(mat, normal, V, L); 
+
+        if (NDotL * NDotV <= 0)return Eval_Transmit(mat, normal, V, L);
         //return make_float3(0);
 
         if (NDotL < 0.0f && NDotV < 0.0f)
         {
-            N = -normal;
+            N = -N;
             eta = 1 / eta;
             NDotL *= -1;
             NDotV *= -1;
@@ -1260,7 +1267,8 @@ namespace Tracer
         float r3 = rnd(seed);
         float r4 = rnd(seed);
         float3 dir;
-        float3 normal = N;
+        //float3 normal = N;
+        float3 normal = mat.shade_normal;
         {
             Onb onb(normal);
             cosine_sample_hemisphere(r1, r2, dir);
@@ -1277,7 +1285,7 @@ namespace Tracer
         if (dot(normal, V) < 0)
         {
             eta = 1 / eta;
-            normal = -N;
+            normal = -normal;
         } 
 
         float NdotV = abs(dot(normal, V));
@@ -1368,14 +1376,15 @@ namespace Tracer
 #endif
 
         float transRatio = mat.trans;
-        float3 n = normal;
+        //float3 n = normal;
+        float3 n = mat.shade_normal;
         float mateta = mat.eta;
         //        float eta = dot(L, n) > 0 ? (mateta) : (1/mateta);     
         float eta = mateta;
         if (dot(n, V) < 0)
         {
             eta = 1 / eta;
-            n = -normal;
+            n = -n;
         }
         float pdf = 0;
         float NdotV = abs(dot(V, n));
@@ -1436,24 +1445,10 @@ namespace Tracer
         sin2ThetaT = 1 / (eta * eta) * sin2ThetaI;
 
         if (sin2ThetaT > 1)// full reflect
-        {
-            //printf("l pdf: %f\n", (diffuseRatio * pdfDiff + specularRatio * pdfSpec));
+        { 
             pdf += (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * transRatio * refractRatio;
         }
-
-        /*
-        if (mat.trans > 0 && isRefract(normal, V, L))
-        {
-            if (dot(normal, V) > 0)
-            {
-                pdf *= (mat.eta * mat.eta);
-            }
-            else
-            {
-                pdf /= (mat.eta * mat.eta);
-            }
-        }*/
-
+         
 
         if (use_pg && Tracer::params.pg_params.pg_enable)
         {
@@ -1469,8 +1464,7 @@ namespace Tracer
         if (use_pg && Tracer::params.pg_params.pg_enable && Shift::glossy(mat) == false)
         { 
             if (rnd(seed) < Tracer::params.pg_params.guide_ratio)
-            {
-                //printf("into PG %d\n", Tracer::params.pg_params.spatio_trees[0].count);
+            { 
                 return Tracer::params.pg_params.sample(seed, position);
             }
         }
@@ -1483,7 +1477,7 @@ namespace Tracer
         float r3 = rnd(seed);
         float r4 = rnd(seed);
         float3 dir;
-        float3 normal = N;
+        float3 normal = mat.shade_normal;
         {
             Onb onb(normal);
             cosine_sample_hemisphere(r1, r2, dir);
@@ -1500,37 +1494,9 @@ namespace Tracer
         if (dot(normal, V) < 0)
         {
             eta = 1 / eta;
-            normal = -N;
+            normal = -normal;
         }
-
-        if (false && mat.trans > .9)
-        {
-            float3 half = Shift::sample_half(mat.roughness * 3, normal, make_float2(r1, r2));
-            if (dot(V, half) < 0)
-            {
-                half = -half;
-            }
-            float reflect_rate = .5;
-
-            float cos_i = abs(dot(half, V));
-            float sin_i = sqrt(1 - cos_i * cos_i);
-            float sin_t2 = sin_i * eta * eta;
-            if (sin_t2 > 1) reflect_rate = 1;
-            if (rnd(seed) < reflect_rate)
-            {
-                return reflect(-V, half);
-            }
-            else
-            {
-                float3 out_dir;
-                bool refract_good = refract(out_dir, V, half, 1 / eta);
-                if (refract_good == false)
-                {
-                    printf("error refract in Sample\n");
-                }
-                return out_dir;
-            }
-        }
+         
 
         float NdotV = abs(dot(normal, V));
         float transRatio = mat.trans;
@@ -1619,14 +1585,14 @@ namespace Tracer
 #endif
 
         float transRatio = mat.trans;
-        float3 n = normal;
+        float3 n = mat.shade_normal;
         float mateta = mat.eta;
         //        float eta = dot(L, n) > 0 ? (mateta) : (1/mateta);     
         float eta = mateta;
         if (dot(n, V) < 0)
         {
             eta = 1 / eta;
-            n = -normal;
+            n = -n;
         }
         float pdf = 0;
         float NdotV = abs(dot(V, n));
@@ -1689,20 +1655,7 @@ namespace Tracer
             //printf("l pdf: %f\n", (diffuseRatio * pdfDiff + specularRatio * pdfSpec));
             pdf += (diffuseRatio * pdfDiff + specularRatio * pdfSpec) * transRatio * refractRatio;
         }
-
-        /*
-        if (mat.trans > 0 && isRefract(normal, V, L))
-        {
-            if (dot(normal, V) > 0)
-            {
-                pdf *= (mat.eta * mat.eta);
-            }
-            else
-            {
-                pdf /= (mat.eta * mat.eta);
-            }
-        }*/
-
+         
 
         if (use_pg && Tracer::params.pg_params.pg_enable && Shift::glossy(mat) == false)
         {
@@ -1754,9 +1707,8 @@ namespace Tracer
             const BDPTVertex& nextPoint = path[i + 1];
             float3 lastDirection = normalize(lastPoint.position - midPoint.position);
             float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-            MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-            mat.base_color = make_float4(midPoint.color, 1.0);
+             
+            MaterialData::Pbr mat = VERTEX_MAT(midPoint);
             throughput *= abs(dot(midPoint.normal, lastDirection)) * abs(dot(midPoint.normal, nextDirection))
                 * Eval(mat, midPoint.normal, lastDirection,nextDirection);
         }
@@ -1860,9 +1812,8 @@ namespace Tracer
                 const BDPTVertex& nextPoint = path[path_size - i - 2];
                 float3 lastDirection = normalize(lastPoint.position - midPoint.position);
                 float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-                MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-                mat.base_color = make_float4(midPoint.color, 1.0);
+                 
+                MaterialData::Pbr mat = VERTEX_MAT(midPoint);
                 float rr_rate = rrRate(mat);
                 pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
             }
@@ -1885,9 +1836,8 @@ namespace Tracer
             const BDPTVertex& nextPoint = path[i + 1];
             float3 lastDirection = normalize(lastPoint.position - midPoint.position);
             float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-            MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-            mat.base_color = make_float4(midPoint.color, 1.0);
+             
+            MaterialData::Pbr mat = VERTEX_MAT(midPoint);
             float rr_rate = rrRate(mat);
             pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position, true) * rr_rate;
         }
@@ -1920,9 +1870,8 @@ namespace Tracer
             const BDPTVertex& nextPoint = path[i + 1];
             float3 lastDirection = normalize(lastPoint.position - midPoint.position);
             float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-            MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-            mat.base_color = make_float4(midPoint.color, 1.0);
+             
+            MaterialData::Pbr mat = VERTEX_MAT(midPoint);
             float rr_rate = fmaxf(midPoint.color);
             pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
         }
@@ -1957,9 +1906,8 @@ namespace Tracer
                 const BDPTVertex& nextPoint = path[path_size - i - 2];
                 float3 lastDirection = normalize(lastPoint.position - midPoint.position);
                 float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-                MaterialData::Pbr mat = Tracer::params.materials[midPoint.materialId];
-                mat.base_color = make_float4(midPoint.color, 1.0);
+                 
+                MaterialData::Pbr mat = VERTEX_MAT(midPoint);
                 light_contri *= Tracer::Eval(mat, midPoint.normal, lastDirection, nextDirection);
             }
 
@@ -2094,9 +2042,8 @@ namespace TrainData
                     return pdf * g * Tracer::params.sky.projectPdf();
                 }
             }
-            
-            MaterialData::Pbr mat = Tracer::params.materials[materialId];
-            mat.base_color = make_float4(color,1.0);
+             
+            MaterialData::Pbr mat = getMat(Tracer::params.materials);
             float d_pdf = Tracer::Pdf(mat, normal, dir, c_dir, position, false);
             float RR_rate = Tracer::rrRate(mat);
             return pdf * d_pdf * RR_rate * g;
@@ -2107,9 +2054,8 @@ namespace TrainData
             if (b.isDirLight())
             {
                 float3 c_dir = -b.normal;
-
-                MaterialData::Pbr mat = Tracer::params.materials[materialId];
-                mat.base_color = make_float4(color, 1.0);
+                 
+                MaterialData::Pbr mat = getMat(Tracer::params.materials);
                 float d_pdf = Tracer::Pdf(mat, normal, dir, c_dir, position, true);
                 float RR_rate = Tracer::rrRate(color);
                 return weight * d_pdf * RR_rate;
@@ -2118,9 +2064,8 @@ namespace TrainData
             float3 vec = b.position - position;
             float3 c_dir = normalize(vec);
             float g = abs(dot(c_dir, b.normal)) / dot(vec, vec);
-             
-            MaterialData::Pbr mat = Tracer::params.materials[materialId];
-            mat.base_color = make_float4(color, 1.0);
+              
+            MaterialData::Pbr mat = getMat(Tracer::params.materials);
             float d_pdf = Tracer::Pdf(mat, normal, dir, c_dir, position, true);
             float RR_rate = Tracer::rrRate(color);
             //d_pdf /= isBrdf ? abs(dot(normal, c_dir)) : 1;
@@ -2151,8 +2096,7 @@ namespace TrainData
                 abs(dot(c_dir, b.normal)) * abs(dot(c_dir, normal)) / dot(vec, vec);
 
 
-            MaterialData::Pbr mat = Tracer::params.materials[materialId];
-            mat.base_color = make_float4(color, 1.0);
+            MaterialData::Pbr mat = getMat(Tracer::params.materials); 
             float3 d_contri = Tracer::Eval(mat, normal, dir, c_dir);
             return weight * g * d_contri;
 
@@ -2169,8 +2113,7 @@ namespace TrainData
         {
             float3 vec = b.position - position;
             float3 c_dir = b.isDirLight() ? -b.normal : normalize(vec);
-            MaterialData::Pbr mat = Tracer::params.materials[materialId];
-            mat.base_color = make_float4(color, 1.0);
+            MaterialData::Pbr mat = getMat(Tracer::params.materials);
             return Tracer::Eval(mat, normal,c_dir, dir);
         }
 
@@ -2900,8 +2843,8 @@ namespace Shift
                     Shift::glossy(np))
                     continue;
             }
-            /* 计算f(x)/p(x) */
-            MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
+            /* 计算f(x)/p(x) */ 
+            MaterialData::Pbr mat = VERTEX_MAT(np);
             float3 diff = v.position - np.position;
             float3 vec_np_v = normalize(diff);
 
@@ -2987,9 +2930,8 @@ namespace Shift
                         Shift::glossy(np))
                         continue;
                 }
-                /* 计算f(x)/p(x) */
-                MaterialData::Pbr mat = Tracer::params.materials[np.materialId];
-                
+                /* 计算f(x)/p(x) */  
+                MaterialData::Pbr mat = VERTEX_MAT(np);
                 float3 diff = v.position - np.position;
                 float3 vec_np_v = normalize(diff);
 
@@ -3084,8 +3026,8 @@ namespace Shift
             np0 = v;
             bool retrace_state = 1;
             for (int i = 1; i < d; ++i) {
-                float3 in_dir = np0.position - np1.position;
-                MaterialData::Pbr mat = Tracer::params.materials[np1.materialId];
+                float3 in_dir = np0.position - np1.position; 
+                MaterialData::Pbr mat = VERTEX_MAT(np1);
                 float3 out_dir = Tracer::Sample(mat, np1.normal, in_dir, seed);
 
                 bool success_hit;
@@ -3234,8 +3176,8 @@ namespace Shift
                 np0 = v;
                 bool retrace_state = 1;
                 for (int i = 1; i < d; ++i) {
-                    float3 in_dir = np0.position - np1.position;
-                    MaterialData::Pbr mat = Tracer::params.materials[np1.materialId];
+                    float3 in_dir = np0.position - np1.position; 
+                    MaterialData::Pbr mat = VERTEX_MAT(np1);
                     float3 out_dir = Tracer::Sample(mat, np1.normal, in_dir, seed);
 
                     bool success_hit;
