@@ -1,0 +1,730 @@
+material black_glossy
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material candle_flame
+{
+	 color 1.0 1.0 1.0
+	 roughness 1.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material concrete
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex water_pool\textures\Mies-BCN_M121.jpg
+}
+
+material Default OBJ.001
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.5
+	 trans 0.0
+}
+
+material Default OBJ.239
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.5
+	 trans 0.0
+}
+
+material glass_architectural
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.009999999776482582
+	 metallic 1.0
+	 specular 0.5
+	 trans 1.0
+	 eta 1.3
+}
+
+material leather_white
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material marble
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex water_pool\textures\Mies-BCN_M01.jpg
+}
+
+material marmol verde
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex water_pool\textures\Mies-BCN_M11.jpg
+}
+
+material matte_white
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.547722578048706
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material metal
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.3162277638912201
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material mist_dense
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material mist_dense.001
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material mist_volume
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material None
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material pavet
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.5
+	 trans 0.0
+	 albedoTex water_pool\textures\Mies-BCN_M081.jpg
+}
+
+material pebbles
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material pebbles.ground
+{
+	 color 0.8000000715255737 0.0035989535972476006 0.011041185818612576
+	 roughness 0.5327102541923523
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex water_pool\textures\//rocks.jpg
+}
+
+material trunk
+{
+	 color 0.21960784494876862 0.1764705926179886 0.09803921729326248
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material volume_mist
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material water
+{
+	 color 0.13003438711166382 0.3791295886039734 0.8000000715255737
+	 roughness 0.009999999776482582
+	 metallic 1.0
+	 specular 0.5
+	 trans 1.0
+	 eta 1.3
+}
+
+material water_volume
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material wax
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material white_lotus
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.4472135901451111
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material white_lotus_leafs
+{
+	 color 1.0 1.0 1.0
+	 roughness 0.5
+	 metallic 0.0
+	 specular 0.05
+}
+
+material white_lotus_orange
+{
+	 color 1.0 0.5693283677101135 0.0
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material white_mat
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+}
+
+material wood
+{
+	 color 0.800000011920929 0.800000011920929 0.800000011920929
+	 roughness 0.0
+	 metallic 0.0
+	 specular 0.05
+	 trans 0
+	 albedoTex water_pool\textures\wood.jpg
+}
+
+mesh
+{
+	 file water_pool\ReflectionPlane.obj
+	 material None
+}
+
+light
+{
+	 position -10.646173477172852 8.826026916503906 6.327016830444336
+	 emission 499.013916015625 500.0 439.64776611328125
+	 v1 -10.290267944335938 8.826026916503906 6.327016830444336
+	 v2 -10.646173477172852 8.826026916503906 7.327016830444336
+	 type Quad
+}
+
+light
+{
+	 position 0.19027620553970337 4.300663948059082 5.0097784996032715
+	 emission 0.7207479476928711 4.815337181091309 25.0
+	 v1 0.44895070791244507 4.300663948059082 5.0097784996032715
+	 v2 0.19027620553970337 4.300663948059082 6.0097784996032715
+	 type Quad
+}
+
+light
+{
+	 position -0.727250874042511 4.4094014167785645 -1.8240633010864258
+	 emission 25.0 10.900694847106934 2.0770676136016846
+	 v1 -0.6419373750686646 4.4094014167785645 -1.8240633010864258
+	 v2 -0.727250874042511 4.4094014167785645 -0.8240633010864258
+	 type Quad
+}
+
+mesh
+{
+	 file water_pool\water_plane_still.001.obj
+	 material water
+}
+
+mesh
+{
+	 file water_pool\Cube.024.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.055.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.056.obj
+	 material glass_architectural
+}
+
+mesh
+{
+	 file water_pool\Plane.004.obj
+	 material black_glossy
+}
+
+mesh
+{
+	 file water_pool\Cube.053.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.052.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.051.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.039.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.050.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.049.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.048.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.047.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.046.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.045.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.044.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.043.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.042.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.041.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.040.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.035.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.034.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Plane.003.obj
+	 material pebbles.ground
+}
+
+mesh
+{
+	 file water_pool\Cube.038.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.037.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.036.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.033.obj
+	 material pavet
+}
+
+mesh
+{
+	 file water_pool\Cube.031.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.029.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.027.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.025.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.026.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.054.obj
+	 material glass_architectural
+}
+
+mesh
+{
+	 file water_pool\Cube.023.obj
+	 material glass_architectural
+}
+
+mesh
+{
+	 file water_pool\Cube.022.obj
+	 material glass_architectural
+}
+
+mesh
+{
+	 file water_pool\Cube.021.obj
+	 material glass_architectural
+}
+
+mesh
+{
+	 file water_pool\Cube.020.obj
+	 material glass_architectural
+}
+
+mesh
+{
+	 file water_pool\Cylinder.009.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cylinder.008.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cylinder.007.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cylinder.006.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Cylinder.005.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Cylinder.004.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cylinder.003.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cylinder.002.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cylinder.001.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.019.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Cylinder.obj
+	 material metal
+}
+
+mesh
+{
+	 file water_pool\Cube.018.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.017.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.016.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.015.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.014.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.013.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.012.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.011.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.010.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.009.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.008.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.007.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.006.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.005.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Cube.004.obj
+	 material concrete
+}
+
+mesh
+{
+	 file water_pool\Plane.001.obj
+	 material white_mat
+}
+
+mesh
+{
+	 file water_pool\Cube.003.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Cube.002.obj
+	 material marble
+}
+
+mesh
+{
+	 file water_pool\Cube.001.obj
+	 material marmol verde
+}
+
+mesh
+{
+	 file water_pool\Cube.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Plane.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Group.003.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Group.002.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Group.001.obj
+	 material None
+}
+
+mesh
+{
+	 file water_pool\Group.obj
+	 material None
+}
+
+cameraSetting
+{
+	 eye -9.73914909362793 2.230705499649048 3.5677106380462646
+	 lookat 0.9176685810089111 -0.06396587938070297 -0.39216431975364685
+	 fov 60
+}
+

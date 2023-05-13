@@ -938,7 +938,7 @@ std::vector<std::vector<std::vector<bool>>> TrainFinish(dropOut_tracing::max_u,
         std::vector<bool>(dropOut_tracing::default_surfaceSubSpaceNumber,
             0)));
 
-const int capacity=10000;
+const int capacity=30000;
 
 void updateDropOutTracingParams()
 {
@@ -1054,7 +1054,10 @@ void updateDropOutTracingParams()
                     int num = TrainVector[i][j][k].size();
                     if (num == 0) continue;
                     if (num==capacity && TrainFinish[i][j][k]) continue;
-                    if (num == capacity) { TrainFinish[i][j][k] = true; printf("one vector train end!!!\n"); }
+                    if (num == capacity) {
+                        TrainFinish[i][j][k] = true; printf("S:%d C:%d U:%d train end!!!\n",j, k, i);
+                        dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->trainEnd = 1;
+                    }
                     dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->loadIn(TrainVector[i][j][k]);
                     if (!disable_print){
                         printf("PG traning for ID S:%d C:%d U:%d with size %d\n", j, k, i, num);
@@ -1298,8 +1301,8 @@ int main( int argc, char* argv[] )
 
         //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
-
+        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
@@ -1310,7 +1313,7 @@ int main( int argc, char* argv[] )
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + strin   g("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
