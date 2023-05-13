@@ -174,7 +174,7 @@ material Water
    roughness 0.01
    metallic 1.0
    trans 1
-   eta 0.75
+   eta 0.6
    albedoTex hallway/textures/wallpaper2.jpg
 }
 
@@ -215,12 +215,12 @@ mesh
     material PVC
 }
 
-mesh
-{
-    file hallway\geometry\Walls.006_fix.obj
-    material Emission
-
-}
+#mesh
+#{
+#    file hallway\geometry\Walls.006_fix.obj
+#    material Emission
+#
+#}
 
 mesh
 {
@@ -309,49 +309,80 @@ mesh
 }
 mesh
 {
-    file hallway\geometry\icoSphere.obj
+    file hallway\geometry\ball1.obj
     material Water
 }
-mesh
-{
-    file hallway\geometry\icoSphere2.obj
-    material Water
-}
-mesh
-{
-    file hallway\geometry\icoSphere3.obj
-    material Water
-}
+#mesh
+#{
+#    file hallway\geometry\icoSphere2.obj
+#    material Water
+#}
+#mesh
+#{
+#    file hallway\geometry\icoSphere3.obj
+#    material Water
+#}
 
 light
 {
- 
-position 0.873493 0.400934 0.201209
-v1 0.928848 0.400929 0.201209
-v2 0.873493 0.400929 0.145854
+    position 0.873493 0.400934 0.201209
+    v1 0.898848 0.400929 0.201209
+    v2 0.873493 0.400929 0.185854
 	divLevel 1
-	emission 500 1000 1000
+	emission 500 500 1500
 	type Quad
 }
 
 light
-{
- 
-      position 0.629965 0.795202 0.273534
-      v1 0.680786 0.795194 0.273534
-      v2 0.629965 0.795194 0.222713
+{ 
+    position 0.873493 0.4500934 0.201209
+    v1 0.873493 0.4500929 0.185854
+    v2 0.898848 0.4500929 0.201209
 	divLevel 1
-	emission 1000 1000 500
+	emission 500 500 1500
 	type Quad
+}
+
+#light
+#{
+# 
+#      position 0.629965 0.795202 0.273534
+#      v1 0.680786 0.795194 0.273534
+#      v2 0.629965 0.795194 0.222713
+#	divLevel 1
+#	emission 1000 1000 500
+#	type Quad
+#}
+#
+#light
+#{
+# 
+#position 0.816148 0.597043 0.426839
+#	v1 0.852462 0.597038 0.426839
+#	v2 0.816148 0.597038 0.390525
+#	divLevel 1
+#	emission 1000 500 1000
+#	type Quad
+#}
+
+light
+{
+    position 1.592080 1.720880 -3.366179
+    v1 2.192080 1.720880 -3.366179
+    v2 1.592080 1.720880 -3.966179
+    divLevel 1
+    emission 100 80 60
+    type Quad
 }
 
 light
 {
- 
-position 0.816148 0.597043 0.426839
-	v1 0.852462 0.597038 0.426839
-	v2 0.816148 0.597038 0.390525
-	divLevel 1
-	emission 1000 500 1000
-	type Quad
+    position -0.203254 2.778168 1.078781
+    v1 -0.203254 1.495130 1.078781
+    v2 -0.203254 2.778168 0.278781
+    divLevel 1
+    emission 20.2 18.52 12.42
+    type Quad
 }
+
+
