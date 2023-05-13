@@ -1323,11 +1323,11 @@ int main( int argc, char* argv[] )
         string scenePath = " ";
 
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4.scene");
 
-        scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
@@ -1348,7 +1348,7 @@ int main( int argc, char* argv[] )
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_2.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_2.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
