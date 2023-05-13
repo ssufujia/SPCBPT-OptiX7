@@ -75,20 +75,35 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         mtl.pbr.roughness = p.roughness;
         mtl.pbr.trans = p.trans;
         mtl.pbr.eta = p.eta;
-        mtl.pbr.brdf = p.brdf;
+        mtl.pbr.brdf = p.brdf; 
         if (p.albedoID != 0)
         {
-            mtl.pbr.base_color_tex.tex = sampler_remap[p.albedoID];
-            mtl.pbr.base_color_tex.texcoord = 0; 
+            if (mtl.pbr.brdf == false)
+            { 
+                mtl.pbr.base_color_tex.tex = sampler_remap[p.albedoID];
+                mtl.pbr.base_color_tex.texcoord = 0;
 
-            float2 offset = { 0, 0 };
-            float  rotation = 0;
-            float2 scale = { 1, 1 };
-            mtl.pbr.base_color_tex.texcoord_offset = offset;
-            mtl.pbr.base_color_tex.texcoord_scale = scale;
-            mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+                float2 offset = { 0, 0 };
+                float  rotation = 0;
+                float2 scale = { 1, 1 };
+                mtl.pbr.base_color_tex.texcoord_offset = offset;
+                mtl.pbr.base_color_tex.texcoord_scale = scale;
+                mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+            }
+            else
+            { 
+                mtl.normal_tex.tex = sampler_remap[p.albedoID];
+                mtl.normal_tex.texcoord = 0;
 
+                float2 offset = { 0, 0 };
+                float  rotation = 0;
+                float2 scale = { 1, 1 };
+                mtl.normal_tex.texcoord_offset = offset;
+                mtl.normal_tex.texcoord_scale = scale;
+                mtl.normal_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+            }
         }
+        
         materialID_remap[i] = Dst.MaterialsSize();
         Dst.addMaterial(mtl);
     }
