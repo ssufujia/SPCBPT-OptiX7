@@ -1142,7 +1142,7 @@ void updateDropOutTracingParams()
 
     dot_params.selection_const =  (dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
         : lt_params.M_per_core * lt_params.num_core);
-    //dot_params.selection_const *= (1 - dropOut_tracing::light_subpath_caustic_discard_ratio);
+    dot_params.selection_const *= (1 - dropOut_tracing::light_subpath_caustic_discard_ratio);
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
     //system("pause");
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
@@ -1337,11 +1337,10 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
