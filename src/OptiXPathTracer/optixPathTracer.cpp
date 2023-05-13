@@ -101,7 +101,7 @@ int32_t mouse_button = -1;
 
 int32_t samples_per_launch = 1; 
 
-std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye")};
+std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
 int render_alg_id = 1;
 bool one_frame_render_only = false;
 float render_fps = 60;
@@ -270,7 +270,15 @@ static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, 
             {
                 render_alg_id = 0;
             }
-
+            if (render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure"))
+            {
+                params.spcbpt_pure = true;
+            }
+            else 
+            {
+                params.spcbpt_pure = SPCBPT_PURE;
+            }
+            printf("raygen switching to %s\n", render_alg[render_alg_id].c_str());
             camera_changed = true;
             resize_dirty = true;
         } 
@@ -394,6 +402,7 @@ void initLaunchParams(const sutil::Scene& scene) {
         params.estimate_pr.width = estimation::es.ref_width;
         params.estimate_pr.ready = true;
     }  
+    params.spcbpt_pure = SPCBPT_PURE;
 }
 
  
@@ -611,7 +620,7 @@ void launchLVCTrace(sutil::Scene& scene)
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
     auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count()); 
     params.sampler = sampler;
-    if (!SPCBPT_PURE)
+    if (!SPCBPT_PURE&&!params.spcbpt_pure)
     {
         sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials);
         params.sampler.glossy_count = sampler.glossy_count;
@@ -771,7 +780,7 @@ void dropOutTracingParamsInit()
 }
 void dropOutTracingParamsSetup(sutil::Scene& scene)
 {
-    if (SPCBPT_PURE)return;
+    if (SPCBPT_PURE|| params.spcbpt_pure)return;
 
     dot_params.pixel_dirty = true;
     dot_params.discard_ratio = dropOut_tracing::light_subpath_caustic_discard_ratio;
@@ -846,7 +855,7 @@ void updateDropOutTracingCombineWeight()
     static int train_iter = 0;
     if (train_iter > 0 && train_iter> dropOut_tracing::iteration_stop_learning)return;
     train_iter++;
-    if (SPCBPT_PURE) return;
+    if (SPCBPT_PURE|| params.spcbpt_pure) return;
     static thrust::host_vector<float> h_frac(params.width * params.height, 0.5);
     static thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
     static vector<float> normal_weight(params.width * params.height, 0);
@@ -968,7 +977,7 @@ const int capacity=10000;
 
 void updateDropOutTracingParams()
 {
-    if (SPCBPT_PURE) return;
+    if (SPCBPT_PURE|| params.spcbpt_pure) return;
     static int train_iter = 0;
     if (train_iter > 0 && train_iter > dropOut_tracing::iteration_stop_learning)
     {
@@ -1198,7 +1207,7 @@ void preprocessing(sutil::Scene& scene)
     //thrust::device_ptr<float> CausticGamma;
     //MyThrustOp::preprocess_getGamma(CausticGamma, true);
 
-    if (!SPCBPT_PURE)
+    if (!SPCBPT_PURE&&!params.spcbpt_pure)
     { 
         thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE);
         thrust::fill(h_caustic_gamma.begin(), h_caustic_gamma.end(), 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
@@ -1340,7 +1349,7 @@ int main( int argc, char* argv[] )
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
@@ -1414,41 +1423,45 @@ int main( int argc, char* argv[] )
                 std::chrono::duration<double> sum_render_time(0.0);
                 std::chrono::duration<double> print_time(10.0);
                 bool print = false;
+                bool setting_changed = false;
                 do
                 {
                     auto t0 = std::chrono::steady_clock::now();
                     glfwPollEvents();
 
                     updateState(output_buffer, params);
+                    if (setting_changed) { params.subframe_index = 0; }
+                    if (params.subframe_index == 0) { sum_render_time = std::chrono::duration<double>(); }
+
                     auto t1 = std::chrono::steady_clock::now();
                     state_update_time += t1 - t0;
                     t0 = t1;
 
-                    if (render_alg[render_alg_id] == std::string("SPCBPT_eye"))
-                    { 
-                        launchLVCTrace(TScene); 
+                    if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure"))
+                    {
+                        launchLVCTrace(TScene);
                         updateDropOutTracingParams();
                         updateDropOutTracingCombineWeight();
                     }
                     launchSubframe(output_buffer, TScene);
-                     
+
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
                     sum_render_time += render_time;
-                    t0 = t1;                    
-                    
+                    t0 = t1;
+
 
                     displaySubframe(output_buffer, gl_display, window);
                     t1 = std::chrono::steady_clock::now();
                     display_time += t1 - t0;
-                     
-                    bool setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
+
+                    setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
                         params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
-                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize, 
+                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize,
                         params.pg_params.pg_enable,
                         params.error_heat_visual
                     );
-                    render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count()); 
+                    render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
 
                     glfwSwapBuffers(window);
 
@@ -1470,7 +1483,6 @@ int main( int argc, char* argv[] )
                     render_frame_record = params.subframe_index;
 
                     ++params.subframe_index;
-                    if (setting_changed)params.subframe_index = 0;
                 } while (!glfwWindowShouldClose(window));
                 CUDA_SYNC_CHECK();
             }

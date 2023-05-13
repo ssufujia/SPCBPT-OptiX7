@@ -52,7 +52,7 @@ namespace sutil
 
     enum programType
     {
-        rayGenProg, missProg, lightHitProg, normalHitProg, progTypeNum
+        rayGenProg, missProg, lightHitProg, normalHitProg, SPCBPT_SPECIAL_rayGen, progTypeNum
     };
 
 class Scene

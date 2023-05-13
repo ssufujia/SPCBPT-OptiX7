@@ -42,10 +42,10 @@
 
 #define DOT_DEBUG_INFO_ENABLE false
 /* Path Guiding 开关 */
-static const bool PG_ENABLE = 1;
+static const bool PG_ENABLE = true;
 const bool SPCBPT_PURE = false;
 const bool FIX_ITERATION = false;
-const bool PG_SELF_TRAIN = 1;
+const bool PG_SELF_TRAIN = true;
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"

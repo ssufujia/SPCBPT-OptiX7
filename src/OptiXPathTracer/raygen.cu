@@ -1204,7 +1204,7 @@ extern "C" __global__ void __raygen__lightTrace()
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
                  
-                if (!SPCBPT_PURE&&Shift::glossy(curVertex) && curVertex.depth < SHIFT_VALID_SIZE&&
+                if (!Tracer::params.spcbpt_pure&&Shift::glossy(curVertex) && curVertex.depth < SHIFT_VALID_SIZE&&
                     RR_TEST(seed, 1 - Tracer::params.dot_params.discard_ratio))
                 {
                     BDPTVertex& glossy_vertex = Tracer::params.lt.ans[lightVertexCount + bufferBias - 1];
