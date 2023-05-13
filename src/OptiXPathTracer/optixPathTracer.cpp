@@ -214,17 +214,18 @@ void img_save(double render_time=-1,int frame=0)
 
     // 将时间格式化为字符串
     std::stringstream ss;
-    ss << "./data/"<< std::put_time(std::localtime(&now_time_t), "%Y年%m月%d日%H_%M_%S");
+    ss << "./data/" << std::put_time(std::localtime(&now_time_t), "%Y_%m_%d%H_%M_%S") << "_" << frame << "iterations_" << render_time << "time";
 
     // 获取格式化后的文件名
     std::string filename = ss.str();
+    //printf("save %s\n",filename);
+    
     sutil::saveImage((filename+".png").c_str(), outputbuffer, true);
 
 
     auto p = MyThrustOp::copy_to_host(params.accum_buffer, params.height * params.width);
     std::ofstream outFile;
-    outFile.open((filename + ".txt").c_str());
-    outFile<<render_time<<" " <<frame<< std::endl;
+    outFile.open((filename + ".txt").c_str()); 
     outFile << params.width << " " << params.height << std::endl;
     for (int i = 0; i < params.width * params.height; i++)
     {
@@ -382,6 +383,15 @@ void initLaunchParams(const sutil::Scene& scene) {
     subspaceInfo.Q = nullptr;
     subspaceInfo.CMFGamma = nullptr;
 
+    params.estimate_pr.ready = false;
+    params.estimate_pr.ref_buffer = nullptr;
+    if (estimation::es.estimation_mode == true)
+    {
+        params.estimate_pr.ref_buffer = estimation::es.ref_ptr;
+        params.estimate_pr.height = estimation::es.ref_height;
+        params.estimate_pr.width = estimation::es.ref_width;
+        params.estimate_pr.ready = true;
+    }  
 }
 
  
@@ -778,7 +788,7 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     }
 
     auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000); 
-    auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber-1, 1);
+    auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber - 1, 1);
     dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
 
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
@@ -959,11 +969,15 @@ void updateDropOutTracingParams()
     static int train_iter = 0;
     if (train_iter > 0 && train_iter > dropOut_tracing::iteration_stop_learning)
     {
-        printf("iteration more than stop point, stop params learning\n");
+        if (train_iter == dropOut_tracing::iteration_stop_learning + 1)
+        {
+            train_iter++;
+            printf("iteration more than stop point, stop params learning\n");
+        }
         return;
     }
     train_iter++;
-    bool disable_print = false;
+    bool disable_print = !DOT_DEBUG_INFO_ENABLE;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
     dot_params.data.host_data = statics_data.data();
@@ -1368,16 +1382,6 @@ int main( int argc, char* argv[] )
             path_guiding_params_setup(TScene);
         }
         
-        if(false)
-        {
-            params.estimate_pr.ref_buffer = nullptr;
-            if (estimation::es.estimation_mode == true)
-            {
-                thrust::device_ptr<float4> ref_buffer;
-
-                params.estimate_pr.ref_buffer = thrust::raw_pointer_cast(ref_buffer);
-            }
-        }
         //if( outfile.empty() )
         if(true)
         {
@@ -1433,17 +1437,20 @@ int main( int argc, char* argv[] )
                      
                     bool setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
                         params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
-                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize
+                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize, params.error_heat_visual
                     );
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count()); 
 
                     glfwSwapBuffers(window);
 
-                    estimation::es.estimation_mode = false;
+                    //estimation::es.estimation_mode = false;
                     if (estimation::es.estimation_mode == true)
                     {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
-                        printf("frame %d relMse %f\n", params.subframe_index, error); 
+                        printf("render time sum %f frame %d relMse %f\n", sum_render_time, params.subframe_index, error); 
+
+                        error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
+                        printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
                     }
                     else
                     {

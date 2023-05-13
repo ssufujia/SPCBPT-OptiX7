@@ -122,7 +122,9 @@ SUTILAPI bool displayStatsControls(std::chrono::duration<double>& state_update_t
     bool& caustic_path_only,
     bool& specular_subspace_visualize,
     bool& caustic_prob_visualize,
-    bool & PG_grid_visualize);
+    bool & PG_grid_visualize,
+    bool & error_heat_visual
+    );
 
 
 // Display a short string starting at x,y.

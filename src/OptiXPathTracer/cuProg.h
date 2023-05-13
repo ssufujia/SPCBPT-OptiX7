@@ -122,6 +122,7 @@ RT_FUNCTION bool isRefract(float3 normal, float3 in_dir, float3 out_dir)
 {
     return dot(normal, in_dir) * dot(normal, out_dir) < 0;
 }
+
 namespace Tracer {
     using namespace whitted;
 

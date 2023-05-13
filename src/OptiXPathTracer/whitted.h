@@ -88,6 +88,7 @@ struct LaunchParams
     bool specular_subspace_visualize;
     bool caustic_prob_visualize;
     bool PG_grid_visualize;
+    bool error_heat_visual;
 };
 
 struct PayloadRadiance
