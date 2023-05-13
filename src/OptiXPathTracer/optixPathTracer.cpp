@@ -1363,7 +1363,7 @@ int main( int argc, char* argv[] )
         preTracer_params_setup(TScene);
         env_params_setup(TScene);
 
-        render_alg[render_alg_id] = std::string("pt");
+        //render_alg[render_alg_id] = std::string("pt");
         //pre tracing
         { 
             handleCameraUpdate(params);
