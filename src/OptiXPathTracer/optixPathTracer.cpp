@@ -79,6 +79,8 @@
 
 using namespace std;
  
+static double render_time_record = 0;
+static int render_frame_record = 0;
 
 bool resize_dirty = false;
 bool minimized    = false; 
@@ -259,7 +261,7 @@ static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, 
 
         else if (key == GLFW_KEY_S)
         {
-            img_save();
+            img_save(render_time_record,render_frame_record);
         }
         else if (key == GLFW_KEY_SPACE)
         {
@@ -1338,7 +1340,7 @@ int main( int argc, char* argv[] )
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        // scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
@@ -1442,7 +1444,9 @@ int main( int argc, char* argv[] )
                      
                     bool setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
                         params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
-                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize, params.error_heat_visual
+                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize, 
+                        params.pg_params.pg_enable,
+                        params.error_heat_visual
                     );
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count()); 
 
@@ -1452,16 +1456,19 @@ int main( int argc, char* argv[] )
                     if (estimation::es.estimation_mode == true)
                     {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
-                        printf("render time sum %f frame %d relMse %f\n", sum_render_time, params.subframe_index, error); 
+                        printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
 
                         error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
-                        printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
+                        printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time.count(), params.subframe_index, error * 100);
                     }
                     else
                     {
                         printf("frame %d\n", params.subframe_index);
 
                     }
+                    render_time_record = sum_render_time.count();
+                    render_frame_record = params.subframe_index;
+
                     ++params.subframe_index;
                     if (setting_changed)params.subframe_index = 0;
                 } while (!glfwWindowShouldClose(window));

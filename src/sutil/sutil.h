@@ -123,6 +123,7 @@ SUTILAPI bool displayStatsControls(std::chrono::duration<double>& state_update_t
     bool& specular_subspace_visualize,
     bool& caustic_prob_visualize,
     bool & PG_grid_visualize,
+    bool & PD_enable,
     bool & error_heat_visual
     );
 
