@@ -163,13 +163,6 @@ material lightshadewire
     metallic 0.05
 }
 
-material lightshade
-{
-    albedoTex white-room/textures/Shade-paper.png
-    specular 0.0
-    roughness 0.010408
-
-}
 
 material pic4
 {
@@ -195,12 +188,6 @@ material chesthandles
 {
     metallic 1.0
     roughness 0.05
-}
-
-material tv
-{
-    color 0.043973 0.043973 0.043973
-    roughness 0.010408
 }
 
 material plane042
@@ -847,12 +834,6 @@ mesh
 
 mesh
 {
-    file white-room/geometry/mesh_00036.obj
-    material lightshade
-}
-
-mesh
-{
     file white-room/geometry/mesh_00037.obj
     material picframe
 }
@@ -1007,11 +988,6 @@ mesh
     material chestdrawers
 }
 
-mesh
-{
-    file white-room/geometry/mesh_00064.obj
-    material tv
-}
 
 mesh
 {
@@ -1679,34 +1655,91 @@ mesh
     material radio-trim
 }
 
-light
-{
-	position    -0.7168200016 2.79450798 0.4751270115 
-	v1    -1.360386968 2.79450798 0.8171179891
-	v2       -0.7168200016 1.135882974 0.4751270115 
+#light
+#{
+#	position    -0.7168200016 2.79450798 0.4751270115 
+#	v1    -1.360386968 2.79450798 0.8171179891
+#	v2       -0.7168200016 1.135882974 0.4751270115 
+#
+#	emission 30 60 5
+#    divlevel 1
+#	type Quad
+#}
+#
+#light
+#{
+#	position 0.6803990006 2.77533102 0.3601959944 
+#	v1        -0.2441789955 2.77533102 0.3601959944 
+#	v2           0.6803990006 1.15241003 0.3601959944
+#
+#    divlevel 1
+#	emission 60 5 30
+#	type Quad
+#}
+#
+#light
+#{
+#	position 1.790151 2.79450798 0.8162369728
+#	v1       1.148112059 2.79450798 0.4713850021  
+#	v2       1.790151 1.135882974 0.8162360191 
+#	
+#    divlevel 1
+#	emission 5 30 60
+#	type Quad
+#}
 
-	emission 30 60 5
-	type Quad
+
+material tv
+{
+    color 0.043973 0.043973 0.043973
+    roughness 0.010408
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00064.obj
+    material tv
+}
+
+material lightshadeDiffuse
+{
+    albedoTex white-room/textures/Shade-paper.png
+    roughness 0.5
+
+}
+
+material lightshade
+{
+    color 1.0 1.0 1.0
+    specular 0.0
+    metallic 1.0
+    roughness 0.01
+    trans 1.0
+    eta 1.3
+}
+
+mesh
+{
+    #file white-room/geometry/mesh_00036.obj
+    file white-room/geometry/lightMask2.obj
+    material lightshadeDiffuse
+}
+
+mesh
+{
+    file white-room/geometry/lightMask1.obj
+    material lightshade
 }
 
 light
 {
-	position 0.6803990006 2.77533102 0.3601959944 
-	v1        -0.2441789955 2.77533102 0.3601959944 
-	v2           0.6803990006 1.15241003 0.3601959944
-
-	emission 60 5 30
+	position 0.542118 2.638829 2.747193
+	v1       0.542118 2.638829 3.035348  
+	v2       0.214330 2.638829 2.747193 
+    divlevel 1
+	emission 3000 3000 3000
 	type Quad
 }
 
-light
-{
-	position 1.790151 2.79450798 0.8162369728
-	v1       1.148112059 2.79450798 0.4713850021  
-	v2       1.790151 1.135882974 0.8162360191 
-	
 
-	emission 5 30 60
-	type Quad
-}
 
