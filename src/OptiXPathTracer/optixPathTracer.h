@@ -44,6 +44,7 @@
 static const bool PG_ENABLE = false;
 const bool SPCBPT_PURE = 0;
 const bool FIX_ITERATION = false;
+const bool PG_SELF_TRAIN = false;
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"

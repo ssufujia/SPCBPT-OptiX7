@@ -1335,7 +1335,7 @@ int main( int argc, char* argv[] )
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_2.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_2.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
