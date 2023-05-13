@@ -248,9 +248,9 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
 
             }
             /* ********************************** */
-            a.normals.push_back(HostToDeviceBuffer(
-                reinterpret_cast<float3*>(c_mesh.normals.data()),
-                num_points,3));
+            //a.normals.push_back(HostToDeviceBuffer(
+            //    reinterpret_cast<float3*>(c_mesh.normals.data()),
+            //    num_points,3));
             /* ********************************** */
             a.normals.push_back(BufferView<float3>());
             a.material_idx.push_back(materialID_remap[k]);
