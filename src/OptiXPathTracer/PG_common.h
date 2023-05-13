@@ -116,7 +116,7 @@ namespace path_guiding
         quad_tree_node* quad_trees;
         //float epsilon_lum = 0.001; 
         float epsilon_lum; 
-        int pg_enable;
+        bool pg_enable;
         float guide_ratio;
 
         RT_FUNCTION __host__ float lerp(const float a, const float b, const float t)

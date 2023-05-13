@@ -929,8 +929,8 @@ extern "C" __global__ void __raygen__shift_combine()
             float pmf_secondStage;
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
-            if (Shift::glossy(light_subpath))continue;
-            if (Shift::glossy(eye_vertex))continue;
+            //if (Shift::glossy(light_subpath))continue;
+            //if (Shift::glossy(eye_vertex))continue;
             if ((Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
             {
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
