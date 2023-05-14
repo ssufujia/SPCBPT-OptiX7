@@ -42,12 +42,10 @@
 
 #define DOT_DEBUG_INFO_ENABLE false
 /* Path Guiding 开关 */
-static const bool PG_ENABLE = true;
-const bool SPCBPT_PURE = true;
+static const bool PG_ENABLE = false;
+const bool SPCBPT_PURE = false;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
-/*save 标准mape差*/
-const float SET_ERROR = -1.f;
 
 #include"whitted.h"
 #include"BDPTVertex.h"

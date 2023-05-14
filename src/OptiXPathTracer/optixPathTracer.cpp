@@ -1477,9 +1477,10 @@ int main( int argc, char* argv[] )
                         error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
 
+                        const float SET_ERROR = 0.04f;
                         if (error < SET_ERROR) {
                             printf("save the data\n");
-                            img_save();
+                            img_save(sum_render_time.count(), params.subframe_index);
                             exit(0);
                         }
                     }
