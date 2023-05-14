@@ -314,6 +314,7 @@ namespace TrainData
         float3 normal;
         float3 weight;//pdf for eye vertex, light contri for light vertex
         float3 color;
+        float3 shade_normal;
         float pdf;//light vertex only, for fast compute the overall sampled path pdf 
         float save_t;
         int last_id;//for cached light vertex
@@ -358,13 +359,21 @@ namespace TrainData
         {
             dir = a.depth == 0 ? make_float3(0.0) : normalize(a.lastPosition - a.position);
             weight = eye_side ? make_float3(pdf) : a.flux;
+            shade_normal = a.get_shade_normal();
             if (eye_side == false && a.depth == 0)
             {
                 if (a.type == BDPTVertex::Type::QUAD) setLightSourceFlag(false);
                 if (a.is_DIRECTION()) setLightSourceFlag(true);
             }
         }
-
+        template<typename B, typename T = MaterialData::Pbr>
+        __host__ __device__ T  getMat(B mats)const
+        { 
+            T mat = mats[materialId];
+            mat.base_color = make_float4(color, 1);
+            mat.shade_normal = shade_normal;
+            return mat;
+        }
     };
     struct pathInfo_node
     {

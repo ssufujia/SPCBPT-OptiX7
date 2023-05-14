@@ -780,6 +780,7 @@ bool displayStatsControls(std::chrono::duration<double>& state_update_time,
     bool &specular_subspace_visualize,
     bool &caustic_prob_visualize,
     bool & PG_grid_visualize,
+    bool & PG_enable,
     bool & error_heat_visual
     )
 {
@@ -830,6 +831,7 @@ bool displayStatsControls(std::chrono::duration<double>& state_update_time,
         if (ImGui::Checkbox("specular_subspace_visualize", &specular_subspace_visualize))changed = true;
         if (ImGui::Checkbox("caustic_prob_visualize", &caustic_prob_visualize))changed = true;
         if (ImGui::Checkbox("PG_grid_visualize", &PG_grid_visualize))changed = true;
+        if (ImGui::Checkbox("PG_enable", &PG_enable))changed = true;
         if (ImGui::Checkbox("error_heat_visualize", &error_heat_visual)) {}
     }
     ImGui::End();

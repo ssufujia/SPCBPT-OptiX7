@@ -1470,7 +1470,9 @@ void Scene::createProgramGroups()
         {
             SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__shift_combine";
         }
-
+        SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+        SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].raygen.module = m_ptx_module;
+        SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].raygen.entryFunctionName = "__raygen__SPCBPT";
 //        SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__glossy_shift_only";
         SPCBPT_groups_desc[missProg].kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
         SPCBPT_groups_desc[missProg].miss.module = m_ptx_module;
@@ -1717,8 +1719,17 @@ void Scene::switchRaygen(std::string raygenName)
         miss_groups[RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::missProg];
          
         hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::normalHitProg];
-        hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::lightHitProg];
+        hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::lightHitProg]; 
+    }
 
+    else if (raygenName == std::string("SPCBPT_eye_ForcePure"))
+    {
+        raygen_group = &m_SPCBPT_eye_subpath_group[SPCBPT_SPECIAL_rayGen];
+        miss_groups[RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_miss_group;
+        miss_groups[RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::missProg];
+
+        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::normalHitProg];
+        hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::lightHitProg];
     }
     else if (raygenName == std::string("pretrace"))
     {
