@@ -1163,7 +1163,7 @@ namespace Tracer
         float eta = 1 / mateta;        
         if (mat.trans<0.1&& (gNDotL * gNDotV <= 0.0f || NDotL * NDotV <= 0))
             return make_float3(0);// return Eval_Transmit(mat, normal, V, L); 
-
+        if (mat.trans > 0.9 && (gNDotL * gNDotV * NDotL * NDotV <= 0))return make_float3(0.0);
         if (NDotL * NDotV <= 0)return Eval_Transmit(mat, normal, V, L);
         //return make_float3(0);
 
