@@ -1451,7 +1451,7 @@ namespace Tracer
         }
          
 
-        if (use_pg && Tracer::params.pg_params.pg_enable)
+        if (use_pg && Tracer::params.pg_params.pg_enablParsec\config.txte)
         {
             pdf *= 1 - Tracer::params.pg_params.guide_ratio;
             pdf += Tracer::params.pg_params.guide_ratio * Tracer::params.pg_params.pdf(position, L);
