@@ -3762,8 +3762,8 @@ namespace Shift
             bool sample_success = alternate_path_sample(seed, path, CP, SP, WC, u, statistic_prd);
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
-            //printf("p q  %f %f %f\n", p, q, p / q);
-            if (p > 0 && dropOut_tracing::PG_reciprocal_estimation_enable) {                
+
+            if (p>0 && dropOut_tracing::PG_reciprocal_estimation_enable && !statistic_prd.pg_p->trainEnd) {
                 ////statistic collection
                 dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
                 float3 dir = normalize(path.get(0).position - SP.position);

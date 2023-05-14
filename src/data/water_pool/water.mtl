@@ -1,0 +1,12 @@
+# Blender MTL File: 'uploads_files_54823_pavillon_barcelone_v1.71_b29.blend'
+# Material Count: 1
+
+newmtl water
+Ns 980.100000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3

@@ -52,12 +52,13 @@ namespace dropOut_tracing
 
     class PGParams {
     public:
-        RT_FUNCTION __host__ PGParams() : hasLoadln(false) {}
+        RT_FUNCTION __host__ PGParams() : hasLoadln(false), trainEnd(false){}
         inline __host__ void loadIn(const std::vector<float2>& points);
         inline __host__ void predict_array(float2* point, int num);
         RT_FUNCTION __host__ float predict(float2& point, unsigned int& seed);
         RT_FUNCTION __host__ float pdf(float2& dirction);
         bool hasLoadln;
+        bool trainEnd;
     private:
         inline __host__ void initializeGMM(const std::vector<float2>& newPoints);
         inline __host__ void updateGaussian(const std::vector<float2>& newPoints);

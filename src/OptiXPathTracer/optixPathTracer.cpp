@@ -973,7 +973,7 @@ std::vector<std::vector<std::vector<bool>>> TrainFinish(dropOut_tracing::max_u,
         std::vector<bool>(dropOut_tracing::default_surfaceSubSpaceNumber,
             0)));
 
-const int capacity=10000;
+const int capacity=30000;
 
 void updateDropOutTracingParams()
 {
@@ -1100,7 +1100,10 @@ void updateDropOutTracingParams()
                     int num = TrainVector[i][j][k].size();
                     if (num == 0) continue;
                     if (num==capacity && TrainFinish[i][j][k]) continue;
-                    if (num == capacity) { TrainFinish[i][j][k] = true; printf("one vector train end!!!\n"); }
+                    if (num == capacity) {
+                        TrainFinish[i][j][k] = true; printf("S:%d C:%d U:%d train end!!!\n",j, k, i);
+                        dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->trainEnd = 1;
+                    }
                     dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->loadIn(TrainVector[i][j][k]);
                     if (!disable_print){
                         printf("PG traning for ID S:%d C:%d U:%d with size %d\n", j, k, i, num);
@@ -1333,14 +1336,14 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
 
-        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
 
          //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
@@ -1472,7 +1475,14 @@ int main( int argc, char* argv[] )
                         printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
 
                         error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
-                        printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time.count(), params.subframe_index, error * 100);
+                        printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
+
+                        const float SET_ERROR = 0.04f;
+                        if (error < SET_ERROR) {
+                            printf("save the data\n");
+                            img_save(sum_render_time.count(), params.subframe_index);
+                            exit(0);
+                        }
                     }
                     else
                     {
