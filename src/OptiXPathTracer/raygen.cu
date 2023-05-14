@@ -365,7 +365,8 @@ extern "C" __global__ void __raygen__SPCBPT()
         if (payload.path.hit_lightSource())
         {
             float3 res = lightStraghtHit(payload.path.currentVertex());
-            result += res;
+            if(payload.depth <= MAX_PATH_LENGTH_FOR_MIS)
+                result += res;
             break;
         }
         BDPTVertex& eye_subpath = payload.path.currentVertex();
@@ -396,7 +397,7 @@ extern "C" __global__ void __raygen__SPCBPT()
                 //printf("debug info %f\n", float3weight(tmp_float3));
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 float3 res = connectVertex_SPCBPT(eye_subpath, light_subpath) / pmf;
-                if (!ISINVALIDVALUE(res))
+                if (!ISINVALIDVALUE(res)&&eye_subpath.depth<=MAX_PATH_LENGTH_FOR_MIS)
                 {
                     result += res / CONNECTION_N;
                 }
@@ -875,7 +876,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
                  
-                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
+                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC)&&!Tracer::params.spcbpt_pure)
                 {
                     //float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
                     //float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
@@ -936,7 +937,7 @@ extern "C" __global__ void __raygen__shift_combine()
 
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                 bool caustic_flag = false;
-                if (Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
+                if (!Tracer::params.spcbpt_pure&& Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
                     light_subpath.depth + 1 < SHIFT_VALID_SIZE && buffer_size + light_subpath.depth + 1 < MAX_PATH_LENGTH_FOR_MIS)
                 {
                     Shift::PathContainer tempPath(const_cast<BDPTVertex*>(&light_subpath), -1, 0);
@@ -969,7 +970,7 @@ extern "C" __global__ void __raygen__shift_combine()
         for (int it = 0; it < num_specular_conn; it++)
         { 
             if (!Shift::pathRecord_is_causticEyesubpath(payload.path_record, payload.depth))break;
-
+            if (Tracer::params.spcbpt_pure)break;
             float caustic_connection_prob = Tracer::params.dot_params.get_caustic_prob(
                 make_uint2(launch_idx.x, launch_idx.y), make_uint2(launch_dims.x, launch_dims.y));
             //caustic_connection_prob = 1;

@@ -29,7 +29,7 @@ namespace dropOut_tracing
     //true  false false true  true  = L(A)*DSDE enable 
     const int max_bound = 100;
     const int max_loop = 1000;
-    const float light_subpath_caustic_discard_ratio = 0.95;
+    const float light_subpath_caustic_discard_ratio = 0.98;
     const int reciprocal_iteration = 5;
     const bool connection_uniform_sample = false;
     const int iteration_stop_learning = 40;

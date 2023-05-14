@@ -816,6 +816,7 @@ namespace Tracer {
                 // 对四边形进行采样，已经经过验证
                 position = light.quad.u * r1 + light.quad.v * r2 + light.quad.corner * r3;
                 emission = light.quad.emission;
+                //emission *= make_float3(tex2D<float4>(1, uv_.x, uv_.y));
                 pdf = 1.0 / light.quad.area;
                 pdf /= params.lights.count;
                 uv = make_float2(r1, r2);

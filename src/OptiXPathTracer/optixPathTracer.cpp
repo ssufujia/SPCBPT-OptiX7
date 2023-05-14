@@ -987,7 +987,7 @@ void updateDropOutTracingParams()
             printf("iteration more than stop point, stop params learning\n");
         }
         return;
-    }
+    } 
     train_iter++;
     bool disable_print = !DOT_DEBUG_INFO_ENABLE;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
@@ -1336,9 +1336,9 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
@@ -1354,15 +1354,15 @@ int main( int argc, char* argv[] )
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/simple_n.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
         
-        //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool2.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_2.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
@@ -1397,8 +1397,8 @@ int main( int argc, char* argv[] )
         { 
             handleCameraUpdate(params);
             dropOutTracingParamsSetup(TScene);
-            preprocessing(TScene);
             path_guiding_params_setup(TScene);
+            preprocessing(TScene);
         }
         
         //if( outfile.empty() )

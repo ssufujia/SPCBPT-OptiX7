@@ -1725,6 +1725,7 @@ void Scene::switchRaygen(std::string raygenName)
     else if (raygenName == std::string("SPCBPT_eye_ForcePure"))
     {
         raygen_group = &m_SPCBPT_eye_subpath_group[SPCBPT_SPECIAL_rayGen];
+        //raygen_group = &m_SPCBPT_eye_subpath_group[rayGenProg];
         miss_groups[RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_miss_group;
         miss_groups[RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::missProg];
 
