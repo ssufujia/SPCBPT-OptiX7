@@ -40,10 +40,15 @@
 #define DIR_JUDGE 0 
 #define RMIS_FLAG true
 
+#define DOT_DEBUG_INFO_ENABLE false
 /* Path Guiding 开关 */
-static const bool PG_ENABLE = false;
-const bool SPCBPT_PURE = false;
+static const bool PG_ENABLE = true;
+const bool SPCBPT_PURE = true;
 const bool FIX_ITERATION = false;
+const bool PG_SELF_TRAIN = true;
+/*save 标准mape差*/
+const float SET_ERROR = -1.f;
+
 #include"whitted.h"
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
@@ -212,7 +217,11 @@ struct subspaceMacroInfo
 struct EstimationParams
 {
     float4* ref_buffer;
+    float min_limit;
     int pre_trace_frame;
+    int width;
+    int height;
+    bool ready;
 };
 struct PTParams :whitted::LaunchParams
 {

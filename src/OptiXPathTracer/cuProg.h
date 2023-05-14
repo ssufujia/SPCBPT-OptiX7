@@ -122,6 +122,7 @@ RT_FUNCTION bool isRefract(float3 normal, float3 in_dir, float3 out_dir)
 {
     return dot(normal, in_dir) * dot(normal, out_dir) < 0;
 }
+
 namespace Tracer {
     using namespace whitted;
 
@@ -1802,6 +1803,8 @@ namespace Tracer
         }
         for (int i = 2; i <= path_size - 2; i++)
         {
+            //if (Shift::glossy(path[i]) || Shift::glossy(path[i - 1]))
+            //    continue;
             labelUnit eye_label_unit(path[i].position, path[i].normal, normalize(path[i - 1].position - path[i].position), false);
             int eye_label = eye_label_unit.getLabel(); 
 
@@ -1815,7 +1818,7 @@ namespace Tracer
             //    );
             //}
         }
-
+        pdf_sum += eye_pdf[path_size - 1];
         return pdf_sum;
     }
 
@@ -2496,39 +2499,6 @@ namespace Shift
         }
     };
 
-    RT_FUNCTION bool getCausticPathInfo(const BDPTVertex* path, int path_size, BDPTVertex& SP, BDPTVertex& CP, int& u, float3& WC)
-    {
-        for (int i = 1; i < path_size - 1; i++)
-        {
-            if (path_size - i - 1 >= SHIFT_VALID_SIZE)return false;
-            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == false)
-                break;
-
-            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == true)
-            {
-                SP = path[i + 1];
-                CP.type = BDPTVertex::Type::DROPOUT_NOVERTEX;
-                u = 1;
-                for (u = 1; i + u + 1 < path_size; u++)
-                {
-                    if (!glossy(path[i + u + 1]))
-                    {
-                        if (i + u + 2 < path_size)
-                        {
-                            CP = path[i + u + 2];
-                        }
-                        if (i + u + 3 < path_size)
-                        {
-                            WC = normalize(path[i + u + 3].position - path[i + u + 2].position);
-                        }
-                        break;
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
-    }
     RT_FUNCTION float3 etaCheck(float3 in_dir, float3 ref_dir, float3 normal)
     {
         float cosA = abs(dot(ref_dir, normal));
@@ -3562,7 +3532,7 @@ namespace Shift
     #define DOT_INVALIDATE_ALTERNATE_PATH(path) (path.setSize(0))
     #define DOT_IS_ALTERNATE_PATH_INVALID(path) (path.size() == 0)
     #define DOT_INVALID_ALTERNATE_PATH_PDF 1
-    #define DOT_SP_RATIO 0.5
+    #define DOT_SP_RATIO 0.0
     /**
      * This function samples an alternate path and stores it in the path container. Returns false if sampling fails.
      * CP stands for control point, SP stands for specular point, u is the step size, and WC stands for control direction.
@@ -3967,15 +3937,43 @@ namespace Shift
         }
         return true;
     }
-
-    RT_FUNCTION bool pathRecord_alreadyCaustic(long long record, int depth)
+    RT_FUNCTION bool vertex_very_close(const BDPTVertex& a, const BDPTVertex& b)
     {
-        if (depth > 32)return false;
-        for (int i = 0; i < depth; i++)
+        float3 diff = a.position - b.position;  
+        if (dot(diff, diff) < DOT_VERY_CLOSE_DISTANCE2) return true;
+        return false;
+    }
+
+    RT_FUNCTION bool getCausticPathInfo(const BDPTVertex* path, int path_size, BDPTVertex& SP, BDPTVertex& CP, int& u, float3& WC)
+    {
+        for (int i = 1; i < path_size - 1; i++)
         {
-            //if (i != depth - 1 && record % 2 != 1)return false;
-            if (i != depth - 1 && record % 2 == 0 && (record >> 1) % 2 == 1)return true;
-            record = record >> 1;
+            if (path_size - i - 1 >= SHIFT_VALID_SIZE)return false;
+            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == false &&  vertex_very_close(path[i], path[i + 1]) == false)
+                break;
+
+            if (Shift::glossy(path[i]) == false && Shift::glossy(path[i + 1]) == true)
+            {
+                SP = path[i + 1];
+                CP.type = BDPTVertex::Type::DROPOUT_NOVERTEX;
+                u = 1;
+                for (u = 1; i + u + 1 < path_size; u++)
+                {
+                    if (!glossy(path[i + u + 1]))
+                    {
+                        if (i + u + 2 < path_size)
+                        {
+                            CP = path[i + u + 2];
+                        }
+                        if (i + u + 3 < path_size)
+                        {
+                            WC = normalize(path[i + u + 3].position - path[i + u + 2].position);
+                        }
+                        break;
+                    }
+                }
+                return true;
+            }
         }
         return false;
     }
@@ -3987,15 +3985,16 @@ namespace Shift
         { 
             const BDPTVertex& a = i < buffer_size ? eye_buffer[i] : light_subpath.get(i - buffer_size);
             const BDPTVertex& b = i + 1 < buffer_size ? eye_buffer[i + 1] : light_subpath.get(i - buffer_size + 1);
+            const BDPTVertex& c = i - 1 < buffer_size ? eye_buffer[i - 1] : light_subpath.get(i - buffer_size - 1);
             if (Shift::glossy(a) == false)
             {
                 if (Shift::glossy(b) == true && size - i < SHIFT_VALID_SIZE)
                 {
                     return true;
                 }
-                return false;
-            }
-
+                if (vertex_very_close(a, b) == false)
+                    return false;
+            } 
         }
         return false;
     }

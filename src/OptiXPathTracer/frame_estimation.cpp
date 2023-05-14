@@ -10,7 +10,7 @@ namespace estimation
 //        thrust::host_vector<float4> reference;
         if (reference_filepath == std::string(""))
         {
-            reference_filepath = std::string("standard.txt");
+            reference_filepath = std::string("ref.txt");
         }  
         float a, b, c, d;
 
@@ -37,6 +37,7 @@ namespace estimation
             float4 pixel = make_float4(a, b, c, d);
             reference.push_back(pixel); 
         }
+        ref_ptr = MyThrustOp::reference_h2d(reference);
         if (ref_width * ref_height != reference.size())
         {
             printf("find a size dismatch problem in reference loading\n");
@@ -71,6 +72,40 @@ namespace estimation
         }
         inFile.close();
         estimation_mode = true;
+    }
+    float estimation_status::MAPE_estimate(thrust::host_vector<float4> accm, const MyParams& params)
+    {
+        if (estimation_mode == false)
+        {
+            return 0.0;
+        }
+        if (params.width != ref_width || params.height != ref_height)
+        {
+            printf("Dismatch img size found in estimation\n");
+            printf("reference size width %d and height %d\n", ref_width, ref_height);
+            printf("actual rendering size width %d and height %d\n", params.width, params.height);
+            return 0;
+        }
+        else
+        {
+            float mape = 0.0;
+            float valid_pixels = 0;
+
+            float minLimit = 0.01;
+            for (int i = 0; i < ref_width * ref_height; i++)
+            {
+                float3 a = make_float3(accm[i]);
+                float3 b = make_float3(reference[i]);
+                if (b.x + b.y + b.z > 0)
+                    valid_pixels += 1;
+                float3 bias = a - b;
+                float3 r_bias = (a - b) / (b + make_float3(minLimit)); 
+                float error = (abs(r_bias.x) + abs(r_bias.y) + abs(r_bias.z)) / 3;
+                error = min(error, 20);
+                mape += error;
+            }
+            return mape / valid_pixels;
+        }
     }
     float estimation_status::relMse_estimate(thrust::host_vector<float4> accm, const MyParams& params)
     {

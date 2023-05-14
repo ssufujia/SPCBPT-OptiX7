@@ -73,6 +73,9 @@
 #include"PG_host.h"
 #include"frame_estimation.h"
 #include <direct.h>
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 
 using namespace std;
  
@@ -211,17 +214,18 @@ void img_save(double render_time=-1,int frame=0)
 
     // 将时间格式化为字符串
     std::stringstream ss;
-    ss << "./data/"<< std::put_time(std::localtime(&now_time_t), "%Y年%m月%d日%H_%M_%S");
+    ss << "./data/" << std::put_time(std::localtime(&now_time_t), "%Y_%m_%d%H_%M_%S") << "_" << frame << "iterations_" << render_time << "time";
 
     // 获取格式化后的文件名
     std::string filename = ss.str();
+    //printf("save %s\n",filename);
+    
     sutil::saveImage((filename+".png").c_str(), outputbuffer, true);
 
 
     auto p = MyThrustOp::copy_to_host(params.accum_buffer, params.height * params.width);
     std::ofstream outFile;
-    outFile.open((filename + ".txt").c_str());
-    outFile<<render_time<<" " <<frame<< std::endl;
+    outFile.open((filename + ".txt").c_str()); 
     outFile << params.width << " " << params.height << std::endl;
     for (int i = 0; i < params.width * params.height; i++)
     {
@@ -379,6 +383,15 @@ void initLaunchParams(const sutil::Scene& scene) {
     subspaceInfo.Q = nullptr;
     subspaceInfo.CMFGamma = nullptr;
 
+    params.estimate_pr.ready = false;
+    params.estimate_pr.ref_buffer = nullptr;
+    if (estimation::es.estimation_mode == true)
+    {
+        params.estimate_pr.ref_buffer = estimation::es.ref_ptr;
+        params.estimate_pr.height = estimation::es.ref_height;
+        params.estimate_pr.width = estimation::es.ref_width;
+        params.estimate_pr.ready = true;
+    }  
 }
 
  
@@ -652,83 +665,89 @@ void path_guiding_params_setup(sutil::Scene& scene)
     int build_iteration_max = 12;
     //g_mats = MyThrustOp::get_data_for_path_guiding();
 
-    //int initial_path = 1000;
-    //int split_limit = initial_path;
-    //int target_path = initial_path;
-    //PGTrainer_api.init(scene.aabb());
-    //for (int i = 0; i < build_iteration_max; i++)
-    //{ 
-    //    MyThrustOp::clear_training_set();
-    //    int current_sample_count = 0;
-    //    int accm_sample_count = 0;
-    //    int accm_it = 0;
-    //    while (current_sample_count + accm_sample_count < target_path)
-    //    { 
-    //        current_sample_count += launchPretrace(scene);
-    //        accm_it++;
-    //        //printf("regenerate data for pg %d %d\n", current_sample_count + accm_sample_count, g_mats.size());
-
-    //        if (current_sample_count > batch_sample_count)
-    //        {
-    //            accm_sample_count += current_sample_count;
-    //            current_sample_count = 0;
-    //            auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
-    //            g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
-    //            MyThrustOp::clear_training_set();
-    //        }
-    //    }
-    //    auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
-    //    g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
-    //    MyThrustOp::clear_training_set();
-
-
-    //    printf("get %d samples for pg building iteration %d; target path%d; split-limit %d; average nodes %f \n",
-    //        g_mats.size(), i, target_path, split_limit, float(g_mats.size())/accm_it);
-    //    PGTrainer_api.set_training_set(g_mats);
-    //    PGTrainer_api.build_tree(split_limit, g_mats.size());
-    //    params.pg_params.spatio_trees = MyThrustOp::spatio_tree_to_device(PGTrainer_api.s_tree.nodes.data(), PGTrainer_api.s_tree.nodes.size());
-    //    params.pg_params.quad_trees = MyThrustOp::quad_tree_to_device(PGTrainer_api.q_tree_group.nodes.data(), PGTrainer_api.q_tree_group.nodes.size()); 
-    //    params.pg_params.pg_enable = 1;
-    //    params.pg_params.epsilon_lum = 0.001;
-    //    params.pg_params.guide_ratio = 0.5;
-
-    //    target_path *= 2;
-    //    split_limit *= sqrt(2); 
-    //    g_mats.clear();
-    //}  
-
-    for (int i = 0; i < pg_training_data_batch; i++)
+    if (PG_SELF_TRAIN)
     {
-        MyThrustOp::clear_training_set();
-        int current_sample_count = 0;
-        while (current_sample_count < batch_sample_count)
+        build_iteration_max = 14;
+        int initial_path = 1000;
+        int split_limit = initial_path;
+        int target_path = initial_path;
+        PGTrainer_api.init(scene.aabb());
+        for (int i = 0; i < build_iteration_max; i++)
         {
-            current_sample_count += launchPretrace(scene);
-            printf("regenerate data for pg %d %d\n", current_sample_count, g_mats.size());
+            MyThrustOp::clear_training_set();
+            int current_sample_count = 0;
+            int accm_sample_count = 0;
+            int accm_it = 0;
+            while (current_sample_count + accm_sample_count < target_path)
+            {
+                current_sample_count += launchPretrace(scene);
+                accm_it++;
+                //printf("regenerate data for pg %d %d\n", current_sample_count + accm_sample_count, g_mats.size());
+
+                if (current_sample_count > batch_sample_count)
+                {
+                    accm_sample_count += current_sample_count;
+                    current_sample_count = 0;
+                    auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
+                    g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
+                    MyThrustOp::clear_training_set();
+                }
+            }
+            auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
+            g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
+            MyThrustOp::clear_training_set();
+
+
+            printf("get %d samples for pg building iteration %d; target path%d; split-limit %d; average nodes %f \n",
+                g_mats.size(), i, target_path, split_limit, float(g_mats.size()) / accm_it);
+            PGTrainer_api.set_training_set(g_mats);
+            PGTrainer_api.build_tree(split_limit, g_mats.size());
+            params.pg_params.spatio_trees = MyThrustOp::spatio_tree_to_device(PGTrainer_api.s_tree.nodes.data(), PGTrainer_api.s_tree.nodes.size());
+            params.pg_params.quad_trees = MyThrustOp::quad_tree_to_device(PGTrainer_api.q_tree_group.nodes.data(), PGTrainer_api.q_tree_group.nodes.size());
+            params.pg_params.pg_enable = 1;
+            params.pg_params.epsilon_lum = 0.001;
+            params.pg_params.guide_ratio = 0.5;
+
+            target_path *= 2;
+            split_limit *= sqrt(2);
+            g_mats.clear();
         }
-        auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
-        g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
-        MyThrustOp::clear_training_set();
     }
-    printf("get mats size %d\n", g_mats.size());
-    PGTrainer_api.set_training_set(g_mats); 
-    PGTrainer_api.init(scene.aabb());
-    //build the tree until we reach max iteration (and the function return false) 
-    for (int i = 0; i < build_iteration_max; i++) { PGTrainer_api.build_tree(); }
-
-    for (int i = 0; i < pg_training_data_online_batch; i++)
-    {
-        g_mats.clear();
-        MyThrustOp::clear_training_set();
-        int current_sample_count = 0;
-        while (current_sample_count < batch_sample_count)
+    else
+    { 
+        for (int i = 0; i < pg_training_data_batch; i++)
         {
-            current_sample_count += launchPretrace(scene);
+            MyThrustOp::clear_training_set();
+            int current_sample_count = 0;
+            while (current_sample_count < batch_sample_count)
+            {
+                current_sample_count += launchPretrace(scene);
+                printf("regenerate data for pg %d %d\n", current_sample_count, g_mats.size());
+            }
+            auto n_mats = MyThrustOp::get_data_for_path_guiding(-1, pr_params.PG_mode);
+            g_mats.insert(g_mats.end(), n_mats.begin(), n_mats.end());
+            MyThrustOp::clear_training_set();
         }
-        printf("online training for pg batch %d \n", i);
-        auto n_mats = MyThrustOp::get_data_for_path_guiding();
-        PGTrainer_api.set_training_set(n_mats);
-        PGTrainer_api.online_training(); 
+        printf("get mats size %d\n", g_mats.size());
+        PGTrainer_api.set_training_set(g_mats);
+        PGTrainer_api.init(scene.aabb());
+        //build the tree until we reach max iteration (and the function return false) 
+        for (int i = 0; i < build_iteration_max; i++) { PGTrainer_api.build_tree(); }
+
+        for (int i = 0; i < pg_training_data_online_batch; i++)
+        {
+            g_mats.clear();
+            MyThrustOp::clear_training_set();
+            int current_sample_count = 0;
+            while (current_sample_count < batch_sample_count)
+            {
+                current_sample_count += launchPretrace(scene);
+            }
+            printf("online training for pg batch %d \n", i);
+            auto n_mats = MyThrustOp::get_data_for_path_guiding();
+            PGTrainer_api.set_training_set(n_mats);
+            PGTrainer_api.online_training();
+        }
     }
     PGTrainer_api.mats_cache.clear();
     PGTrainer_api.mats.clear();
@@ -765,11 +784,12 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
     {
+        //printf("% d\n", current_sample_count);
         current_sample_count += launchPretrace(scene);
     }
 
     auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000); 
-    auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber-1, 1);
+    auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber - 1, 1);
     dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
 
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
@@ -858,7 +878,7 @@ void updateDropOutTracingCombineWeight()
         {
             if (h_record[i].valid() == false||h_record[i].is_caustic() == false)continue;
             if (isnan(h_record[i].record) || isinf(h_record[i].record))continue;
-            float weight = abs(h_record[i].record);
+            float weight = abs(h_record[i].record) * h_caustic_gamma[h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId];
             if (weight > 1000000) weight = 1000000;
             unsigned id = h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId;
             gamma_count[id] += 1;
@@ -919,7 +939,11 @@ void updateDropOutTracingCombineWeight()
                 h_frac[i] = 0.5;
             else
             {
-                h_frac[i] = 0.5 * t + (1 - t) * (caustic_weight[i] / (normal_weight[i] + caustic_weight[i]));
+                float recommend = (caustic_weight[i] / (normal_weight[i] + caustic_weight[i]));
+                if (recommend < 0.05)
+                    h_frac[i] = CONSERVATIVE_RATE;
+                else h_frac[i] = 1;
+
             }
         } 
         subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
@@ -943,7 +967,18 @@ const int capacity=30000;
 void updateDropOutTracingParams()
 {
     if (SPCBPT_PURE) return;
-    bool disable_print = true;
+    static int train_iter = 0;
+    if (train_iter > 0 && train_iter > dropOut_tracing::iteration_stop_learning)
+    {
+        if (train_iter == dropOut_tracing::iteration_stop_learning + 1)
+        {
+            train_iter++;
+            printf("iteration more than stop point, stop params learning\n");
+        }
+        return;
+    }
+    train_iter++;
+    bool disable_print = !DOT_DEBUG_INFO_ENABLE;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
     dot_params.data.host_data = statics_data.data();
@@ -1094,8 +1129,8 @@ void updateDropOutTracingParams()
     dot_params.data.on_GPU = true;
 
 
-    dot_params.selection_const = dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
-        : lt_params.M_per_core * lt_params.num_core;
+    dot_params.selection_const =  (dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
+        : lt_params.M_per_core * lt_params.num_core);
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
     //system("pause");
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
@@ -1239,6 +1274,7 @@ void initCameraState(const sutil::Scene& scene)
 }
  
  
+ 
 //------------------------------------------------------------------------------
 //
 // Main
@@ -1283,28 +1319,20 @@ int main( int argc, char* argv[] )
             printUsageAndExit( argv[0] );
         }
     }
-
-    /*trainingParams tp;
-    unsigned int sd = 0;
-    for (int i = 0; i < 10; ++i) {
-        tp.train(make_float3(rnd(sd), rnd(sd), rnd(sd)));
-    }
-    tp.printGrid();
-    tp.printPrefixSum();
-    tp.printPdf();
-    tp.checkSample();
-    exit(0);*/
+     
 
     try
     {
         string scenePath = " ";
 
         //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v3.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4.scene");
 
-        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
+
+        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
 
          //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
@@ -1313,8 +1341,8 @@ int main( int argc, char* argv[] )
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        //scenePath = string(SAMPLES_DIR) + strin   g("/data/water/water.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/water/simple.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
         
@@ -1323,7 +1351,7 @@ int main( int argc, char* argv[] )
         // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_env2.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_2.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
@@ -1343,14 +1371,7 @@ int main( int argc, char* argv[] )
 
         //
         // Set up OptiX state
-        //
-        //createContext( state );
-        //buildMeshAccel( state );
-        //createModule( state );
-        //createProgramGroups( state );
-        //createPipeline( state );
-        //createSBT( state );
-        //initLaunchParams( state );
+        // 
         OPTIX_CHECK(optixInit()); // Need to initialize function table
         initCameraState(TScene);
         //initCameraState(*myScene);
@@ -1359,6 +1380,8 @@ int main( int argc, char* argv[] )
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
         env_params_setup(TScene);
+
+        //render_alg[render_alg_id] = std::string("pt");
         //pre tracing
         { 
             handleCameraUpdate(params);
@@ -1366,17 +1389,7 @@ int main( int argc, char* argv[] )
             preprocessing(TScene);
             path_guiding_params_setup(TScene);
         }
-
-        if(false)
-        {
-            params.estimate_pr.ref_buffer = nullptr;
-            if (estimation::es.estimation_mode == true)
-            {
-                thrust::device_ptr<float4> ref_buffer;
-
-                params.estimate_pr.ref_buffer = thrust::raw_pointer_cast(ref_buffer);
-            }
-        }
+        
         //if( outfile.empty() )
         if(true)
         {
@@ -1429,17 +1442,29 @@ int main( int argc, char* argv[] )
                     displaySubframe(output_buffer, gl_display, window);
                     t1 = std::chrono::steady_clock::now();
                     display_time += t1 - t0;
-
-                    sutil::displayStats(state_update_time, render_time, display_time);
+                     
+                    bool setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
+                        params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
+                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize, params.error_heat_visual
+                    );
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count()); 
 
                     glfwSwapBuffers(window);
 
-                    estimation::es.estimation_mode = false;
+                    //estimation::es.estimation_mode = false;
                     if (estimation::es.estimation_mode == true)
                     {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
-                        printf("frame %d relMse %f\n", params.subframe_index, error); 
+                        printf("render time sum %f frame %d relMse %f\n", sum_render_time, params.subframe_index, error); 
+
+                        error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
+                        printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
+
+                        if (error < SET_ERROR) {
+                            printf("save the data\n");
+                            img_save();
+                            exit(0);
+                        }
                     }
                     else
                     {
@@ -1447,11 +1472,7 @@ int main( int argc, char* argv[] )
 
                     }
                     ++params.subframe_index;
-                    /*if (sum_render_time > print_time && !print) {
-                        img_save(sum_render_time.count(), params.subframe_index);
-                        print = true;
-                        exit(0);
-                     }*/
+                    if (setting_changed)params.subframe_index = 0;
                 } while (!glfwWindowShouldClose(window));
                 CUDA_SYNC_CHECK();
             }

@@ -470,7 +470,8 @@ namespace MyThrustOp
         }
         for (int i = 0; i < dropOut_tracing::default_specularSubSpaceNumber; i++)
         {
-            //printf("get %d vertex at specular subspace %d\n", h_subspace_vertex_count[i], i);
+            if(DOT_DEBUG_INFO_ENABLE)
+                printf("get %d vertex at specular subspace %d\n", h_subspace_vertex_count[i], i);
         }
         static thrust_dev_int d_indexes;
         d_indexes = h_indexes_rearrange;
@@ -635,6 +636,13 @@ namespace MyThrustOp
         neat_conns.resize(0);
         neat_paths.resize(0);
     }
+    thrust::device_vector<float4> d_reference_img_buffer;
+    float4* reference_h2d(thrust::host_vector<float4> h_ref)
+    {  
+        d_reference_img_buffer = h_ref;
+        return thrust::raw_pointer_cast(d_reference_img_buffer.data());
+    }
+
     int valid_sample_gather(thrust::device_ptr<preTracePath> raw_paths, int maxPathSize, 
         thrust::device_ptr<preTraceConnection> raw_conns,int maxConns)
     {

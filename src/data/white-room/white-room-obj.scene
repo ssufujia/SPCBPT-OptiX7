@@ -1,0 +1,1745 @@
+cameraSetting
+{
+	eye 2.8 2.0 6.9
+	lookat 0.0 1.4 2
+}
+
+material lampbase
+{
+    roughness  0.010408
+    color 0.64 0.64 0.64
+}
+
+material lightholdersphere
+{
+    color 0.55 0.27 0.02
+    specular 0.59
+    specularTint 0.59 0.49 0.48
+    roughness 0.010408
+}
+
+material lightholdersphere2
+{
+    color 0.55 0.27 0.02
+    specular 0.59
+    specularTint 0.59 0.49 0.48
+    roughness 0.010408
+
+}
+
+material lightholdersphere1
+{
+    color 0.55 0.27 0.02
+    specular 0.59
+    specularTint 0.59 0.49 0.48
+    roughness 0.010408
+}
+
+material magazine
+{
+    albedoTex white-room/textures/magazine.png
+    color 0.5 0.5 0.5
+    specular 0.5
+    roughness 0.010408
+}
+
+material standinginnershade
+{
+    color 0.5 0.5 0.5
+    roughness 0.010408
+
+}
+
+material apple
+{
+    albedoTex white-room/textures/apple.png
+    roughness 0.010408
+
+}
+
+material fruitbowl
+{
+    metallic 1.0
+    roughness 0.010408
+}
+
+material lovestand
+{
+    color 0.2 0.2 0.2
+    roughness 0.010408
+}
+
+material lovebase
+{
+    color 0.2 0.2 0.2
+    roughness 0.010408
+}
+
+material plane078
+{
+    color 0.8 0.8 0.8
+    roughness 1.0
+}
+
+material plane077
+{
+    color 0.65 0.65 0.65
+    roughness 1.0}
+
+material lovebackletter
+{
+    color 0.5 0.5 0.5
+    roughness 1.0
+}
+
+material love-o
+{
+    color 0.5 0.5 0.5
+    roughness 1.0
+}
+
+material love-l
+{
+    color 0.8 0.8 0.8
+    roughness 1.0
+}
+
+material pic1
+{
+    albedoTex white-room/textures/photo1.png
+    roughness 0.010408
+
+}
+
+material picframe
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408
+
+}
+
+material pic2
+{
+    albedoTex white-room/textures/photo2.png
+    roughness 0.010408
+
+}
+
+material pic3
+{
+    albedoTex white-room/textures/photo3.png
+    roughness 0.010408
+
+}
+
+material cushion1
+{
+   albedoTex white-room/textures/cushion-stripe-purple.png
+    roughness 0.010408
+
+}
+
+material lightfittingceiling
+{
+    color 0.8 0.8 0.8  
+    roughness 0.010408
+}
+
+material ceilingbulbfitting
+{
+    color 0.8 0.8 0.8  
+    roughness 0.010408
+}
+
+material lightcord
+{
+    color 0.8 0.8 0.8  
+    roughness 0.010408
+
+}
+
+material lightshadewire
+{
+    metallic 0.05
+}
+
+
+material pic4
+{
+    albedoTex white-room/textures/photo4.png
+    roughness 0.010408
+
+}
+
+material book
+{
+    albedoTex white-room/textures/book-spines.png
+    roughness 0.010408
+
+}
+
+material chestdrawers
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408
+}
+
+material chesthandles
+{
+    metallic 1.0
+    roughness 0.05
+}
+
+material plane042
+{
+    color 0.8 0.8 0.8
+    specular 0.8
+    roughness 0.0
+}
+
+material cushion2
+{
+    albedoTex white-room/textures/cushion-purple-yellow-stripe.png
+    roughness 0.2
+
+}
+
+material chairbase
+{
+    color 0.5 0.5 0.5
+}
+
+material chairback
+{
+    color 0.5 0.5 0.5
+}
+
+material chairarms
+{
+    color 0.5 0.5 0.5
+}
+
+material cushion3
+{
+    albedoTex white-room/textures/cushion-green-circles.png
+    roughness 0.05
+
+}
+
+material lampshade-outer
+{
+    albedoTex white-room/textures/shade-stripes.png
+    roughness 0.05
+
+}
+
+material plane040
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408
+}
+
+material plane039
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408
+
+}
+
+material bookshelf
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408
+
+}
+
+material coffeetablehandle
+{
+    metallic 1.0
+    roughness 0.05
+}
+
+material coffeetabledrawer
+{
+    color 0.5 0.5 0.5
+}
+
+material coffeetablesurround
+{
+    color 0.5 0.5 0.5
+}
+
+material socket
+{
+     color 0.8 0.8 0.8
+    roughness 0.010408
+
+}
+
+material bigpicture
+{
+    albedoTex white-room/textures/pic5wide.png
+    roughness 0.010408
+
+}
+
+material bigpic2
+{
+    albedoTex white-room/textures/pic3.png
+    roughness 0.010408
+
+}
+
+material blindcordknob
+{
+    color 0.8 0.8 0.8    
+    roughness 0.010408
+
+}
+
+material blindcord
+{
+    color 0.8 0.8 0.8    
+    roughness 0.010408
+
+}
+
+material blindrollend
+{
+    color 0.8 0.8 0.8    
+    roughness 0.010408
+
+}
+
+material blindbar
+{
+    color 0.8 0.8 0.8    
+    roughness 0.010408
+
+}
+
+material blinddrop
+{
+    color 0.5 0.5 0.5 
+    roughness 0.010408
+
+}
+
+material blindroll
+{
+    color 0.8 0.8 0.8    
+    roughness 0.010408
+
+}
+
+material circle003
+{
+    color 0.8 0.8 0.8    
+    roughness 0.010408
+
+}
+
+material fireplacetray
+{
+    metallic 1.0
+    roughness 0.05
+}
+
+material fireplace-base
+{
+    color 0.1 0.1 0.1
+}
+
+material fireplace-grill
+{
+    color 0.02 0.02 0.02
+    roughness 0.5
+}
+
+material plane019
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408 
+}
+
+material fireplace-grate
+{
+    color 0.075 0.075 0.075
+}
+
+material fireplace-back
+{
+    color 0.075 0.075 0.075
+}
+
+material fireplace-arch
+{
+    color 0.05 0.05 0.05
+}
+
+material fireplace-scrolls
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408 
+
+}
+
+material plane015
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408 
+
+}
+
+material fireplace-stone
+{
+    color 0.1 0.1 0.1
+    specular 0.2
+    roughness 0.05
+
+}
+
+material fireplace-top
+{
+    color 0.5 0.5 0.5
+}
+
+material fireplace-surround-base
+{
+    color 0.8 0.8 0.8
+   roughness 0.010408 
+}
+
+material showsheff
+{
+    albedoTex white-room/textures/boards+02_s2.png
+    roughness 0.010408
+
+}
+
+material picture-rail
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+}
+
+material wallpaint
+{
+    color 0.5 0.5 0.5
+}
+
+material floorboards
+{
+    albedoTex white-room/textures/Rosewood_DIFFUSE.png
+    roughness 0.10408
+
+}
+
+material skirtboard
+{
+    color 0.8 0.8 0.8
+    roughness 0.010408
+}
+
+material cornis
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material chair
+{
+    color 0.5 0.5 0.5
+}
+
+material sofa
+{
+    color 0.5 0.5 0.5
+}
+
+material cushion4
+{
+    albedoTex white-room/textures/cushion-green-circles.png
+    roughness 0.10408
+
+}
+
+material rug
+{
+    albedoTex white-room/textures/carpet-text3a-bump.png
+    roughness 0.010408
+
+}
+
+material coffeetablelegs
+{
+        metallic 1.0
+    roughness 0.1
+
+}
+
+material coffeetableuprights
+{
+        metallic 1.0
+    roughness 0.1
+
+}
+
+material radiator-floor-cover
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material radiator-knob
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material radiator
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material radiator-pipe
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material teacup
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material teasaucer
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material teaspoon
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material teapot
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material radiohandle
+{
+    color 0.389509 0.372589 0.293747
+    roughness 0.010408
+
+}
+
+material radio-back
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material radio-logo
+{
+        color 0.465161 0.465161 0.465161
+    roughness 0.010408
+
+}
+
+material radio-dial
+{
+    color 0.8 0.8 0.8
+    roughness 0.10408
+
+}
+
+material radio-dial-back
+{
+    color 0.2 0.2 0.2
+    roughness 0.010408
+
+}
+
+material radio-dial-edge
+{
+    color 0.640514 0.625417 0.580126
+    roughness 0.010408
+
+}
+
+material radio-feet
+{
+        color 0.640000 0.600153 0.434490
+    roughness 0.010408
+
+}
+
+material radio-front
+{
+        color 0.640000 0.600153 0.434490
+    roughness 0.010408
+
+}
+
+material radio-handle-chrome
+{
+       color 0.8 0.8 0.8
+    roughness 0.010408
+
+}
+
+material radio-handle-joint
+{
+        color 0.640000 0.600153 0.434490
+    roughness 0.010408
+
+}
+
+material radio-inner
+{
+        color 0.015078 0.015078 0.015078
+    roughness 0.010408
+
+}
+
+material radio-knob
+{
+        color 0.358375 0.300936 0.128617
+    roughness 0.010408
+
+}
+
+material radio-shell
+{
+        color 0.066822 0.028495 0.013827
+    roughness 0.010408
+
+}
+
+material radio-trim
+{
+        color 0.483044 0.483044 0.483044
+    roughness 0.010408
+
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00001.obj
+    material lampbase
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00002.obj
+    material lightholdersphere
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00003.obj
+    material lightholdersphere2
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00004.obj
+    material lightholdersphere1
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00005.obj
+    material magazine
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00006.obj
+    material standinginnershade
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00007.obj
+    material apple
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00008.obj
+    material apple
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00009.obj
+    material apple
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00010.obj
+    material apple
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00011.obj
+    material fruitbowl
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00012.obj
+    material lovestand
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00013.obj
+    material lovebase
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00014.obj
+    material plane078
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00015.obj
+    material plane077
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00016.obj
+    material lovebackletter
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00017.obj
+    material lovebackletter
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00018.obj
+    material lovebackletter
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00019.obj
+    material lovebackletter
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00020.obj
+    material love-o
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00021.obj
+    material love-l
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00023.obj
+    material pic1
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00024.obj
+    material picframe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00025.obj
+    material picframe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00026.obj
+    material pic2
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00029.obj
+    material pic3
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00030.obj
+    material picframe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00031.obj
+    material cushion1
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00032.obj
+    material lightfittingceiling
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00033.obj
+    material ceilingbulbfitting
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00034.obj
+    material lightcord
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00035.obj
+    material lightshadewire
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00037.obj
+    material picframe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00038.obj
+    material pic4
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00040.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00041.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00042.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00043.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00044.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00045.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00046.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00047.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00048.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00049.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00050.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00051.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00052.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00053.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00054.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00055.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00056.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00057.obj
+    material book
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00058.obj
+    material chestdrawers
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00059.obj
+    material chestdrawers
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00060.obj
+    material chestdrawers
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00061.obj
+    material chesthandles
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00062.obj
+    material chestdrawers
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00063.obj
+    material chestdrawers
+}
+
+
+mesh
+{
+    file white-room/geometry/mesh_00065.obj
+    material plane042
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00066.obj
+    material cushion2
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00067.obj
+    material chairbase
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00068.obj
+    material chairback
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00069.obj
+    material chairarms
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00070.obj
+    material cushion3
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00071.obj
+    material lampshade-outer
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00072.obj
+    material plane040
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00073.obj
+    material plane039
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00074.obj
+    material bookshelf
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00075.obj
+    material coffeetablehandle
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00076.obj
+    material coffeetabledrawer
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00077.obj
+    material coffeetablesurround
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00078.obj
+    material socket
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00079.obj
+    material bigpicture
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00080.obj
+    material picframe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00085.obj
+    material socket
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00087.obj
+    material bigpic2
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00088.obj
+    material picframe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00089.obj
+    material blindcordknob
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00090.obj
+    material blindcord
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00091.obj
+    material blindcord
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00092.obj
+    material blindrollend
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00093.obj
+    material blindrollend
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00094.obj
+    material blindbar
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00095.obj
+    material blinddrop
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00096.obj
+    material blindroll
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00097.obj
+    material blindroll
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00098.obj
+    material blinddrop
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00099.obj
+    material blindbar
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00100.obj
+    material blindroll
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00101.obj
+    material blindrollend
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00102.obj
+    material blindcord
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00103.obj
+    material blindcord
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00104.obj
+    material blindcordknob
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00105.obj
+    material blindcordknob
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00106.obj
+    material blindcord
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00107.obj
+    material blindcord
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00108.obj
+    material blindrollend
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00109.obj
+    material blindrollend
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00110.obj
+    material blinddrop
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00111.obj
+    material blinddrop
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00112.obj
+    material blindroll
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00113.obj
+    material circle003
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00114.obj
+    material fireplacetray
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00115.obj
+    material fireplace-base
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00116.obj
+    material fireplace-grill
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00117.obj
+    material plane019
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00118.obj
+    material fireplace-grate
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00119.obj
+    material fireplace-grill
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00120.obj
+    material fireplace-back
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00121.obj
+    material fireplace-arch
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00122.obj
+    material fireplace-scrolls
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00123.obj
+    material plane015
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00124.obj
+    material fireplace-stone
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00125.obj
+    material fireplace-top
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00126.obj
+    material fireplace-surround-base
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00127.obj
+    material showsheff
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00128.obj
+    material picture-rail
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00129.obj
+    material wallpaint
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00130.obj
+    material floorboards
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00131.obj
+    material skirtboard
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00132.obj
+    material cornis
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00133.obj
+    material wallpaint
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00134.obj
+    material wallpaint
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00135.obj
+    material wallpaint
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00136.obj
+    material wallpaint
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00137.obj
+    material socket
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00138.obj
+    material chairarms
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00139.obj
+    material chair
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00140.obj
+    material chair
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00141.obj
+    material sofa
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00142.obj
+    material sofa
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00143.obj
+    material sofa
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00144.obj
+    material cushion4
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00145.obj
+    material rug
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00146.obj
+    material coffeetabledrawer
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00147.obj
+    material coffeetablehandle
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00148.obj
+    material coffeetablelegs
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00149.obj
+    material coffeetableuprights
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00150.obj
+    material radiator-floor-cover
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00151.obj
+    material radiator-floor-cover
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00152.obj
+    material radiator-knob
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00153.obj
+    material radiator
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00154.obj
+    material radiator
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00155.obj
+    material radiator
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00156.obj
+    material radiator
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00157.obj
+    material radiator
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00158.obj
+    material radiator-pipe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00159.obj
+    material radiator-pipe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00160.obj
+    material radiator-pipe
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00161.obj
+    material teacup
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00162.obj
+    material teasaucer
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00163.obj
+    material teaspoon
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00164.obj
+    material teapot
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00165.obj
+    material teapot
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00166.obj
+    material radiohandle
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00167.obj
+    material radio-back
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00168.obj
+    material radio-logo
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00169.obj
+    material radio-dial
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00170.obj
+    material radio-dial-back
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00171.obj
+    material radio-dial-edge
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00173.obj
+    material radio-feet
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00174.obj
+    material radio-front
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00175.obj
+    material radio-handle-chrome
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00176.obj
+    material radio-handle-joint
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00177.obj
+    material radio-inner
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00178.obj
+    material radio-knob
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00179.obj
+    material radio-shell
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00180.obj
+    material radio-trim
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00181.obj
+    material radio-trim
+}
+
+#light
+#{
+#	position    -0.7168200016 2.79450798 0.4751270115 
+#	v1    -1.360386968 2.79450798 0.8171179891
+#	v2       -0.7168200016 1.135882974 0.4751270115 
+#
+#	emission 30 60 5
+#    divlevel 1
+#	type Quad
+#}
+#
+#light
+#{
+#	position 0.6803990006 2.77533102 0.3601959944 
+#	v1        -0.2441789955 2.77533102 0.3601959944 
+#	v2           0.6803990006 1.15241003 0.3601959944
+#
+#    divlevel 1
+#	emission 60 5 30
+#	type Quad
+#}
+#
+#light
+#{
+#	position 1.790151 2.79450798 0.8162369728
+#	v1       1.148112059 2.79450798 0.4713850021  
+#	v2       1.790151 1.135882974 0.8162360191 
+#	
+#    divlevel 1
+#	emission 5 30 60
+#	type Quad
+#}
+
+
+material tv
+{
+    color 0.043973 0.043973 0.043973
+    roughness 0.010408
+}
+
+mesh
+{
+    file white-room/geometry/mesh_00064.obj
+    material tv
+}
+
+material lightshadeDiffuse
+{
+    albedoTex white-room/textures/Shade-paper.png
+    roughness 0.5
+
+}
+
+material lightshade
+{
+    color 1.0 1.0 1.0
+    specular 0.0
+    metallic 1.0
+    roughness 0.01
+    trans 1.0
+    eta 1.3
+}
+
+mesh
+{
+    #file white-room/geometry/mesh_00036.obj
+    file white-room/geometry/lightMask2.obj
+    material lightshadeDiffuse
+}
+
+mesh
+{
+    file white-room/geometry/lightMask1.obj
+    material lightshade
+}
+
+light
+{
+	position 0.542118 2.638829 2.747193
+	v1       0.542118 2.638829 3.035348  
+	v2       0.214330 2.638829 2.747193 
+    divlevel 1
+	emission 3000 3000 3000
+	type Quad
+}
+
+
+

@@ -8,6 +8,7 @@
 #include<fstream> 
 
 #include"optixPathTracer.h"
+#include"cuda_thrust/device_thrust.h"
 namespace estimation
 { 
     struct estimation_status
@@ -16,8 +17,10 @@ namespace estimation
         int ref_width;
         int ref_height;
         bool estimation_mode;
+        float4* ref_ptr;
         estimation_status(std::string reference_filepath, bool old_version = false);
         float relMse_estimate(thrust::host_vector<float4> accm, const MyParams& params);
+        float MAPE_estimate(thrust::host_vector<float4> accm, const MyParams& params);
     };
     extern estimation_status es;
 }
