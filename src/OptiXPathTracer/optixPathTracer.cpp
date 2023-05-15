@@ -1452,7 +1452,7 @@ int main( int argc, char* argv[] )
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
                     sum_render_time += render_time;
-                    t0 = t1;
+                    t0 = t1; 
 
 
                     displaySubframe(output_buffer, gl_display, window);
@@ -1466,7 +1466,6 @@ int main( int argc, char* argv[] )
                         params.error_heat_visual
                     );
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
-
                     glfwSwapBuffers(window);
 
                     //estimation::es.estimation_mode = false;
@@ -1487,7 +1486,7 @@ int main( int argc, char* argv[] )
                     }
                     else
                     {
-                        printf("frame %d\n", params.subframe_index);
+                        printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
 
                     }
                     render_time_record = sum_render_time.count();
