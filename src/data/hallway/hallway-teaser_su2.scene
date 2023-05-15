@@ -40,7 +40,7 @@ material BrushedAluminium
 {
    color 0.4109392762184143 0.4109392762184143 0.4109392762184143
    roughness 0.18441145716874274
-   metallic 0.0
+   metallic 0.6090909242630005
    albedoTex hallway/textures/aluminum_texture1642.jpg
 }
 
@@ -127,7 +127,7 @@ material Paint-WhiteGloss.002
 {
    color 0.8999999761581421 0.8999999761581421 0.8999999761581421
    roughness 0.03201078325574436
-   metallic 0
+   metallic 0.10122698545455933
 }
 
 material Paint-WhiteMatt
@@ -163,7 +163,7 @@ material Wood
 {
    color 0.800000011920929 0.800000011920929 0.800000011920929
    roughness 0.047439713384299864
-   metallic 0.0
+   metallic 0.14179104566574097
    albedoTex hallway/textures/QUARTERSAWNTEAK.jpg
 }
 
@@ -171,7 +171,7 @@ material WoodFloor
 {
    color 0.800000011920929 0.800000011920929 0.800000011920929
    roughness 0.06430973717942834
-   metallic 0.0
+   metallic 0.34375
    albedoTex hallway/textures/seamless-textures-PARQUET-WOOD-FLOORING-#29b.jpg
 }
 
@@ -320,14 +320,12 @@ material Lens
 	roughness 0.001
 	metallic 1.0
 	trans 1
-	eta 0.9
-      brdf 1
-      albedoTex hallway/textures/pool_normal.png
+	eta 0.8
 }
 
 mesh
 {
-    file hallway\geometry\specular_lens.obj
+    file hallway\geometry\coneGlass.obj
     material Lens
 }
 
@@ -336,47 +334,122 @@ mesh
     file hallway\geometry\lightSurround.obj
     material Black_s
 }
-
-
-#light
-#{
-    #position 0.359477 1.884173 0.863725
-    #v1 0.340389 1.832212 0.863725
-    #v2 0.359472 1.884175 0.808370
-   # divLevel 1
-  #  emission 20000 8000 6000
- #   type Quad
-#}
-
  
 light
 {
-    position 0.395060 1.814159 0.832418
-    v1 0.386358 1.807475 0.832418
-    v2 0.395060 1.814160 0.821445
+#L1
+position 0.523566 0.121751 1.527595
+v1 0.588675 0.121737 1.593061
+v2 0.589031 0.121737 1.462487
     divLevel 1
-    emission 200000 120000 80000
+    emission 400 250 200
     type Quad
 }
 
+ 
+
+ 
+ 
 light
 {
-    position 1.592080 1.720880 -3.366179
-    v1 2.192080 1.720880 -3.366179
-    v2 1.592080 1.720880 -3.966179
+#L2
+	position 0.331064 0.620932 0.986980
+	v1 0.332037 0.620918 1.079305
+	v2 0.423388 0.620918 0.986006
     divLevel 1
-    emission 70 40 30
+    emission 400 200 200
     type Quad
 }
 
+ 
+ 
 light
 {
-    position -0.203254 2.778168 1.078781
-    v1 -0.203254 1.495130 1.078781
-    v2 -0.203254 2.778168 0.278781
+#L3
+
+	position 0.031247 1.099647 0.377195
+	v1 0.032221 1.099633 0.469520
+	v2 0.123572 1.099633 0.376222 
     divLevel 1
-    emission 10.2 9.52 6.42
+    emission 400 200 200
+    type Quad
+}
+light
+{
+#L4
+
+	position 0.582924 0.786458 0.245874
+	v1 0.655811 0.786443 0.319160
+	v2 0.656210 0.786443 0.172987
+ 
+    divLevel 1
+    emission 400 300 200
+    type Quad
+}
+light
+{
+#L5
+
+
+	position 0.799238 0.588541 0.402710
+	v1 0.838860 0.588533 0.442549
+	v2 0.839077 0.588533 0.363089
+    divLevel 1
+    emission 200 300 300
+    type Quad
+}
+light
+{
+#L6
+
+
+	position 0.859434 0.394609 0.177921
+	v1 0.899055 0.394601 0.217759
+	v2 0.899272 0.394601 0.138299
+    divLevel 1
+    emission 400 200 300
     type Quad
 }
 
+ 
+ 
+light
+{
+#L7
+	position 1.643054 0.038167 0.113468
+	v1 1.644028 0.038153 0.205793
+	v2 1.735379 0.038153 0.112494 
+    divLevel 1
+    emission 200 250 230
+    type Quad
+}
+
+ 
+ 
+light
+{
+#L8
+
+	position 2.254792 0.478630 -1.690755
+	v1 2.255766 0.478616 -1.598431
+	v2 2.347117 0.478616 -1.691729
+    divLevel 1
+    emission 200 270 330
+    type Quad
+}
+
+ 
+ 
+ 
+light
+{
+#L9
+
+	position 1.640675 0.038167 -2.123751
+	v1 1.641649 0.038153 -2.031426
+	v2 1.733000 0.038153 -2.124725
+    divLevel 1
+    emission 270 350 350
+    type Quad
+}
 

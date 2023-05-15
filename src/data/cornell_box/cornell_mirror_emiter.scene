@@ -22,16 +22,23 @@ material green
 {
 	color 0.14 0.45 0.091
 }
+
 material Mirror
 {
    color 1 1 1
-   roughness 0.001
+   roughness 0.01
    metallic 1.0
-
 }
+material Mirror_s
+{
+   color 0.5 0.5 0.5
+   roughness 0.01
+   metallic 1.0
+}
+
 material black
 {
-	color 0 0 0
+	color 0.0 0.0 0.0
 }
 
 
@@ -64,6 +71,11 @@ mesh
 {
 	file cornell_box/box_lamp_inside.obj
 	material black
+}
+mesh
+{
+	file cornell_box/box_lamp_inside_m.obj
+	material Mirror
 }
 
 #mesh

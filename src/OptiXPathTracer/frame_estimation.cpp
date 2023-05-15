@@ -92,18 +92,24 @@ namespace estimation
             float valid_pixels = 0;
 
             float minLimit = 0.01;
+            float3 error3 = make_float3(0);
             for (int i = 0; i < ref_width * ref_height; i++)
             {
                 float3 a = make_float3(accm[i]);
                 float3 b = make_float3(reference[i]);
                 if (b.x + b.y + b.z > 0)
                     valid_pixels += 1;
+                else continue;
                 float3 bias = a - b;
                 float3 r_bias = (a - b) / (b + make_float3(minLimit)); 
+                error3 += make_float3(abs(r_bias.x), abs(r_bias.y), abs(r_bias.z));
                 float error = (abs(r_bias.x) + abs(r_bias.y) + abs(r_bias.z)) / 3;
-                error = min(error, 20);
+                ////if (error > 2000) 
+                error = fmin(float(error), 10.0f);
                 mape += error;
             }
+            error3 /= valid_pixels;
+            //printf("no limit mape 3 channels %f %f %f\n", error3.x, error3.y, error3.z);
             return mape / valid_pixels;
         }
     }

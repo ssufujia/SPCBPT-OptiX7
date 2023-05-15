@@ -81,13 +81,12 @@ material Water
       brdf 1
       albedoTex glint_normal.jpg
 }
-material Water2
+material mirror
 {
-	color 1 1 1
+	color 0.5 0.5 1
 	roughness 0.1
 	metallic 1.0
-	trans 1.0
-	eta 1.33333
+ 
 }
 
 mesh
@@ -122,22 +121,12 @@ mesh
 	material LeftWall
 }
 
-#mesh
-#{
-#	file water/ShortBox.obj
-#	material ShortBox
-#}
-
-#mesh
-#{
-#	file water/TallBox.obj
-#	material TallBox
-#}
+ 
 
 mesh
 {
-	file water/test.obj
-	material Water
+	file water/flower.obj
+	material mirror
 }
 
  

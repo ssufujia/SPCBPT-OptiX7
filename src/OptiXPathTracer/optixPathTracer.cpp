@@ -1336,12 +1336,14 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
+        // scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
@@ -1355,11 +1357,10 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/simple_n.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_LSS.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_mirror_emitter.scene");
         
         //scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool2.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/water/LSS.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su.scene");
@@ -1478,7 +1479,7 @@ int main( int argc, char* argv[] )
                         printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
 
                         const float SET_ERROR = 0.04f;
-                        if (error < SET_ERROR) {
+                        if (false&&error < SET_ERROR) {
                             printf("save the data\n");
                             img_save(sum_render_time.count(), params.subframe_index);
                             exit(0);
