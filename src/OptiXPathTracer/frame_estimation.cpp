@@ -109,7 +109,7 @@ namespace estimation
                 mape += error;
             }
             error3 /= valid_pixels;
-            //printf("no limit mape 3 channels %f %f %f\n", error3.x, error3.y, error3.z);
+            printf("no limit mape 3 channels %f %f %f\n", error3.x, error3.y, error3.z);
             return mape / valid_pixels;
         }
     }

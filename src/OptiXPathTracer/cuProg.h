@@ -3713,7 +3713,7 @@ namespace Shift
                 printf("spliting stack error: push invalid sign");
             }
         }
-        RT_FUNCTION bool empty() { return positive_stack == 0 && negative_stack == 0; }
+        RT_FUNCTION bool empty() { return positive_stack <= 0 && negative_stack <= 0; }
         RT_FUNCTION int pop()
         {
             if (positive_stack > 0)
