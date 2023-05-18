@@ -9,7 +9,7 @@ cameraSetting
 	#eye 2.653059 0.733602 1.036655
 	#lookat 2.555092 0.751108 1.026866
 	fov 45
- 
+ 	geo_normal 1
 
 }
  

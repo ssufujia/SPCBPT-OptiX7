@@ -155,8 +155,9 @@ extern "C" __global__ void __raygen__pinhole()
             &payload
         );
 
+        payload.depth += 1;
 
-        if (float3weight(payload.currentResult)> 0.0)
+        if (float3weight(payload.currentResult)> 0.0 && payload.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
         {
             const float  L_dist = length(payload.vis_pos_A- payload.vis_pos_B);
             const float3 L = (payload.vis_pos_B - payload.vis_pos_A) / L_dist;
@@ -164,11 +165,11 @@ extern "C" __global__ void __raygen__pinhole()
                 payload.result += payload.currentResult; 
             payload.currentResult = make_float3(0);
         }
-        if (payload.done || payload.depth > 30) {
+        if (payload.done || payload.depth + 1 >= MAX_PATH_LENGTH_FOR_MIS) {
             //printf("%d\n", payload.depth);
             break;
         }
-        payload.depth += 1;
+        
     }
 
     /* Update results */
@@ -248,7 +249,6 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
     float3 LB_DIR = normalize(LB); 
 
     float3 fa, fb;
-    float3 ADcolor;
     MaterialData::Pbr mat_a = VERTEX_MAT(a);
     fa = Tracer::Eval(mat_a, a.normal, LA_DIR, -connectDir) ;
 
@@ -269,13 +269,12 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
             fb = make_float3(1.0f);
         }
     }
-    float3 temp_vec = a.flux / a.pdf;
-    //printf("connect info %f %f %f\n", temp_vec.x, temp_vec.y, temp_vec.z);
+
     float3 contri = a.flux * b.flux * fa * fb * G;
     float pdf = a.pdf * b.pdf; 
-    //float3 ans = contri / pdf *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
+    //float3 ans = contri / pdf;// *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
     float3 ans = (a.flux / a.pdf) * (b.flux / b.pdf) * fa * fb * G
-        *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
+         *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
 
     if (ISINVALIDVALUE(ans))
     {
@@ -365,10 +364,11 @@ extern "C" __global__ void __raygen__SPCBPT()
         if (payload.path.hit_lightSource())
         {
             float3 res = lightStraghtHit(payload.path.currentVertex());
-            if(payload.depth <= MAX_PATH_LENGTH_FOR_MIS)
+            if(payload.depth < MAX_PATH_LENGTH_FOR_MIS)
                 result += res;
             break;
         }
+        if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
         BDPTVertex& eye_subpath = payload.path.currentVertex();
         //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
         //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
@@ -392,12 +392,12 @@ extern "C" __global__ void __raygen__SPCBPT()
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
 
-            if ((Tracer::visibilityTest(Tracer::params.handle, eye_subpath, light_subpath)))
+            if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, light_subpath))
             { 
                 //printf("debug info %f\n", float3weight(tmp_float3));
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 float3 res = connectVertex_SPCBPT(eye_subpath, light_subpath) / pmf;
-                if (!ISINVALIDVALUE(res)&&eye_subpath.depth<=MAX_PATH_LENGTH_FOR_MIS)
+                if (!ISINVALIDVALUE(res) && eye_subpath.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
                 {
                     result += res / CONNECTION_N;
                 }
@@ -772,7 +772,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
 }
 
 extern "C" __global__ void __raygen__shift_combine()
-{ 
+{
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -801,7 +801,7 @@ extern "C" __global__ void __raygen__shift_combine()
     payload.seed = seed;
     payload.ray_direction = ray_direction;
     payload.origin = ray_origin;
-    /* 视子路初始化 */  
+    /* 视子路初始化 */
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
     BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
@@ -829,7 +829,7 @@ extern "C" __global__ void __raygen__shift_combine()
             1e16f,  // tmax
             &payload
         );
-        
+
         /* 没打中 */
         if (payload.path.size == begin_depth)
             break;
@@ -838,7 +838,7 @@ extern "C" __global__ void __raygen__shift_combine()
         payload.path_record = (payload.path_record) |
             ((long long)Shift::glossy(payload.path.currentVertex()) << payload.depth);
         if (buffer_size < MAX_PATH_LENGTH_FOR_MIS)
-        { 
+        {
             pathBuffer[buffer_size++] = payload.path.currentVertex();
             if (buffer_size > 2 && Shift::vertex_very_close(pathBuffer[buffer_size - 1], pathBuffer[buffer_size - 2]))
             {
@@ -853,59 +853,60 @@ extern "C" __global__ void __raygen__shift_combine()
         if (payload.path.hit_lightSource())
         {
             if (dropOut_tracing::debug_PT_ONLY)
-            {   
-                Tracer::lightSample light_sample;
-                light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
-
-                BDPTVertex light_vertex;
-                init_vertex_from_lightSample(light_sample, light_vertex);
-                pathBuffer[buffer_size - 1] = light_vertex; 
-                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
-                {
-                    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
-                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
-                    res = contri / pdf * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
-                } 
-            } 
-            else
-            { 
+            {
                 Tracer::lightSample light_sample;
                 light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
 
                 BDPTVertex light_vertex;
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
-                 
-                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC)&&!Tracer::params.spcbpt_pure)
+                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
+                {
+                    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
+                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
+                    res = contri / pdf * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
+                }
+            }
+            else
+            {
+                Tracer::lightSample light_sample;
+                light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
+
+                BDPTVertex light_vertex;
+                init_vertex_from_lightSample(light_sample, light_vertex);
+                pathBuffer[buffer_size - 1] = light_vertex;
+
+                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC) && !Tracer::params.spcbpt_pure)
                 {
                     //float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
                     //float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
                     //res = contri / pdf * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
                     res = lightStraghtHit(payload.path.currentVertex()) * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
+                    //if (Tracer::params.caustic_path_only) res = make_float3(float3weight(res), 0, float3weight(res));
                 }
                 else if (!Tracer::params.caustic_path_only)
-                { 
+                {
                     res = lightStraghtHit(payload.path.currentVertex());
                 }
             }
             if (ISINVALIDVALUE(res))
             {
-                res =  make_float3(0.0f);
+                res = make_float3(0.0f);
             }
             result += res;
             break;
         }
-        
-        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS) 
+
+        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS)
             break;
 
         BDPTVertex& eye_vertex = payload.path.currentVertex();
-          
+
         for (int it = 0; it < CONNECTION_N; it++)
         {
             if (dropOut_tracing::debug_PT_ONLY)continue;
-            /* 暂时取消LSDE这样的光路筛选方式，改用dropoutTracing_common.h里根据四参数的形式来决定是否连接的方式，仅要求视子路为diffuse */ 
- 
+            /* 暂时取消LSDE这样的光路筛选方式，改用dropoutTracing_common.h里根据四参数的形式来决定是否连接的方式，仅要求视子路为diffuse */
+
             dropOut_tracing::pixelRecord& pixel_record =
                 Tracer::params.dot_params.pixel_record[Tracer::params.dot_params.pixel2Id(make_uint2(launch_idx.x, launch_idx.y), make_uint2(launch_dims.x, launch_dims.y))];
 
@@ -927,7 +928,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
             //if (Shift::glossy(light_subpath))continue;
             //if (Shift::glossy(eye_vertex))continue;
-            if ((Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
+            if (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position) && eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
             {
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
 
@@ -937,8 +938,8 @@ extern "C" __global__ void __raygen__shift_combine()
 
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                 bool caustic_flag = false;
-                if (!Tracer::params.spcbpt_pure&& Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
-                    light_subpath.depth + 1 < SHIFT_VALID_SIZE && buffer_size + light_subpath.depth + 1 < MAX_PATH_LENGTH_FOR_MIS)
+                if (!Tracer::params.spcbpt_pure && Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
+                    light_subpath.depth + 1 < SHIFT_VALID_SIZE)
                 {
                     Shift::PathContainer tempPath(const_cast<BDPTVertex*>(&light_subpath), -1, 0);
                     int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, 0, tempPath, originPath);
@@ -949,11 +950,15 @@ extern "C" __global__ void __raygen__shift_combine()
                         caustic_flag = true;
                     }
                 }
-                
+
                 if (!ISINVALIDVALUE(res))
                 {
-                    if(!(Tracer::params.caustic_path_only && caustic_flag == false))
-                        result += res / CONNECTION_N;
+                    if (!(Tracer::params.caustic_path_only && caustic_flag == false))
+                    {
+                        //if (Tracer::params.caustic_path_only && caustic_flag == true)
+                        //    res = make_float3(float3weight(res), 0, float3weight(res));
+                        result += res / CONNECTION_N;    
+                    }
                     if (caustic_eye)
                     {
                         pixel_record.is_valid = true;
@@ -961,14 +966,14 @@ extern "C" __global__ void __raygen__shift_combine()
                         pixel_record.record = float3weight(res);
                     }
                 }
-            } 
+            }
         }
 
 
-         
+
         const int num_specular_conn = dropOut_tracing::specular_connection_N;
         for (int it = 0; it < num_specular_conn; it++)
-        { 
+        {
             if (!Shift::pathRecord_is_causticEyesubpath(payload.path_record, payload.depth))break;
             if (Tracer::params.spcbpt_pure)break;
             float caustic_connection_prob = Tracer::params.dot_params.get_caustic_prob(
@@ -980,8 +985,8 @@ extern "C" __global__ void __raygen__shift_combine()
                 Tracer::params.dot_params.pixel_record[Tracer::params.dot_params.pixel2Id(make_uint2(launch_idx.x, launch_idx.y), make_uint2(launch_dims.x, launch_dims.y))];
 
             float pmf_firstStage = 1;
-            float pmf_secondStage; 
-             
+            float pmf_secondStage;
+
             const BDPTVertex* light_subpath_p;
             if (dropOut_tracing::connection_uniform_sample)
             {
@@ -996,8 +1001,8 @@ extern "C" __global__ void __raygen__shift_combine()
                 light_subpath_p = &light_glossy;
             }
             const BDPTVertex& light_subpath = *light_subpath_p;
-             
-             
+
+
 
             float final_pmf = (pmf_firstStage * pmf_secondStage);
             //float final_pmf = pmf_secondStage ;
@@ -1008,8 +1013,8 @@ extern "C" __global__ void __raygen__shift_combine()
             pixel_record.eyeId = eye_vertex.subspaceId;
             pixel_record.specularId = abs(light_subpath.get_specular_id());
 
-            if ( 
-                (buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS) &&
+            if (
+                (eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS) &&
                 (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
             {
                 const BDPTVertex* light_ptr = &light_subpath;
@@ -1036,13 +1041,14 @@ extern "C" __global__ void __raygen__shift_combine()
                     float pdf = eye_vertex.pdf * retracing_pdf * CP.pdf;
 
                     float3 contri = Tracer::contriCompute(pathBuffer, path_size);
-                    float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst; 
+                    float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
 
-                    pixel_record.record = float3weight(res) ;
+                    pixel_record.record = float3weight(res);
                     res *= dropOutTracing_MISWeight(pathBuffer, path_size);
 
                     if (!ISINVALIDVALUE(res))
                     {
+                        //if (Tracer::params.caustic_path_only) res = make_float3(0, float3weight(res), float3weight(res));
                         result += res / num_specular_conn;
                     }
                     else
@@ -1052,7 +1058,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 }
             }
         }
-        
+
 
         if (eye_vertex.depth == 1 && Tracer::params.eye_subspace_visualize || Tracer::params.light_subspace_visualize || Tracer::params.specular_subspace_visualize
             || Tracer::params.caustic_prob_visualize || Tracer::params.PG_grid_visualize)
@@ -1075,7 +1081,7 @@ extern "C" __global__ void __raygen__shift_combine()
             }
             result = make_float3(rnd(vis_id), rnd(vis_id), rnd(vis_id));
             if (Tracer::params.caustic_prob_visualize)
-            { 
+            {
                 float caustic_connection_prob = Tracer::params.dot_params.get_caustic_prob(
                     make_uint2(launch_idx.x, launch_idx.y), make_uint2(launch_dims.x, launch_dims.y));
                 result = make_float3(caustic_connection_prob);
@@ -1099,7 +1105,7 @@ extern "C" __global__ void __raygen__shift_combine()
         {
             accum_color = accum_color_prev;
         }
-    }  
+    }
     if (accum_color.x < 0 || accum_color.y < 0 || accum_color.z < 0)
     {
         accum_color = make_float3(0);
@@ -1115,9 +1121,15 @@ extern "C" __global__ void __raygen__shift_combine()
     if (Tracer::params.error_heat_visual && Tracer::params.estimate_pr.ready &&
         Tracer::params.estimate_pr.height == launch_dims.y && Tracer::params.estimate_pr.width == launch_dims.x)
     {
-        float4 ref = Tracer::params.estimate_pr.ref_buffer[image_index]; 
+        float4 ref = Tracer::params.estimate_pr.ref_buffer[image_index];
         Tracer::params.frame_buffer[image_index] = get_error_heat(ref, accum_color);
     }
+
+    //if (Tracer::params.caustic_path_only)
+    //{
+    //    float diff = accum_color.y / accum_color.z * 290;
+    //    Tracer::params.frame_buffer[image_index] = make_color(hsv2rgb(((-int(diff) + 240) % 360), 1.0, 1.0));
+    //}
 }
 
 #define CheckLightBufferState if(!(lightVertexCount<lt_params.core_padding)) break; 

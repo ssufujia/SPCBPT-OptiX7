@@ -1,0 +1,410 @@
+cameraSetting
+{
+	eye 7.492245 3.657255 -1.611869
+      lookat 7.400266 3.650079 -1.573288
+	up 0 1 0
+	fov 50
+}
+ 
+material  mesh0_SG
+{
+    color 0.639216 0.600000 0.607843
+    roughness 0.3
+}
+material  mesh1_SG
+{
+    color 0.639216 0.400000 0.129412
+    roughness 0.3
+}
+material  mesh2_SG
+{
+    color 0.737255 0.400000 0.156863
+    roughness 0.3
+}
+material  mesh4_SG
+{
+    color 0.176471 0.058824 0.058824
+    roughness 0.1
+    metallic 0.4
+}
+material  mesh5_SG
+{
+    color 0.898039 0.898039 0.898039
+    roughness 0.3
+}
+material  mesh6_SG
+{
+    color 0.066667 0.066667 0.066667
+    roughness 0.3
+}
+material  mesh7_SG
+{
+    color 0.698039 0.698039 0.698039
+    roughness 0.3
+}
+material  mesh8_SG
+{
+    color 0.686275 0.427451 0.168627
+    roughness 0.3
+}
+material  mesh9_SG
+{
+    color 0.709804 0.709804 0.709804
+    roughness 0.0
+    metallic 1.0
+}
+material  mesh10_SG
+{
+    color 0.600000 0.600000 0.600000
+    roughness 0.3
+}
+material  mesh11_SG
+{
+    color 0.117647 0.258824 0.149020
+    roughness 0.3
+}
+material  mesh12_SG
+{
+    color 0.427451 0.427451 0.427451
+    roughness 0.3
+}
+material  mesh13_SG
+{
+    color 0.517647 0.447059 0.337255
+    roughness 0.3
+}
+material  mesh15_SG
+{
+    color 0.447059 0.447059 0.447059
+    roughness 0.3
+}
+material  mesh16_SG
+{
+    color 1.000000 1.000000 1.000000
+    roughness 0.04
+    metallic 0.2
+}
+material  mesh17_SG
+{
+    color 0.498039 0.498039 0.498039
+    roughness 0.3
+}
+material  mesh18_SG
+{
+    color 0.400000 0.400000 0.400000
+    roughness 0.3
+}
+material  mesh19_SG
+{
+    color 0.878431 0.717647 0.576471
+    roughness 0.3
+}
+material  mesh20_SG
+{
+    color 0.827451 0.698039 0.427451
+    roughness 0.3
+}
+material  mesh21_SG
+{
+    color 0.286275 0.149020 0.129412
+    roughness 0.8
+    metallic 0.9
+}
+material  mesh22_SG
+{
+    color 0.078431 0.078431 0.078431
+    roughness 0.3
+}
+material  mesh23_SG
+{
+    color 0.819608 0.086275 0.066667
+    roughness 0.3
+}
+material  mesh24_SG
+{
+    color 0.698039 0.698039 0.698039
+    roughness 0.3
+}
+material  mesh25_SG
+{
+    color 0.600000 0.600000 0.600000
+    roughness 0.3
+}
+material  mesh28_SG
+{
+    color 0.639216 0.439216 0.317647
+    roughness 0.3
+}
+material  mesh29_SG
+{
+    color 1 1 1
+    roughness 0.5
+    metallic 0.0
+}
+material  mesh30_SG
+{
+    color 0.058824 0.058824 0.058824
+    roughness 0.3
+}
+material  mesh31_SG
+{
+    color 0.976471 0.176471 0.168627
+    roughness 0.3
+}
+material  mesh32_SG
+{
+    color 0.600000 0.600000 0.600000
+    roughness 0.3
+    metallic 1.0
+}
+material  mesh33_SG
+{
+    color 0.478431 0.239216 0.117647
+    roughness 0.3
+}
+material  mesh34_SG
+{
+    color 0.047059 0.047059 0.047059
+    roughness 0.3
+}
+material  mesh35_SG
+{
+    color 0.600000 0.600000 0.600000
+    roughness 0.3
+}
+material  mesh26_SG
+{
+    color 0.098039 0.098039 0.098039
+    roughness 0.3
+}
+material  Material__0
+{
+    color 0.047059 0.047059 0.047059
+    roughness 0.3
+}
+material  mesh27_SG
+{
+    color 0.466667 0.447059 0.427451
+    roughness 0.3
+}
+mesh
+{
+    file conference\geometry\conference.obj
+    material mesh27_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.001.obj
+    material mesh0_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.002.obj
+    material mesh1_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.003_refine.obj
+    material mesh2_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.004.obj
+    material mesh4_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.005.obj
+    material mesh5_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.006.obj
+    material mesh6_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.007.obj
+    material mesh7_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.008.obj
+    material mesh8_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.009.obj
+    material mesh9_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.010.obj
+    material mesh10_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.011.obj
+    material mesh11_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.012.obj
+    material mesh12_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.013.obj
+    material mesh13_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.014.obj
+    material mesh15_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.015.obj
+    material mesh16_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.016.obj
+    material mesh17_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.017.obj
+    material mesh18_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.018.obj
+    material mesh19_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.019.obj
+    material mesh20_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.020.obj
+    material mesh21_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.021.obj
+    material mesh22_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.022.obj
+    material mesh23_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.023.obj
+    material mesh24_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.024.obj
+    material mesh25_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.025.obj
+    material mesh28_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.026.obj
+    material mesh29_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.027.obj
+    material mesh30_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.028.obj
+    material mesh31_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.029.obj
+    material mesh32_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.030.obj
+    material mesh33_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.031.obj
+    material mesh34_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.032.obj
+    material mesh35_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.033.obj
+    material mesh26_SG
+}
+
+mesh
+{
+    file conference\geometry\conference.034.obj
+    material Material__0
+}
+
+light 
+{
+    position -4.226725 -0.015724 6.053609
+    v1 -4.226725 5.038054 6.053610
+    v2 -2.217794 -0.015723 6.126043
+    divLevel 10
+
+    emission 500 500 500
+    type Quad
+}
+

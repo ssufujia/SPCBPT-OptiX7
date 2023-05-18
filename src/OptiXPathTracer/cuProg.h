@@ -816,7 +816,9 @@ namespace Tracer {
                 // 对四边形进行采样，已经经过验证
                 position = light.quad.u * r1 + light.quad.v * r2 + light.quad.corner * r3;
                 emission = light.quad.emission;
-                //emission *= make_float3(tex2D<float4>(1, uv_.x, uv_.y));
+                //printf("albedo tex %d\n",light.albedoID);
+                if(light.albedoID!=0)
+                    emission *= make_float3(tex2D<float4>(light.albedoID, uv_.x, uv_.y));
                 pdf = 1.0 / light.quad.area;
                 pdf /= params.lights.count;
                 uv = make_float2(r1, r2);
@@ -1166,7 +1168,8 @@ namespace Tracer
             return make_float3(0);// return Eval_Transmit(mat, normal, V, L); 
         if (mat.trans > 0.9 && (gNDotL * gNDotV * NDotL * NDotV <= 0))return make_float3(0.0);
         if (NDotL * NDotV <= 0)return Eval_Transmit(mat, normal, V, L);
-        //return make_float3(0);
+        if (mat.metallic + mat.base_color.x + mat.base_color.y + mat.base_color.z <= 0)return make_float3(0);
+        
 
         if (NDotL < 0.0f && NDotV < 0.0f)
         {
@@ -3883,7 +3886,8 @@ namespace Shift
     RT_FUNCTION bool vertex_very_close(const BDPTVertex& a, const BDPTVertex& b)
     {
         float3 diff = a.position - b.position;  
-        if (dot(diff, diff) < DOT_VERY_CLOSE_DISTANCE2) return true;
+        //if (dot(diff, diff) < DOT_VERY_CLOSE_DISTANCE2 || (a.depth > 0 && Tracer::params.materials[a.materialId].roughness < 0.01)) return true;
+        if (dot(diff, diff) < DOT_VERY_CLOSE_DISTANCE2 ) return true;
         return false;
     }
 

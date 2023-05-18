@@ -25,6 +25,7 @@ struct LightParameter
 	LightType lightType;
 	float area;
 	float radius;
+	int albedoID;
 	int divBase;
 	int divLevel;
 	int id;

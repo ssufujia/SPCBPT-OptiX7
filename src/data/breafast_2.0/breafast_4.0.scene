@@ -11,7 +11,8 @@ light
 
     	v1  1.144429 1.839052 0.968751
  	v2  0.842778 2.140703 0.968751
-	emission 3000 3000 8000
+	emission 2540 7640 10820
+
 	type Quad
 }
 
@@ -22,7 +23,7 @@ light
 
     	v1  -2.091429 1.839052 0.968751
  	v2  -2.393080 2.140703 0.968751
-	emission 8000 3000 3000
+	emission 10820 7640 5540
 	type Quad
 }
 
@@ -32,13 +33,13 @@ material Mirror
 	color 1.0 1.0 1.0
 	roughness 0.001
 	metallic 1.0
-      brdf 1
-      albedoTex pool_normal.png
+
+ 	albedoTex breafast_2.0/textures/color.png
 }
 material  breakfast_room:Artwork
 {
     color 0.00 0.00 0.00
-    roughness 0.99
+    roughness 0.3
     albedoTex breafast_2.0/textures/picture3.jpg
 }
 material  breakfast_room:Black_Rubber
@@ -60,17 +61,18 @@ material  breakfast_room:Chrome
 {
     color 0.00 0.00 0.00
     roughness 0.1
+    metallic 1.0
 }
 material  breakfast_room:Floor_Tiles
 {
     color 0.00 0.00 0.00
-    roughness 0.7
-    albedoTex breafast_2.0/textures/tiles.png
+    roughness 0.1
+    albedoTex breafast_2.0/textures/tiles_red.png
 }
 material  breakfast_room:Frosted_Glass
 {
     color 0.90 0.08 0.01
-    roughness 0.8
+    roughness 0.1
 }
 material  breakfast_room:Gold_Paint
 {
@@ -95,22 +97,22 @@ material  breakfast_room:Paint___Black_Satin
 material  breakfast_room:Paint___White_Gloss
 {
     color 0.8 0.8 0.8
-    roughness 0.95
+    roughness 0.1
 }
 material  breakfast_room:Paint___White_Matt
 {
     color 0.90 0.90 0.90
-    roughness 0.99
+    roughness 0.2
 }
 material  breakfast_room:White_Marble
 {
     color 0.70 0.70 0.70
-    roughness 0.9
+    roughness 0.1
 }
 material  breakfast_room:White_Plastic
 {
     color 0.8 0.8 0.8
-    roughness 0.9
+    roughness 0.05
 }
 
 #mesh

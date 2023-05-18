@@ -42,10 +42,53 @@
 
 #define DOT_DEBUG_INFO_ENABLE false
 /* Path Guiding 开关 */
-static const bool PG_ENABLE = false;
+static const bool PG_ENABLE = true;
 const bool SPCBPT_PURE = false;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
+
+#define PG_MORE_TRAINING false
+#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM false
+#define DOT_STOP_LEARNING_LATER false
+#define DOT_LESS_MIS_WEIGHT false
+#define SPCBPT_TERMINATE_EARLY false
+
+
+//#define SCENE_KITCHEN
+//#define SCENE_PROJECTOR
+//#define SCENE_BEDROOM
+#define SCENE_HALLWAY
+//#define SCENE_WATER
+//#define SCENE_BREAKFAST
+
+
+
+
+
+#ifdef SCENE_KITCHEN
+#define CONNECTION_N 3
+#endif // KITCHEN
+
+#ifdef SCENE_PROJECTOR
+#define PG_MORE_TRAINING true
+#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
+#define SPCBPT_TERMINATE_EARLY true
+#endif // 
+
+#ifdef SCENE_BREAKFAST
+#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
+#endif // DEBUG
+
+#ifdef  SCENE_WATER
+#define DOT_STOP_LEARNING_LATER true
+#define DOT_LESS_MIS_WEIGHT true
+#endif //  WATER
+
+#ifdef SCENE_HALLWAY
+#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true 
+#endif // SCENE_HALLWAY
+
+
 
 #include"whitted.h"
 #include"BDPTVertex.h"

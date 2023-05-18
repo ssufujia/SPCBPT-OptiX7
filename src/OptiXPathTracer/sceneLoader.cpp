@@ -137,6 +137,7 @@ Scene* LoadScene(const char* filename)
 			float3 v1, v2;
 			char light_type[20] = "None";
 			int lightDivLevel = 1;
+			char tex_name[kMaxLineLength] = "None";
 			while (fgets(line, kMaxLineLength, file))
 			{
 				// end group
@@ -159,6 +160,7 @@ Scene* LoadScene(const char* filename)
 				sscanf(line, " v2 %f %f %f", &v2.x, &v2.y, &v2.z);
 				sscanf(line, " type %s", light_type);
 				sscanf(line, " divLevel %d", &lightDivLevel);
+				sscanf(line, " albedoTex %s", &tex_name);
 			}
 			light.divLevel = lightDivLevel;
 			if (strcmp(light_type, "Quad") == 0)
@@ -194,6 +196,18 @@ Scene* LoadScene(const char* filename)
 			//auto local_lights = breakLight(light, lightDivLevel);
 			//scene->lights.insert(scene->lights.end(), local_lights.begin(), local_lights.end());
 			//printf("insert lights %d\n", local_lights.size());
+			light.albedoID = 0;
+			if (texture_ids.find(tex_name) != texture_ids.end()) // Found Texture
+			{
+				light.albedoID = texture_ids[tex_name];
+			}
+			else if (strcmp(tex_name, "None") != 0)
+			{
+				tex_id++;
+				texture_ids[tex_name] = tex_id;
+				scene->texture_map[tex_id - 1] = tex_name;
+				light.albedoID = tex_id;
+			}
 			scene->lights.push_back(light);
 		}
 

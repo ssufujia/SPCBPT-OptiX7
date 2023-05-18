@@ -30,9 +30,9 @@ sutil::Aabb get_aabb(std::vector<float> v)
 } 
 static std::map<int, int> materialID_remap;
 static std::map<int, int> lightsourceID_remap;
+static std::map<int, int> sampler_remap;
 void Material_shift(Scene& Src, sutil::Scene& Dst)
 {
-    std::map<int, int> sampler_remap;
     for (int i = 0; i < Src.texture_map.size(); i++)
     {
 
@@ -154,8 +154,10 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
         {
             continue;
         }
-//        light.type = SL.lightType == LightType::DIRECTION? Light::Type::DIRECTIONAL
+//        light.type = SL.lightType == LightType::DIRECTION? Light::Type::DIRECTIONAL 
+        printf("light source albedo tex load %d %d\n", i, sampler_remap[SL.albedoID]);
         light.id = lights.size();
+        light.albedoID = sampler_remap[SL.albedoID];
         light.ssBase = ssBase;
         light.divLevel = SL.divLevel;
         ssBase += SL.divLevel * SL.divLevel;
@@ -248,9 +250,10 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
 
             }
             /* ********************************** */
-            //a.normals.push_back(HostToDeviceBuffer(
-            //    reinterpret_cast<float3*>(c_mesh.normals.data()),
-            //    num_points,3));
+            if(!Src.use_geometry_normal)
+                a.normals.push_back(HostToDeviceBuffer(
+                reinterpret_cast<float3*>(c_mesh.normals.data()),
+                num_points,3));
             /* ********************************** */
             a.normals.push_back(BufferView<float3>());
             a.material_idx.push_back(materialID_remap[k]);

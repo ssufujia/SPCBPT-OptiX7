@@ -27,12 +27,12 @@ namespace dropOut_tracing
     //true  true  true  false false = LSDE  enable
     //true  false true  false true  = LDSDE enable
     //true  false false true  true  = L(A)*DSDE enable 
-    const int max_bound = 100;
+    const int max_bound = 10000;
     const int max_loop = 1000;
-    const float light_subpath_caustic_discard_ratio = 0.95;
+    const float light_subpath_caustic_discard_ratio = DOT_MORE_PROXY_LIGHT_SUBPATH_NUM?0.5:0.95;
     const int reciprocal_iteration = 5;
     const bool connection_uniform_sample = false;
-    const int iteration_stop_learning = 40;
+    const int iteration_stop_learning = DOT_STOP_LEARNING_LATER ? 400 : 40;
     const int specular_connection_N = 1;
 #define DOT_VERY_CLOSE_DISTANCE2 0.04
 #define DOT_EMPTY_SURFACEID 0

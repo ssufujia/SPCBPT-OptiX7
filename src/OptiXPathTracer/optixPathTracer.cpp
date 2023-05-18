@@ -678,10 +678,15 @@ void path_guiding_params_setup(sutil::Scene& scene)
 
     if (PG_SELF_TRAIN)
     {
-        build_iteration_max = 14;
+        build_iteration_max = 12;
         int initial_path = 1000;
         int split_limit = initial_path;
         int target_path = initial_path;
+        if (PG_MORE_TRAINING)
+        {
+            build_iteration_max += 3;
+            split_limit *= 4;
+        }
         PGTrainer_api.init(scene.aabb());
         for (int i = 0; i < build_iteration_max; i++)
         {
@@ -989,7 +994,7 @@ void updateDropOutTracingParams()
         return;
     } 
     train_iter++;
-    bool disable_print = !DOT_DEBUG_INFO_ENABLE;
+    bool disable_print = !DOT_DEBUG_INFO_ENABLE; 
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
     dot_params.data.host_data = statics_data.data();
@@ -1142,7 +1147,7 @@ void updateDropOutTracingParams()
 
     dot_params.selection_const =  (dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
         : lt_params.M_per_core * lt_params.num_core);
-    //dot_params.selection_const *= (1 - dropOut_tracing::light_subpath_caustic_discard_ratio);
+    dot_params.selection_const *= DOT_LESS_MIS_WEIGHT ? (1 - dropOut_tracing::light_subpath_caustic_discard_ratio) : 1;
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
     //system("pause");
 //    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
@@ -1337,11 +1342,27 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
 
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+#ifdef SCENE_PROJECTOR 
+        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");
+#endif 
+#ifdef SCENE_KITCHEN
+        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
+#endif 
+#ifdef SCENE_BEDROOM
+        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
+#endif   
+#ifdef SCENE_HALLWAY
+        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
+#endif   
+#ifdef SCENE_WATER
+        scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
+#endif 
+#ifdef SCENE_BREAKFAST
+        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+#endif      
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
@@ -1365,7 +1386,8 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
@@ -1376,8 +1398,8 @@ int main( int argc, char* argv[] )
         //char scene_path2[] = "D:/optix7PlayGround/OptiX SDK 7.5.0/SDK/data/house/Victorian House Blendswap.gltf";
         //sutil::loadScene(scene_path2, TScene); 
 
-        LightSource_shift(*myScene, params, TScene);
         Scene_shift(*myScene, TScene);
+        LightSource_shift(*myScene, params, TScene);
         
         TScene.finalize();
         
@@ -1399,8 +1421,8 @@ int main( int argc, char* argv[] )
         //pre tracing
         { 
             handleCameraUpdate(params);
-            dropOutTracingParamsSetup(TScene);
             path_guiding_params_setup(TScene);
+            dropOutTracingParamsSetup(TScene);
             preprocessing(TScene);
         }
         

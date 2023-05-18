@@ -3,6 +3,7 @@ cameraSetting
 	eye -0.623726 -6.587055 1.204726 
 	lookat -0.623726 -5.587055 1.204728 
       up 0 0 1
+	geo_normal 1
 }
 light
 {	
