@@ -65,8 +65,6 @@ const bool estimation_save = false;
 
 
 
-
-
 #ifdef SCENE_KITCHEN
 #define CONNECTION_N 3
 #endif // KITCHEN
@@ -89,6 +87,7 @@ const bool estimation_save = false;
 
 #ifdef SCENE_HALLWAY
 #define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true 
+#define MAX_PATH_LENGTH_FOR_MIS 12
 #define DOT_BOUND_LIMIT_LESS true
 #endif // SCENE_HALLWAY
 
