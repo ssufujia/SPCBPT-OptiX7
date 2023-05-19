@@ -3,9 +3,10 @@
 #include<optix.h>
 namespace estimation
 { 
-    estimation_status::estimation_status(std::string reference_filepath, bool old_version)
+    void estimation_status::estimation_update(std::string reference_filepath, bool old_version)
     {
         estimation_mode = false;
+
         printf("loading reference img.....\n");
 //        thrust::host_vector<float4> reference;
         if (reference_filepath == std::string(""))
@@ -104,8 +105,7 @@ namespace estimation
                 float3 r_bias = (a - b) / (b + make_float3(minLimit)); 
                 error3 += make_float3(abs(r_bias.x), abs(r_bias.y), abs(r_bias.z));
                 float error = (abs(r_bias.x) + abs(r_bias.y) + abs(r_bias.z)) / 3;
-                ////if (error > 2000) 
-                error = fmin(float(error), 10.0f);
+                error = min(error, 50);
                 mape += error;
             }
             error3 /= valid_pixels;
@@ -148,5 +148,5 @@ namespace estimation
             return relmse / valid_pixels;
         } 
     }
-    estimation_status es(std::string(""), false); 
+    estimation_status es; 
 }

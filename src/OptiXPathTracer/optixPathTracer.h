@@ -46,6 +46,7 @@ static const bool PG_ENABLE = true;
 const bool SPCBPT_PURE = false;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
+const bool estimation_save = false;
 
 #define PG_MORE_TRAINING false
 #define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM false
