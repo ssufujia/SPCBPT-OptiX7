@@ -42,7 +42,7 @@
 
 #define DOT_DEBUG_INFO_ENABLE false
 /* Path Guiding 开关 */
-static const bool PG_ENABLE = true;
+static const bool PG_ENABLE = false;
 const bool SPCBPT_PURE = false;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
@@ -56,9 +56,9 @@ const bool estimation_save = false;
 
 
 //#define SCENE_KITCHEN
-//#define SCENE_PROJECTOR
+#define SCENE_PROJECTOR
 //#define SCENE_BEDROOM
-#define SCENE_HALLWAY
+//#define SCENE_HALLWAY
 //#define SCENE_WATER
 //#define SCENE_BREAKFAST
 
@@ -72,7 +72,7 @@ const bool estimation_save = false;
 
 #ifdef SCENE_PROJECTOR
 #define PG_MORE_TRAINING true
-#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
+//#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
 #define SPCBPT_TERMINATE_EARLY true
 #endif // 
 

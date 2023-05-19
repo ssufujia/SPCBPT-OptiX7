@@ -150,7 +150,7 @@ extern "C" __global__ void __closesthit__lightsource()
     float3 ray_direction = optixGetWorldRayDirection();
 
     if ( /* 打中的光源法向要求与光线方向相反 */
-        (dot(prd->ray_direction, light_sample.normal()) <= 0) && (true||
+        (dot(prd->ray_direction, light_sample.normal()) <= 0) && (true ||
             /* 光源直击, L - E */
             (LE_ENABLE && prd->depth == 0) || (
                 /* 是否是 S_ONLY */
@@ -162,7 +162,7 @@ extern "C" __global__ void __closesthit__lightsource()
                     /* L - D - S - E */
                     (LDSE_ENABLE && prd->depth == 2 && prd->path_record == 0b01) ||
                     /* L - D - S - + - E */
-                    (LDS_ENABLE && prd->depth > 2 && (prd->path_record & (1ll << (prd->depth - 2))) && !(prd->path_record & (1ll << (prd->depth - 1))) ) ||
+                    (LDS_ENABLE && prd->depth > 2 && (prd->path_record & (1ll << (prd->depth - 2))) && !(prd->path_record & (1ll << (prd->depth - 1)))) ||
                     /* L - D - S - D - E */
                     (LDSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b010) ||
                     /* L - S - * - E */
@@ -172,7 +172,7 @@ extern "C" __global__ void __closesthit__lightsource()
                     /* L - S - D - E */
                     (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) ||
                     /* L - (S)* - S - D - E */
-                    (LS_SDE_ENABLE && prd->depth > 2 &&(prd->path_record == ((1<< prd->depth) - 2))) ||
+                    (LS_SDE_ENABLE && prd->depth > 2 && (prd->path_record == ((1 << prd->depth) - 2))) ||
                     /* L - S - S - D - E */
                     (LSSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b110) ||
                     /* L - S - S - S - D - E */
@@ -200,7 +200,7 @@ extern "C" __global__ void __closesthit__lightsource()
 #endif 
         prd->result += prd->throughput * light_sample.emission * MIS_weight;
     }
-    prd->done = true;
+    prd->done = true; 
     return;
 }
 

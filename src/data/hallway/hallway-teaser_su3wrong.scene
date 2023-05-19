@@ -374,9 +374,14 @@ mesh
     material BlackBird
 }
 
- 
 
- 
+
+#mesh
+#{
+#    file hallway\geometry\lightOcclusion_back.obj
+#    material Black_s
+#}
+
 light
 {
 	position 1.410092 1.268527 0.025598
@@ -417,7 +422,7 @@ light
     v1 2.192080 1.720880 -3.366179
     v2 1.592080 1.720880 -3.966179
     divLevel 1
-    emission 112 64 48
+    emission 28 16 12
     type Quad
 }
 

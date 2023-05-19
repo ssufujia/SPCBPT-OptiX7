@@ -295,13 +295,18 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         Dst.addMesh(mesh_ptr);
         sutil::Scene::MeshGroup& a = *mesh_ptr;
 
-        int num_points = 6;
-        int num_faces = 2;
+        int num_points = 12;
+        int num_faces = 4;
         std::vector<float3> positions;
         positions.push_back(light.quad.corner);
         positions.push_back(light.quad.u);
         positions.push_back(light.quad.v);
         positions.push_back(light.quad.u + light.quad.v - light.quad.corner);
+
+        positions.push_back(light.quad.corner - light.quad.normal * 1e-3f);
+        positions.push_back(light.quad.v - light.quad.normal * 1e-3f);
+        positions.push_back(light.quad.u - light.quad.normal * 1e-3f);
+        positions.push_back(light.quad.u + light.quad.v - light.quad.corner - light.quad.normal * 1e-3f);
         std::vector<unsigned> indices;
         indices.push_back(0);
         indices.push_back(1);
@@ -310,10 +315,21 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         indices.push_back(3);
         indices.push_back(2); 
 
+        indices.push_back(4);
+        indices.push_back(5);
+        indices.push_back(7);
+        indices.push_back(4);
+        indices.push_back(7);
+        indices.push_back(6);
+
         std::vector<Vec2f> texcoords; 
         texcoords.push_back(make_Vec2f(0, 0));
         texcoords.push_back(make_Vec2f(1, 0));
         texcoords.push_back(make_Vec2f(0, 1));
+        texcoords.push_back(make_Vec2f(1, 1));
+        texcoords.push_back(make_Vec2f(0, 0));
+        texcoords.push_back(make_Vec2f(0, 1));
+        texcoords.push_back(make_Vec2f(1, 0));
         texcoords.push_back(make_Vec2f(1, 1));
 
 
@@ -338,6 +354,7 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         //    num_points,3)); 
         a.normals.push_back(BufferView<float3>());
         a.material_idx.push_back(lightsourceID_remap[i]);
+        //a.material_idx.push_back(materialID_remap[0]);
         a.object_aabb = get_aabb(positions);
 
 
