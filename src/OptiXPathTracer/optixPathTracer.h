@@ -53,6 +53,7 @@ const bool estimation_save = false;
 #define DOT_STOP_LEARNING_LATER false
 #define DOT_LESS_MIS_WEIGHT false
 #define SPCBPT_TERMINATE_EARLY false
+#define DOT_BOUND_LIMIT_LESS false
 
 
 //#define SCENE_KITCHEN
@@ -74,6 +75,7 @@ const bool estimation_save = false;
 #define PG_MORE_TRAINING true
 //#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
 #define SPCBPT_TERMINATE_EARLY true
+#define DOT_BOUND_LIMIT_LESS true
 #endif // 
 
 #ifdef SCENE_BREAKFAST
@@ -87,6 +89,7 @@ const bool estimation_save = false;
 
 #ifdef SCENE_HALLWAY
 #define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true 
+#define DOT_BOUND_LIMIT_LESS true
 #endif // SCENE_HALLWAY
 
 
