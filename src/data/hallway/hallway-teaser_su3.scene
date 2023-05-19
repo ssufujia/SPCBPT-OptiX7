@@ -411,6 +411,14 @@ light
     type Quad
 }
 
+mesh
+{
+    file hallway\geometry\lightOcclusion_back.obj
+    material Black_s
+}
+
+ 
+
 light
 {
     position 1.592080 1.720880 -3.366179
