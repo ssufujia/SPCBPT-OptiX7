@@ -575,6 +575,30 @@ void lt_params_setup(const sutil::Scene& scene)
     lt_params.validState = valid_ptr;// BufferView<bool>(valid_ptr, lt_params.get_element_count());
     //params.lt = lt_params; 
 }
+void estimation_setup(const string& path) {
+    string algo = "";
+    switch (render_alg_id)
+    {
+    case 0:algo += "pt"; break;
+    case 1:algo += "dropout"; break;
+    case 2:algo += "spcbpt"; break;
+    default:algo += "error"; break;
+    }
+    string name = path.substr(path.rfind('/') + 1);
+    name = name.substr(0, name.rfind('\.')) ;
+    string outpath = name + "_" + algo + ".txt";
+    cout << "save our estimate to " << outpath << endl;
+    estimation::es.outputFile.open(outpath);
+    estimation::es.outputFile << "{\n"
+        << "name:" << name << endl
+        << "height:" << params.height << endl
+        << "width:" << params.width <<endl
+        <<"algo:"<< algo<<endl
+        << "}"<<endl;
+
+
+    estimation::es.estimation_update("./ref/" + name + ".txt", false);
+}
 
 void preTracer_params_setup(const sutil::Scene& scene)
 {
@@ -1336,11 +1360,11 @@ int main( int argc, char* argv[] )
     try
     {
         string scenePath = " ";
-
+        const float SET_ERROR = -1.0f;
         //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
@@ -1393,6 +1417,7 @@ int main( int argc, char* argv[] )
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
         env_params_setup(TScene);
+        estimation_setup(scenePath);
 
         //render_alg[render_alg_id] = std::string("pt");
         //pre tracing
@@ -1483,6 +1508,9 @@ int main( int argc, char* argv[] )
                             printf("save the data\n");
                             img_save(sum_render_time.count(), params.subframe_index);
                             exit(0);
+                        }
+                        if (estimation_save) {
+                            estimation::es.outputFile << params.subframe_index << " " <<sum_render_time.count() <<" "<< error<< endl;
                         }
                     }
                     else

@@ -46,6 +46,7 @@ static const bool PG_ENABLE = false;
 const bool SPCBPT_PURE = false;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
+const bool estimation_save = true;
 
 #include"whitted.h"
 #include"BDPTVertex.h"
