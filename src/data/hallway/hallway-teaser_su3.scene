@@ -411,11 +411,11 @@ light
     type Quad
 }
 
-mesh
-{
-    file hallway\geometry\lightOcclusion_back.obj
-    material Black_s
-}
+#mesh
+#{
+#    file hallway\geometry\lightOcclusion_back.obj
+#    material Black_s
+#}
 
  
 
