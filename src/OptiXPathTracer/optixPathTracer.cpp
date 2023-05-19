@@ -639,6 +639,7 @@ void launchLightTrace(sutil::Scene& scene)
 }
 void launchLVCTrace(sutil::Scene& scene)
 { 
+    if (!SPCBPT_PURE && !params.spcbpt_pure) { dot_params.discard_ratio = dot_params.discard_ratio_next; }
     launchLightTrace(scene); 
     auto p_v = thrust::device_pointer_cast(params.lt.ans);
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
@@ -813,6 +814,7 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
 
     dot_params.pixel_dirty = true;
     dot_params.discard_ratio = dropOut_tracing::light_subpath_caustic_discard_ratio;
+    dot_params.discard_ratio_next = dropOut_tracing::light_subpath_caustic_discard_ratio;
     dot_params.specularSubSpaceNumber = dropOut_tracing::default_specularSubSpaceNumber;
     dot_params.surfaceSubSpaceNumber = dropOut_tracing::default_surfaceSubSpaceNumber;
     dot_params.data.on_GPU = false;
@@ -1018,7 +1020,7 @@ void updateDropOutTracingParams()
         return;
     } 
     train_iter++;
-    bool disable_print = !DOT_DEBUG_INFO_ENABLE; 
+    bool disable_print = !DOT_DEBUG_INFO_ENABLE;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
     thrust::host_vector<dropOut_tracing::PGParams> pg_data = MyThrustOp::DOT_PG_data_to_host();
     dot_params.data.host_data = statics_data.data();
@@ -1032,22 +1034,28 @@ void updateDropOutTracingParams()
     //Average Computation
     {  
         // Create temporary vectors to store the counter and data for each subspace 
-        std::vector<std::vector<std::vector<int>>> tempVector_counter(dropOut_tracing::max_u,
+        static std::vector<std::vector<std::vector<int>>> tempVector_counter(dropOut_tracing::max_u,
             std::vector<std::vector<int>>(dot_params.specularSubSpaceNumber,
                 std::vector<int>(dot_params.surfaceSubSpaceNumber, 0)));
-        std::vector<std::vector<std::vector<float>>> tempVector(dropOut_tracing::max_u, 
+        static std::vector<std::vector<std::vector<float>>> tempVector(dropOut_tracing::max_u, 
             std::vector<std::vector<float>>(dot_params.specularSubSpaceNumber,
                 std::vector<float>(dot_params.surfaceSubSpaceNumber, 0)));
 
-
+        static std::vector<std::vector<std::vector<float>>> variance_vector(dropOut_tracing::max_u,
+            std::vector<std::vector<float>>(dot_params.specularSubSpaceNumber,
+                std::vector<float>(dot_params.surfaceSubSpaceNumber, 0)));
         // Iterate through each record compute the summary reciprocal
         for (int i = 0; i < records.size(); i++)
         {
             auto& record = records[i];
             if (record.data_slot == DOT_usage::Average)
             {
-                tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId] += float(record);
-                tempVector_counter[int(record.type)][record.specular_subspaceId][record.surface_subspaceId]++;
+                float& average = tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId];
+                float& variance = variance_vector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId];
+                int& count = tempVector_counter[int(record.type)][record.specular_subspaceId][record.surface_subspaceId];
+                average = lerp(average, float(record), 1.0 / (count + 1));
+                variance = lerp(variance, float(record) * float(record), 1.0 / (count + 1));
+                count++; 
             }
         }
         for(int i = 0;i<dropOut_tracing::max_u;i++)
@@ -1055,18 +1063,14 @@ void updateDropOutTracingParams()
                 for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
                 {
                     auto& statistic_data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k);
-                    if (tempVector_counter[i][j][k] != 0)
-                    {
-                        // Compute Average reciprocal
-                        tempVector[i][j][k] /= tempVector_counter[i][j][k];
-                    }
-
+  
                     if (statistic_data.valid)
                     { 
                         // Linearly interpolate the data in dot_params with the new data from tempVector
-                        statistic_data.average = lerp(statistic_data.average, tempVector[i][j][k], 1.0 / float(dot_params.statistics_iteration_count + 1));
-                        if (statistic_data.valid&&!disable_print)
-                            printf("Average reciprocal PDF for ID S:%d C:%d U:%d is %f\n", j, k, i, statistic_data.average);
+                        statistic_data.average = tempVector[i][j][k];// lerp(statistic_data.average, tempVector[i][j][k], 1.0 / float(dot_params.statistics_iteration_count + 1));
+                        statistic_data.variance = variance_vector[i][j][k];
+                        if (statistic_data.valid && !disable_print)
+                            printf("Average reciprocal PDF for ID S:%d C:%d U:%d is %f , sqrt variance %f\n", j, k, i, statistic_data.average, sqrt(statistic_data.variance));
                     }
                     if (tempVector_counter[i][j][k] != 0)
                     {
@@ -1164,17 +1168,25 @@ void updateDropOutTracingParams()
     ////////////Update the Statstics Data In The Above Data Block//////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
     dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(statics_data);
     dot_params.data.device_PGParams = MyThrustOp::DOT_PG_data_to_device(pg_data);
     dot_params.data.on_GPU = true;
 
 
-    dot_params.selection_const =  (dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
-        : lt_params.M_per_core * lt_params.num_core);
-    dot_params.selection_const *= DOT_LESS_MIS_WEIGHT ? (1 - dropOut_tracing::light_subpath_caustic_discard_ratio) : 1;
+    dot_params.selection_const =  dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
+        : lt_params.M_per_core * lt_params.num_core;
+   // dot_params.selection_const *= DOT_LESS_MIS_WEIGHT ? (1 - dot_params.discard_ratio) : 1;
+    dot_params.selection_const *= (1 - dot_params.discard_ratio);
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
-    //system("pause");
-//    printf("selection_ratio %f %d %d %d\n", dot_params.selection_const, lt_params.M_per_core, lt_params.num_core, params.sampler.glossy_count);
+
+    printf("get %d specular subpath, discard ratio %f\n", params.sampler.glossy_count, dot_params.discard_ratio);
+    static float average_incomplete_ratio = 0;
+    float incomplete_ratio = float(params.sampler.glossy_count + 1) / (1 - dot_params.discard_ratio) / (lt_params.M_per_core * lt_params.num_core);
+    float train_t = 1.0 / train_iter;
+    average_incomplete_ratio = average_incomplete_ratio * (1 - train_t) + incomplete_ratio * train_t;
+    dot_params.discard_ratio_next = clamp(1 - dropOut_tracing::target_num_incomplete_subpath / (average_incomplete_ratio * lt_params.M_per_core * lt_params.num_core), 0.0, 0.99);
 }
 
 void preprocessing(sutil::Scene& scene)

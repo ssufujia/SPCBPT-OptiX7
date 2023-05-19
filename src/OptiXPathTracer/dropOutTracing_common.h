@@ -30,6 +30,7 @@ namespace dropOut_tracing
     const int max_bound = DOT_BOUND_LIMIT_LESS? 10000:100;
     const int max_loop = 1000;
     const float light_subpath_caustic_discard_ratio = DOT_MORE_PROXY_LIGHT_SUBPATH_NUM?0.5:0.95;
+    const int target_num_incomplete_subpath = 400;
     const int reciprocal_iteration = 5;
     const bool connection_uniform_sample = false;
     const int iteration_stop_learning = DOT_STOP_LEARNING_LATER ? 400 : 40;
@@ -174,6 +175,7 @@ namespace dropOut_tracing
         int statistics_iteration_count;
         float selection_const; 
         float discard_ratio;
+        float discard_ratio_next;
         bool pixel_dirty; 
 
         statistics_data data; 
@@ -235,7 +237,7 @@ namespace dropOut_tracing
             float weight = CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id];
             if (specular_id >= 1)
                 weight -= CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id - 1];
-            return weight / specular_Q[specular_id] * selection_const * (1 - discard_ratio);
+            return weight / specular_Q[specular_id] * selection_const;
         }
         __host__ void image_resize()
         {

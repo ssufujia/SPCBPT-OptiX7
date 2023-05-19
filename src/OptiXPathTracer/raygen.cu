@@ -546,9 +546,15 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
             } 
         }
     }
-
-    float dropOutTracingPdf = dot_params.statistics_iteration_count == 0 ? 0.0 :
-        1.0 / dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace, DOT_usage::Average);
+    float dropOutTracingPdf = 0;
+    if (dot_params.statistics_iteration_count != 0)
+    {
+        dropOut_tracing::statistics_data_struct& dot_statistic_data =
+            dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace);
+        dropOutTracingPdf = 1.0 / dot_statistic_data.average;
+        dropOutTracingPdf = dot_statistic_data.average / dot_statistic_data.variance; 
+    }
+     
     if (isinf(dropOutTracingPdf) || isnan(dropOutTracingPdf) || (dropOutTracingPdf < 0))dropOutTracingPdf = 0.0;
 
     //printf("%f %f %f\n", pdf, dropOutTracingPdf, dot_params.selection_ratio(dropOut_tracing::pathLengthToDropOutType(u), specular_index, surface_index));
@@ -569,11 +575,8 @@ RT_FUNCTION float dropOutTracing_MISWeight(const BDPTVertex* path, int path_size
     float SPCBPT_pdf = Tracer::SPCBPT_MIS_sum_compute(path, path_size);
     float other_pdf = SPCBPT_pdf;
     float MIS_weight_not_normalize = dropOutTracing_MISWeight_non_normalize(path, path_size);
-    float MIS_weight_dominator = other_pdf + MIS_weight_not_normalize;
-    //printf("%f %f %f\n", upt_pdf, MIS_weight_not_normalize, MIS_weight_not_normalize / MIS_weight_dominator);
-    return MIS_weight_not_normalize / MIS_weight_dominator;
-    //}
-    //return 0;    
+    float MIS_weight_dominator = other_pdf + MIS_weight_not_normalize; 
+    return MIS_weight_not_normalize / MIS_weight_dominator; 
 } 
 RT_FUNCTION float3 eval_path(const BDPTVertex* path, int path_size, int strategy_id)
 {
