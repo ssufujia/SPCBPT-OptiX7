@@ -552,7 +552,12 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
         dropOut_tracing::statistics_data_struct& dot_statistic_data =
             dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace);
         dropOutTracingPdf = 1.0 / dot_statistic_data.average;
-        dropOutTracingPdf = dot_statistic_data.average / dot_statistic_data.variance; 
+        if (DOT_LESS_MIS_WEIGHT)
+        {
+            float dropOutTracingPdf2 = dot_statistic_data.average / dot_statistic_data.variance;
+            dropOutTracingPdf = dropOutTracingPdf2 * 2 < dropOutTracingPdf ? dropOutTracingPdf / 2 : dropOutTracingPdf;
+        }
+            
     }
      
     if (isinf(dropOutTracingPdf) || isnan(dropOutTracingPdf) || (dropOutTracingPdf < 0))dropOutTracingPdf = 0.0;

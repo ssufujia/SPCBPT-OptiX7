@@ -105,7 +105,7 @@ namespace estimation
                 float3 r_bias = (a - b) / (b + make_float3(minLimit)); 
                 error3 += make_float3(abs(r_bias.x), abs(r_bias.y), abs(r_bias.z));
                 float error = (abs(r_bias.x) + abs(r_bias.y) + abs(r_bias.z)) / 3;
-                error = min(error, 50);
+                error = fmin(error, 50.0);
                 mape += error;
             }
             error3 /= valid_pixels;
