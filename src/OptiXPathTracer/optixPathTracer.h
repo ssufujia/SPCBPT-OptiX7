@@ -36,6 +36,7 @@
 #define CONSERVATIVE_RATE 0.2
 #define CONNECTION_N 1
 #define MAX_PATH_LENGTH_FOR_MIS 8
+#define LIMIT_PATH_TERMINATE true
 
 #define DIR_JUDGE 0 
 #define RMIS_FLAG true
@@ -57,16 +58,19 @@ const bool estimation_save = false;
 
 
 //#define SCENE_KITCHEN
-#define SCENE_PROJECTOR
-//#define SCENE_BEDROOM
+//#define SCENE_PROJECTOR
+#define SCENE_BEDROOM
 //#define SCENE_HALLWAY
 //#define SCENE_WATER
 //#define SCENE_BREAKFAST
 
 
+#ifdef SCENE_BEDROOM 
+#define LIMIT_PATH_TERMINATE false
+#endif // KITCHEN
 
 #ifdef SCENE_KITCHEN
-#define CONNECTION_N 3
+#define CONNECTION_N 3 
 #endif // KITCHEN
 
 #ifdef SCENE_PROJECTOR
@@ -78,11 +82,13 @@ const bool estimation_save = false;
 
 #ifdef SCENE_BREAKFAST
 #define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
+#define LIMIT_PATH_TERMINATE false
 #endif // DEBUG
 
 #ifdef  SCENE_WATER
 #define DOT_STOP_LEARNING_LATER true
 #define DOT_LESS_MIS_WEIGHT true
+#define LIMIT_PATH_TERMINATE false
 #endif //  WATER
 
 #ifdef SCENE_HALLWAY

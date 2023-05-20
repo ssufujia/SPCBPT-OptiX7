@@ -100,6 +100,41 @@ __device__ float3 hsv2rgb(int h, float s, float v)
     }
     return make_float3(m) + rgb_;
 }
+
+RT_FUNCTION float3 HeatMap(float e)
+{
+    float r = 0.0f;
+    float g = 0.0f;
+    float b = 0.0f;
+
+    if (e < 0.25f)
+    {
+        r = 0.0f;
+        g = 4.0f * e;
+        b = 1.0f;
+    }
+    else if (e < 0.5f)
+    {
+        r = 0.0f;
+        g = 1.0f;
+        b = 2.0f - 4.0f * e;
+    }
+    else if (e < 0.75f)
+    {
+        r = 4.0f * e - 2.0f;
+        g = 1.0f;
+        b = 0.0f;
+    }
+    else
+    {
+        r = 1.0f;
+        g = 4.0f - 4.0f * e;
+        b = 0.0f;
+    }
+
+    return make_float3(r, g, b);
+}
+
 RT_FUNCTION uchar4 get_error_heat(float4 ref, float3 current)
 {
     float3 bias = make_float3(ref) - current;
@@ -157,7 +192,7 @@ extern "C" __global__ void __raygen__pinhole()
 
         payload.depth += 1;
 
-        if (float3weight(payload.currentResult)> 0.0 && payload.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
+        if (float3weight(payload.currentResult) > 0.0 && (payload.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
         {
             const float  L_dist = length(payload.vis_pos_A- payload.vis_pos_B);
             const float3 L = (payload.vis_pos_B - payload.vis_pos_A) / L_dist;
@@ -165,7 +200,7 @@ extern "C" __global__ void __raygen__pinhole()
                 payload.result += payload.currentResult; 
             payload.currentResult = make_float3(0);
         }
-        if (payload.done || payload.depth + 1 >= MAX_PATH_LENGTH_FOR_MIS) {
+        if (payload.done || (payload.depth + 1 >= MAX_PATH_LENGTH_FOR_MIS && LIMIT_PATH_TERMINATE)) {
             //printf("%d\n", payload.depth);
             break;
         }
@@ -364,7 +399,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         if (payload.path.hit_lightSource())
         {
             float3 res = lightStraghtHit(payload.path.currentVertex());
-            if(payload.depth < MAX_PATH_LENGTH_FOR_MIS)
+            if (payload.depth < MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE)
                 result += res;
             break;
         }
@@ -397,7 +432,8 @@ extern "C" __global__ void __raygen__SPCBPT()
                 //printf("debug info %f\n", float3weight(tmp_float3));
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 float3 res = connectVertex_SPCBPT(eye_subpath, light_subpath) / pmf;
-                if (!ISINVALIDVALUE(res) && eye_subpath.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
+                if (!ISINVALIDVALUE(res) &&
+                    (eye_subpath.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
                 {
                     result += res / CONNECTION_N;
                 }
@@ -936,7 +972,8 @@ extern "C" __global__ void __raygen__shift_combine()
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
             //if (Shift::glossy(light_subpath))continue;
             //if (Shift::glossy(eye_vertex))continue;
-            if (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position) && eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
+            if (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position) &&
+                (eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
             {
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
 
@@ -947,7 +984,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                 bool caustic_flag = false;
                 if (!Tracer::params.spcbpt_pure && Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
-                    light_subpath.depth + 1 < SHIFT_VALID_SIZE)
+                    light_subpath.depth + 1 < SHIFT_VALID_SIZE && eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
                 {
                     Shift::PathContainer tempPath(const_cast<BDPTVertex*>(&light_subpath), -1, 0);
                     int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, 0, tempPath, originPath);
