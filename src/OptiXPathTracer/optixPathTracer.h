@@ -47,7 +47,7 @@ static const bool PG_ENABLE = false;
 const bool SPCBPT_PURE = false;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
-const bool estimation_save = false;
+const bool estimation_save = true;
 
 #define PG_MORE_TRAINING false
 #define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM false
@@ -57,20 +57,21 @@ const bool estimation_save = false;
 #define DOT_BOUND_LIMIT_LESS false
 
 
-//#define SCENE_KITCHEN
-//#define SCENE_PROJECTOR
-#define SCENE_BEDROOM
-//#define SCENE_HALLWAY
-//#define SCENE_WATER
+//#define SCENE_BEDROOM
 //#define SCENE_BREAKFAST
+#define SCENE_PROJECTOR
+//#define SCENE_HALLWAY
+//#define SCENE_KITCHEN
+//#define SCENE_WATER
 
 
 #ifdef SCENE_BEDROOM 
-#define LIMIT_PATH_TERMINATE false
+#define MAX_PATH_LENGTH_FOR_MIS 12 
 #endif // KITCHEN
 
 #ifdef SCENE_KITCHEN
 #define CONNECTION_N 3 
+#define MAX_PATH_LENGTH_FOR_MIS 12
 #endif // KITCHEN
 
 #ifdef SCENE_PROJECTOR

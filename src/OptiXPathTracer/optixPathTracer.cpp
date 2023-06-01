@@ -709,8 +709,8 @@ void path_guiding_params_setup(sutil::Scene& scene)
         int target_path = initial_path;
         if (PG_MORE_TRAINING)
         {
-            build_iteration_max += 3;
-            split_limit *= 4;
+            build_iteration_max += 4;
+            split_limit *= 2;
         }
         PGTrainer_api.init(scene.aabb());
         for (int i = 0; i < build_iteration_max; i++)
@@ -1452,12 +1452,12 @@ int main( int argc, char* argv[] )
         OPTIX_CHECK(optixInit()); // Need to initialize function table
         initCameraState(TScene);
         //initCameraState(*myScene);
+        estimation_setup(scenePath);
         initLaunchParams(TScene);
         dropOutTracingParamsInit();
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
         env_params_setup(TScene);
-        estimation_setup(scenePath);
 
         //render_alg[render_alg_id] = std::string("pt");
         //pre tracing
