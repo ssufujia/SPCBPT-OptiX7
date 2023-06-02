@@ -192,7 +192,7 @@ extern "C" __global__ void __raygen__pinhole()
 
         payload.depth += 1;
 
-        if (float3weight(payload.currentResult) > 0.0 && (payload.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
+        if (float3weight(payload.currentResult) > 0.0)
         {
             const float  L_dist = length(payload.vis_pos_A- payload.vis_pos_B);
             const float3 L = (payload.vis_pos_B - payload.vis_pos_A) / L_dist;
@@ -200,7 +200,7 @@ extern "C" __global__ void __raygen__pinhole()
                 payload.result += payload.currentResult; 
             payload.currentResult = make_float3(0);
         }
-        if (payload.done || (payload.depth + 1 >= MAX_PATH_LENGTH_FOR_MIS && LIMIT_PATH_TERMINATE)) {
+        if (payload.done  ) {
             //printf("%d\n", payload.depth);
             break;
         }
@@ -398,12 +398,10 @@ extern "C" __global__ void __raygen__SPCBPT()
         //}  
         if (payload.path.hit_lightSource())
         {
-            float3 res = lightStraghtHit(payload.path.currentVertex());
-            if (payload.depth < MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE)
-                result += res;
+            float3 res = lightStraghtHit(payload.path.currentVertex()); 
+            result += res;
             break;
-        }
-        if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
+        } 
         BDPTVertex& eye_subpath = payload.path.currentVertex();
         //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
         //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
@@ -432,8 +430,7 @@ extern "C" __global__ void __raygen__SPCBPT()
                 //printf("debug info %f\n", float3weight(tmp_float3));
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 float3 res = connectVertex_SPCBPT(eye_subpath, light_subpath) / pmf;
-                if (!ISINVALIDVALUE(res) &&
-                    (eye_subpath.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
+                if (!ISINVALIDVALUE(res))
                 {
                     result += res / CONNECTION_N;
                 }

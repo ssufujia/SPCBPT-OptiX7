@@ -28,7 +28,7 @@
 #ifndef OPTIXPATHTRACER_H
 #define OPTIXPATHTRACER_H
 
-#define NUM_SUBSPACE 300
+#define NUM_SUBSPACE 1000
 #define NUM_SUBSPACE_LIGHTSOURCE (int(0.2 * NUM_SUBSPACE))
 
 #define RR_MIN_LIMIT
@@ -44,7 +44,7 @@
 #define DOT_DEBUG_INFO_ENABLE false
 /* Path Guiding 开关 */
 static const bool PG_ENABLE = false;
-const bool SPCBPT_PURE = false;
+const bool SPCBPT_PURE = true;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
 const bool estimation_save = true;
@@ -56,47 +56,9 @@ const bool estimation_save = true;
 #define SPCBPT_TERMINATE_EARLY false
 #define DOT_BOUND_LIMIT_LESS false
 
+ 
 
-//#define SCENE_BEDROOM
-//#define SCENE_BREAKFAST
-#define SCENE_PROJECTOR
-//#define SCENE_HALLWAY
-//#define SCENE_KITCHEN
-//#define SCENE_WATER
-
-
-#ifdef SCENE_BEDROOM 
-#define MAX_PATH_LENGTH_FOR_MIS 12 
-#endif // KITCHEN
-
-#ifdef SCENE_KITCHEN
-#define CONNECTION_N 3 
-#define MAX_PATH_LENGTH_FOR_MIS 12
-#endif // KITCHEN
-
-#ifdef SCENE_PROJECTOR
-#define PG_MORE_TRAINING true
-//#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
-#define SPCBPT_TERMINATE_EARLY true
-#define DOT_BOUND_LIMIT_LESS true
-#endif // 
-
-#ifdef SCENE_BREAKFAST
-#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
-#define LIMIT_PATH_TERMINATE false
-#endif // DEBUG
-
-#ifdef  SCENE_WATER
-#define DOT_STOP_LEARNING_LATER true
-#define DOT_LESS_MIS_WEIGHT true
-#define LIMIT_PATH_TERMINATE false
-#endif //  WATER
-
-#ifdef SCENE_HALLWAY
-#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true 
-#define MAX_PATH_LENGTH_FOR_MIS 12
-#define DOT_BOUND_LIMIT_LESS true
-#endif // SCENE_HALLWAY
+ 
 
 
 

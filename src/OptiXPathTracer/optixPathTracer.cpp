@@ -101,7 +101,8 @@ int32_t mouse_button = -1;
 
 int32_t samples_per_launch = 1; 
 
-std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
+std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye") };
+//std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
 int render_alg_id = 1;
 bool one_frame_render_only = false;
 float render_fps = 60;
@@ -355,36 +356,9 @@ void initLaunchParams(const sutil::Scene& scene) {
     }
     
     params.materials = HostToDeviceBuffer(material_vec.data(), material_vec.size());
+     
 
-    // TODO: add light support to sutil::Scene
-    //std::vector<Light> lights(2);
-    //lights[0].type = Light::Type::POINT;
-    //lights[0].point.color = { 1.0f, 1.0f, 0.8f };
-    //lights[0].point.intensity = 5.0f;
-    //lights[0].point.position = scene.aabb().center() + make_float3(loffset);
-    //lights[0].point.falloff = Light::Falloff::QUADRATIC;
-    //lights[1].type = Light::Type::POINT;
-    //lights[1].point.color = { 0.8f, 0.8f, 1.0f };
-    //lights[1].point.intensity = 3.0f;
-    //lights[1].point.position = scene.aabb().center() + make_float3(-loffset, 0.5f * loffset, -0.5f * loffset);
-    //lights[1].point.falloff = Light::Falloff::QUADRATIC;
-
-    //params.lights.count = static_cast<uint32_t>(lights.size());
-    //CUDA_CHECK(cudaMalloc(
-    //    reinterpret_cast<void**>(&params.lights.data),
-    //    lights.size() * sizeof(Light)
-    //));
-    //CUDA_CHECK(cudaMemcpy(
-    //    reinterpret_cast<void*>(params.lights.data),
-    //    lights.data(),
-    //    lights.size() * sizeof(Light),
-    //    cudaMemcpyHostToDevice
-    //));
-
-    params.miss_color = make_float3(0.1f);
-    //params.scene_epsilon = 1e-3f;
-    //params.scene_maximum = 1e16f;
-    //CUDA_CHECK( cudaStreamCreate( &stream ) );
+    params.miss_color = make_float3(0.1f); 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_params), sizeof(MyParams)));
 
     params.handle = scene.traversableHandle();
@@ -562,8 +536,8 @@ void env_params_setup(const sutil::Scene& scene)
 void lt_params_setup(const sutil::Scene& scene)
 {
     lt_params.M_per_core = 10;
-    lt_params.core_padding = 800;
-    lt_params.num_core = 1000;
+    lt_params.core_padding = 80;
+    lt_params.num_core = 10000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
     lt_params.launch_frame = 0;
 
@@ -1199,7 +1173,7 @@ void preprocessing(sutil::Scene& scene)
         current_sample_count += launchPretrace(scene);
     }
 
-    MyThrustOp::sample_reweight();
+    //MyThrustOp::sample_reweight();
     auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 10000);
     auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE, 0);
 
@@ -1377,89 +1351,27 @@ int main( int argc, char* argv[] )
     try
     {
         string scenePath = " ";
-        const float SET_ERROR = -1.0f;
-        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
-
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
-#ifdef SCENE_PROJECTOR 
-        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");
-#endif 
-#ifdef SCENE_KITCHEN
-        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
-#endif 
-#ifdef SCENE_BEDROOM
-        scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-#endif   
-#ifdef SCENE_HALLWAY
-        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
-#endif   
-#ifdef SCENE_WATER
-        scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
-#endif 
-#ifdef SCENE_BREAKFAST
-        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
-#endif      
-
-        //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
-
-        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
-
-         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
-
-
-        // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/simple_n.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_mirror_emitter.scene");
-        
-        //scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool2.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
-        // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
-
-        auto myScene = LoadScene(scenePath.c_str()); 
-        
-        myScene->getMeshData(0);
-        //cout << scenePath << std::endl;
-        
-        sutil::Scene TScene;
-        //char scene_path2[] = "D:/optix7PlayGround/OptiX SDK 7.5.0/SDK/data/house/Victorian House Blendswap.gltf";
-        //sutil::loadScene(scene_path2, TScene); 
-
+        const float SET_ERROR = -1.0f;  
+        scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
+        auto myScene = LoadScene(scenePath.c_str());  
+        myScene->getMeshData(0);  
+        sutil::Scene TScene;  
         Scene_shift(*myScene, TScene);
-        LightSource_shift(*myScene, params, TScene);
-        
+        LightSource_shift(*myScene, params, TScene); 
         TScene.finalize();
-        
-        //initCameraState();
-
+         
         //
         // Set up OptiX state
         // 
         OPTIX_CHECK(optixInit()); // Need to initialize function table
-        initCameraState(TScene);
-        //initCameraState(*myScene);
-        estimation_setup(scenePath);
+        initCameraState(TScene); 
+        //estimation_setup(scenePath);
         initLaunchParams(TScene);
         dropOutTracingParamsInit();
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
         env_params_setup(TScene);
-
-        //render_alg[render_alg_id] = std::string("pt");
+         
         //pre tracing
         { 
             handleCameraUpdate(params);
@@ -1534,7 +1446,7 @@ int main( int argc, char* argv[] )
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
                     glfwSwapBuffers(window);
 
-                    //estimation::es.estimation_mode = false;
+                    estimation::es.estimation_mode = false;
                     if (estimation::es.estimation_mode == true)
                     {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
