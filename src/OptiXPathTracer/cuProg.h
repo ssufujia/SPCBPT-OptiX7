@@ -1675,7 +1675,6 @@ namespace Tracer
 #ifdef RR_MIN_LIMIT
         rr_rate = rr_rate < MIN_RR_RATE ? MIN_RR_RATE : rr_rate;
 #endif
-        // if (rr_rate > 0.5)return 0.5;
         return rr_rate;
     }
     RT_FUNCTION float rrRate(const MaterialData::Pbr& pbr)

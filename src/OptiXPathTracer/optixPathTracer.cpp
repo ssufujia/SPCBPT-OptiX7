@@ -537,7 +537,7 @@ void lt_params_setup(const sutil::Scene& scene)
 {
     lt_params.M_per_core = 10;
     lt_params.core_padding = 80;
-    lt_params.num_core = 10000;
+    lt_params.num_core = 1000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
     lt_params.launch_frame = 0;
 
