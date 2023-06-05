@@ -537,7 +537,7 @@ void lt_params_setup(const sutil::Scene& scene)
 {
     lt_params.M_per_core = 10;
     lt_params.core_padding = 80;
-    lt_params.num_core = 1000;
+    lt_params.num_core = 10000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
     lt_params.launch_frame = 0;
 
@@ -1408,23 +1408,23 @@ int main( int argc, char* argv[] )
                 bool setting_changed = false;
                 do
                 {
-                    auto t0 = std::chrono::steady_clock::now();
                     glfwPollEvents();
 
                     updateState(output_buffer, params);
                     if (setting_changed) { params.subframe_index = 0; }
                     if (params.subframe_index == 0) { sum_render_time = std::chrono::duration<double>(); }
 
-                    auto t1 = std::chrono::steady_clock::now();
-                    state_update_time += t1 - t0;
-                    t0 = t1;
-
+                    auto t0 = std::chrono::steady_clock::now();
                     if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure"))
                     {
                         launchLVCTrace(TScene);
                         updateDropOutTracingParams();
                         updateDropOutTracingCombineWeight();
                     }
+                    auto t1 = std::chrono::steady_clock::now();
+                    state_update_time += t1 - t0;
+                    t0 = t1;
+
                     launchSubframe(output_buffer, TScene);
 
                     t1 = std::chrono::steady_clock::now();

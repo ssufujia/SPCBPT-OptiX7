@@ -303,7 +303,7 @@ namespace MyThrustOp
     {
         SubspaceSampler sampler;
         thrust_dev_bool d_validState(validState, validState + countRange);
-        thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);
+        //thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);
         static thrust_dev_int d_Vsubspace_info(countRange);
         static thrust_host_int h_Vsubspace_info(countRange);
         static thrust_dev_float d_weight(countRange);

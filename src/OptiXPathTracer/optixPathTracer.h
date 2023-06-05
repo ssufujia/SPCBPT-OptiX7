@@ -35,8 +35,8 @@
 #define MIN_RR_RATE 0.3
 #define CONSERVATIVE_RATE 0.2
 #define CONNECTION_N 1
-#define MAX_PATH_LENGTH_FOR_MIS 8
-#define LIMIT_PATH_TERMINATE true
+#define MAX_PATH_LENGTH_FOR_MIS 7
+#define LIMIT_PATH_TERMINATE false
 
 #define DIR_JUDGE 0 
 #define RMIS_FLAG true

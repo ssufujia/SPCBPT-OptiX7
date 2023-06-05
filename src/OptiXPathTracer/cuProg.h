@@ -41,7 +41,7 @@
 #define SCENE_EPSILON 1e-3f
 
 
-#define ISINVALIDVALUE(ans) (ans.x>100000.0f|| isnan(ans.x)||ans.y>100000.0f|| isnan(ans.y)||ans.z>100000.0f|| isnan(ans.z))
+#define ISINVALIDVALUE(ans) (ans.x>1000000.0f|| isnan(ans.x)||ans.y>1000000.0f|| isnan(ans.y)||ans.z>1000000.0f|| isnan(ans.z))
 #define VERTEX_MAT(v) (v.getMat(Tracer::params.materials))
 struct labelUnit
 {
