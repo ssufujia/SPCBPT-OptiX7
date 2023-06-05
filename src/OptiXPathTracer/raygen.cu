@@ -1251,8 +1251,6 @@ extern "C" __global__ void __raygen__lightTrace()
 
                 float e = curVertex.contri_float();
 
-                if (e < 0.00001)
-                    break;
                 /* lightVertexCount 在经过这个函数后会加 1 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias);
                 CheckLightBufferState;
