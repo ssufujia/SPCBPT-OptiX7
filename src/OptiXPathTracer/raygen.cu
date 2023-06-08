@@ -147,8 +147,7 @@ RT_FUNCTION uchar4 get_error_heat(float4 ref, float3 current)
 
 
 extern "C" __global__ void __raygen__pinhole()
-{
-
+{ 
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -389,13 +388,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         }
         payload.depth += 1;
 
-
-        //if (payload.path.size == 2)
-        //{
-        //    BDPTVertex v = payload.path.currentVertex();
-        //    labelUnit lu(v.position, v.normal, normalize(v.lastPosition - v.position), false);
-        //    first_hit_id = lu.getLabel();
-        //}  
+         
         if (payload.path.hit_lightSource())
         {
             float3 res = lightStraghtHit(payload.path.currentVertex());
@@ -404,11 +397,7 @@ extern "C" __global__ void __raygen__SPCBPT()
             break;
         }
         if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
-        BDPTVertex& eye_subpath = payload.path.currentVertex();
-        //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
-        //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
-        //result = make_float3(rnd(PG_id), rnd(PG_id), rnd(PG_id));
-        //break;
+        BDPTVertex& eye_subpath = payload.path.currentVertex(); 
         for (int it = 0; it < CONNECTION_N; it++)
         {
 
@@ -439,11 +428,9 @@ extern "C" __global__ void __raygen__SPCBPT()
                 }
             }
 
-        }
-        //printf("%d size error depth%d\n", Tracer::params.lights.count, payload.path.size);
+        } 
     }
-
-    //env map
+     
     result += payload.result;
 
     //

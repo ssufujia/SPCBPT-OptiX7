@@ -34,13 +34,13 @@ freely, subject to the following restrictions:
 #include "light_parameters.h"
 #include "Picture.h"
 //#include "Texture.h"
-
+#include"cuda/Light.h"
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <stdint.h> 
 #include"tiny_obj_loader.h"  
-
+#include"cuda/MaterialData.h"
 struct Scene
 {
 	std::vector<std::string> mesh_names;
@@ -48,6 +48,9 @@ struct Scene
 	//std::vector<Matrix4x4> transforms;
 	std::vector<MaterialParameter> materials;
 	std::vector<LightParameter> lights;
+	
+	std::vector<Light> optix_lights;
+	std::vector<MaterialData::Pbr> optix_materials;
 	//std::vector<Texture> textures;
 	std::map<int, std::string> texture_map;
 	std::string env_file;

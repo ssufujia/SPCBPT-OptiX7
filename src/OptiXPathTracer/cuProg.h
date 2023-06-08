@@ -817,8 +817,10 @@ namespace Tracer {
                 position = light.quad.u * r1 + light.quad.v * r2 + light.quad.corner * r3;
                 emission = light.quad.emission;
                 //printf("albedo tex %d\n",light.albedoID);
-                if(light.albedoID!=0)
+                if (light.albedoID != 0)
+                { 
                     emission *= make_float3(tex2D<float4>(light.albedoID, uv_.x, uv_.y));
+                }
                 pdf = 1.0 / light.quad.area;
                 pdf /= params.lights.count;
                 uv = make_float2(r1, r2);

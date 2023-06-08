@@ -41,24 +41,8 @@ struct MaterialData
     MaterialData()
     {
         type                       = MaterialData::PBR;
-        pbr.base_color             = { 1.0f, 1.0f, 1.0f, 1.0f };
-        pbr.metallic               = 1.0f;
-        pbr.roughness              = 1.0f;
-        pbr.base_color_tex         = { 0, 0 };
-        pbr.metallic_roughness_tex = { 0, 0 };
-         
-        pbr.subsurface = 0.0f;
-        pbr.specular = 0.5f; 
-        pbr.specularTint = 0.0f;
-        pbr.anisotropic = 0.0f;
-        pbr.sheen = 0.0f;
-        pbr.sheenTint = 0.5f;
-        pbr.clearcoat = 0.0f;
-        pbr.clearcoatGloss = 1.0f;
-        pbr.trans = 0;
-        pbr.eta = 1.5;
-    }
-
+        pbr.initialize();
+    } 
     enum AlphaMode
     {
         ALPHA_MODE_OPAQUE = 0,
@@ -100,9 +84,31 @@ struct MaterialData
         float                clearcoatGloss;
 
         Texture              base_color_tex;
+        Texture              normal_tex;
         Texture              metallic_roughness_tex;
         bool                 brdf = false;
-         
+        void initialize()
+        {
+            base_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+            metallic = 0.0f;
+            roughness = 0.5f;
+            base_color_tex = { 0, 0 };
+            metallic_roughness_tex = { 0, 0 };
+            subsurface = 0.0f;
+            specular = 0.5f;
+            specularTint = 0.0f;
+            anisotropic = 0.0f;
+            sheen = 0.0f;
+            sheenTint = 0.5f;
+            clearcoat = 0.0f;
+            clearcoatGloss = 1.0f;
+            trans = 0;
+            eta = 1.5;
+
+            base_color_tex.tex = 0;
+            normal_tex.tex = 0;
+
+        }
     };
 
     Type                 type            = PBR;

@@ -62,60 +62,61 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         Dst.addSampler(address_s, address_t, filter, image_id); 
         sampler_remap[i + 1] = Dst.SamplerCurrent();
     }
-    for (int i = 0; i < Src.materials.size(); i++)
+    for (int i = 0; i < Src.optix_materials.size(); i++)
     {
-        auto& p = Src.materials[i];
+        printf("AAAAA\n");
+        auto& p = Src.optix_materials[i];
         MaterialData mtl;
+        
         mtl.doubleSided = true;
 
         mtl.alpha_mode = MaterialData::ALPHA_MODE_OPAQUE;
-
-        mtl.pbr.base_color = make_float4(p.color,1.0);
-        mtl.pbr.metallic = p.metallic;
-        mtl.pbr.roughness = p.roughness;
-        mtl.pbr.trans = p.trans;
-        mtl.pbr.eta = p.eta;
-        mtl.pbr.brdf = p.brdf; 
-        if (p.albedoID != 0)
+        mtl.pbr = p;
+        //mtl.pbr.base_color = make_float4(p.color,1.0);
+        mtl.pbr.base_color.w = 1.0;
+        //mtl.pbr.metallic = p.metallic;
+        //mtl.pbr.roughness = p.roughness;
+        //mtl.pbr.trans = p.trans;
+        //mtl.pbr.eta = p.eta;
+        //mtl.pbr.brdf = p.brdf; 
+        if (p.base_color_tex.tex != 0)
         {
-            if (mtl.pbr.brdf == false)
-            { 
-                mtl.pbr.base_color_tex.tex = sampler_remap[p.albedoID];
-                mtl.pbr.base_color_tex.texcoord = 0;
+            mtl.pbr.base_color_tex.tex = sampler_remap[p.base_color_tex.tex];
+            mtl.pbr.base_color_tex.texcoord = 0;
 
-                float2 offset = { 0, 0 };
-                float  rotation = 0;
-                float2 scale = { 1, 1 };
-                mtl.pbr.base_color_tex.texcoord_offset = offset;
-                mtl.pbr.base_color_tex.texcoord_scale = scale;
-                mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
-            }
-            else
-            { 
-                mtl.normal_tex.tex = sampler_remap[p.albedoID];
-                mtl.normal_tex.texcoord = 0;
-
-                float2 offset = { 0, 0 };
-                float  rotation = 0;
-                float2 scale = { 1, 1 };
-                mtl.normal_tex.texcoord_offset = offset;
-                mtl.normal_tex.texcoord_scale = scale;
-                mtl.normal_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
-            }
+            float2 offset = { 0, 0 };
+            float  rotation = 0;
+            float2 scale = { 1, 1 };
+            mtl.pbr.base_color_tex.texcoord_offset = offset;
+            mtl.pbr.base_color_tex.texcoord_scale = scale;
+            mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
         }
-        
+        if (p.normal_tex.tex != 0)
+        {
+            mtl.normal_tex.tex = sampler_remap[p.normal_tex.tex];
+            mtl.normal_tex.texcoord = 0;
+
+            float2 offset = { 0, 0 };
+            float  rotation = 0;
+            float2 scale = { 1, 1 };
+            mtl.normal_tex.texcoord_offset = offset;
+            mtl.normal_tex.texcoord_scale = scale;
+            mtl.normal_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+        }  
         materialID_remap[i] = Dst.MaterialsSize();
+        printf("material remap id %d -> %d\n", i, materialID_remap[i]);
         Dst.addMaterial(mtl);
     }
-    for (int i = 0; i < Src.lights.size(); i++)
+    for (int i = 0; i < Src.optix_lights.size(); i++)
     {
-        auto &light = Src.lights[i];
-        if (light.lightType != LightType::QUAD)
+        auto &light = Src.optix_lights[i];
+        if (light.type != Light::Type::QUAD)
             continue;
         MaterialData mtl;
-        mtl.emissive_factor = Src.lights[i].emission;
+        mtl.emissive_factor = light.quad.emission;
         mtl.light_id = i;
         lightsourceID_remap[i] = Dst.MaterialsSize();
+        printf("lightsource remap id %d -> %d\n", i, lightsourceID_remap[i]);
         Dst.addMaterial(mtl);
 
     }
@@ -127,41 +128,42 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
 { 
     int ssBase = Src.has_envMap() ? 0.5 * NUM_SUBSPACE_LIGHTSOURCE : 0;
 
-    std::vector<Light> lights;
-    for (int i = 0; i < Src.lights.size(); i++)
+    std::vector<Light>& lights = Src.optix_lights;
+    for (int i = 0; i < lights.size(); i++)
     {
-        auto& SL = Src.lights[i];
-        Light light;
-        if (SL.lightType == LightType::DIRECTION)
-        {
-            Dst.addDirectionalLight(SL.direction, SL.emission);
-            continue;
-            light.type = Light::Type::DIRECTIONAL;
-            light.directional.intensity = SL.emission;
-            light.directional.direction = SL.direction;
-        }
-        else if (SL.lightType == LightType::QUAD)
-        {
-            light.type = Light::Type::QUAD;
-            light.quad.emission = SL.emission;
-            light.quad.corner = SL.position;
-            light.quad.u = SL.position + SL.u;
-            light.quad.v = SL.position + SL.v;
-            light.quad.normal = normalize(cross(SL.u, SL.v));
-            light.quad.area = length(cross(SL.u, SL.v));
-        }
-        else
-        {
-            continue;
-        }
-//        light.type = SL.lightType == LightType::DIRECTION? Light::Type::DIRECTIONAL 
-        printf("light source albedo tex load %d %d\n", i, sampler_remap[SL.albedoID]);
-        light.id = lights.size();
-        light.albedoID = sampler_remap[SL.albedoID];
+        //auto& SL = Src.lights[i];
+        Light& light = lights[i]; 
+        //if (SL.lightType == LightType::DIRECTION)
+        //{
+        //    Dst.addDirectionalLight(SL.direction, SL.emission);
+        //    continue;
+        //    light.type = Light::Type::DIRECTIONAL;
+        //    light.directional.intensity = SL.emission;
+        //    light.directional.direction = SL.direction;
+        //}
+        //else if (SL.lightType == LightType::QUAD)
+        //{
+        //    light.type = Light::Type::QUAD;
+        //    light.quad.emission = SL.emission;
+        //    light.quad.corner = SL.position;
+        //    light.quad.u = SL.position + SL.u;
+        //    light.quad.v = SL.position + SL.v;
+        //    light.quad.normal = normalize(cross(SL.u, SL.v));
+        //    light.quad.area = length(cross(SL.u, SL.v));
+        //}
+        //else
+        //{
+        //    continue;
+        //}
+//        light.type = SL.lightType == LightType::DIRECTION? Light::Type::DIRECTIONAL  
+        light.id = i;
+        //light.albedoID = sampler_remap[SL.albedoID];
         light.ssBase = ssBase;
-        light.divLevel = SL.divLevel;
-        ssBase += SL.divLevel * SL.divLevel;
-        lights.push_back(light);
+        ssBase += light.divLevel * light.divLevel; 
+        //printf("light source info %f %f %f\nlight source info u %f %f %f\nlight source info v %f %f %f\n", light.quad.corner.x, light.quad.corner.y, light.quad.corner.z,
+        //    light.quad.u.x, light.quad.u.y, light.quad.u.z,
+        //    light.quad.v.x, light.quad.v.y, light.quad.v.z
+        //    );
     }
     if (Src.has_envMap())
     {
@@ -204,7 +206,6 @@ void Scene_shift(Scene& Src, sutil::Scene& Dst)
 }
 void Geometry_shift(Scene& Src, sutil::Scene& Dst)
 { 
-    //return;
     for (int k = 0; k < Src.mesh_names.size(); k++)
     {
         std::vector<tinyobj::shape_t>       m_shapes;
@@ -275,18 +276,13 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
     //return;
     for (int i = 0; i < Src.lights.size(); i++)
     {
-        auto &SLight = Src.lights[i];
-        if (SLight.lightType != LightType::QUAD)
+        //auto &SLight = Src.lights[i];
+        auto &SLight = Src.optix_lights[i];
+        if (SLight.type != Light::Type::QUAD)
         {
             continue;
         }
-        Light light;
-        light.type = Light::Type::QUAD;
-        light.quad.corner = SLight.position;
-        light.quad.u = SLight.u + SLight.position;
-        light.quad.v = SLight.v + SLight.position;
-        light.quad.emission = SLight.emission;
-        light.quad.normal = normalize(cross(light.quad.u - light.quad.corner, light.quad.v - light.quad.corner));
+        Light light = SLight;  
         
         Dst.addLight(light);
 
@@ -354,6 +350,7 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         //    num_points,3)); 
         a.normals.push_back(BufferView<float3>());
         a.material_idx.push_back(lightsourceID_remap[i]);
+        //printf("light id %d\n",a.material_idx[0]);
         //a.material_idx.push_back(materialID_remap[0]);
         a.object_aabb = get_aabb(positions);
 

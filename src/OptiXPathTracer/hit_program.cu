@@ -136,7 +136,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     MidVertex.RMIS_pointer = 1.0 / rmis::light_hit(LastVertex, virtual_light);
 }
 extern "C" __global__ void __closesthit__lightsource()
-{
+{ 
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
 
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
@@ -148,39 +148,8 @@ extern "C" __global__ void __closesthit__lightsource()
     light_sample.ReverseSample(light, geom.texcoord->UV);
     float t_hit = optixGetRayTmax();
     float3 ray_direction = optixGetWorldRayDirection();
-
-    if ( /* 打中的光源法向要求与光线方向相反 */
-        (dot(prd->ray_direction, light_sample.normal()) <= 0) && (true ||
-            /* 光源直击, L - E */
-            (LE_ENABLE && prd->depth == 0) || (
-                /* 是否是 S_ONLY */
-                (!S_ONLY || prd->path_record) && (
-                    /* L - * - E，所有光路 */
-                    LAE_ENABLE ||
-                    /* L - D - E */
-                    (LDE_ENABLE && prd->depth == 1 && prd->path_record == 0b0) ||
-                    /* L - D - S - E */
-                    (LDSE_ENABLE && prd->depth == 2 && prd->path_record == 0b01) ||
-                    /* L - D - S - + - E */
-                    (LDS_ENABLE && prd->depth > 2 && (prd->path_record & (1ll << (prd->depth - 2))) && !(prd->path_record & (1ll << (prd->depth - 1)))) ||
-                    /* L - D - S - D - E */
-                    (LDSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b010) ||
-                    /* L - S - * - E */
-                    (LS_ENABLE && prd->depth > 0 && (prd->path_record & (1ll << (prd->depth - 1)))) ||
-                    /* L - S - E */
-                    (LSE_ENABLE && prd->depth == 1 && prd->path_record == 0b1) ||
-                    /* L - S - D - E */
-                    (LSDE_ENABLE && prd->depth == 2 && prd->path_record == 0b10) ||
-                    /* L - (S)* - S - D - E */
-                    (LS_SDE_ENABLE && prd->depth > 2 && (prd->path_record == ((1 << prd->depth) - 2))) ||
-                    /* L - S - S - D - E */
-                    (LSSDE_ENABLE && prd->depth == 3 && prd->path_record == 0b110) ||
-                    /* L - S - S - S - D - E */
-                    (LSSSDE_ENABLE && prd->depth == 4 && prd->path_record == 0b1110)
-                    )
-                )
-            )
-        )
+    /* 打中的光源法向要求与光线方向相反 */
+    if (dot(prd->ray_direction, light_sample.normal()) <= 0)
     {
         // printf("record %d\n", prd->path_record);
         /* PT 加 NEE 的 MIS */
@@ -555,7 +524,6 @@ extern "C" __global__ void __closesthit__radiance()
     {
         Tracer::lightSample light_sample;
         light_sample(light, prd->seed);
-
         // TODO: optimize
         const float  L_dist = length(light_sample.position - geom.P);
         const float3 L = (light_sample.position - geom.P) / L_dist;
@@ -593,6 +561,7 @@ extern "C" __global__ void __closesthit__radiance()
 #endif // PT_BRDF_STRATEGY_ONLY 
                 result += prd->throughput * light_sample.emission * attenuation / light_sample.pdf
                     * N_dot_L * L_dot_LN / L_dist / L_dist * eval * MIS_weight;// *make_float3(1.0, 0.0, 1.0);
+                //printf("light sample emission %f %f %f %f\n", light_sample.emission.x, eval.x + eval.y + eval.z, MIS_weight, result.x + result.y + result.z);
             }
         }
     }
@@ -623,8 +592,9 @@ extern "C" __global__ void __closesthit__radiance()
     //prd->result += result;
 
 
-    //if (prd->depth > 5) result *= 0;
+    ////if (prd->depth > 5) result *= 0;
     //prd->result = make_float3(currentPbr.base_color);
+    //prd->done = true;
     prd->currentResult += result;
     prd->origin = geom.P;
 

@@ -42,6 +42,8 @@ struct BDPTVertex
 
     //cache the RMIS weight for eye sub-path tracing
     float3 RMIS_pointer_3;
+
+
     float3 shade_normal;
     //to save the uv coordinate of the light source
     float2 uv;
@@ -58,6 +60,7 @@ struct BDPTVertex
     //used for RMIS computing, pdf for (previous vertex) -> (this vertex)
     float singlePdf;
     //used for RMIS computing, the single pdf of the previous vertex.
+    //seems no use in practice
     float lastSinglePdf;
 
     //float d;     //can be replaced by RIS_pointer, consider to remove

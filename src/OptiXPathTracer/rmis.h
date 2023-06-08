@@ -362,7 +362,5 @@ namespace rmis
         return D_B / ((weight + D_A) / pdf_B * lightVertex.singlePdf + D_B);
     }
 
-}
-#ifdef HIDDEN_NOT_USE 
-#endif // 0
+} 
 #endif

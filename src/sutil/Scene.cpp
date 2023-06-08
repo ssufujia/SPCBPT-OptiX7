@@ -1898,6 +1898,8 @@ void Scene::createSBT()
                 HitGroupRecord rec = {};
                 const int32_t mat_idx = mesh->material_idx[i];
                 {
+                    if (mat_idx == 30)
+                        printf("material_emmision %f\n", m_materials[mat_idx].emissive_factor.x);
                     if (mat_idx >= 0 && (length(m_materials[mat_idx].emissive_factor) > 0))
                     {
                         OPTIX_CHECK(optixSbtRecordPackHeader(m_lightsource_hit_group, &rec));
