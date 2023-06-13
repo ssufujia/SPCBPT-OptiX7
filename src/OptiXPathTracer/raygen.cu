@@ -1325,6 +1325,9 @@ extern "C" __global__ void __raygen__lightTrace()
 
 }
 
+extern "C" __global__ void __miss__none()
+{
+}
 extern "C" __global__ void __miss__constant_radiance()
 {
     Tracer::PayloadRadiance* prd = Tracer::getPRD();

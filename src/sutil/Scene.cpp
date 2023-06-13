@@ -669,6 +669,175 @@ cudaTextureObject_t Scene::getSampler( int32_t sampler_index ) const
 }
 
 
+SUTILAPI void Scene::loadModules()
+{
+    OptixModuleCompileOptions module_compile_options = {};
+#if !defined( NDEBUG )
+    module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_LEVEL_0;
+    module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#endif
+
+    m_pipeline_compile_options = {};
+    m_pipeline_compile_options.usesMotionBlur = false;
+    m_pipeline_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_LEVEL_INSTANCING;
+    m_pipeline_compile_options.numPayloadValues = whitted::NUM_PAYLOAD_VALUES;
+    m_pipeline_compile_options.numAttributeValues = 2; // TODO
+    m_pipeline_compile_options.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE; // should be OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
+    m_pipeline_compile_options.pipelineLaunchParamsVariableName = "params";
+    
+    std::vector<std::string> all_files;
+    for (auto p = m_progsets.begin(); p != m_progsets.end(); p++)
+    {
+        all_files.push_back(p->second.p_raygen.filePath);
+        for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+        {
+            if (p->second.p_missing[i].ignored)continue;
+            all_files.push_back(p->second.p_missing[i].filePath);
+        }
+        for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+            for (int j = 0; j < RayHitType::RAYHIT_TYPE_COUNT; j++)
+            {
+                if (p->second.p_rayhit[i][j].ignored)continue;
+                all_files.push_back(p->second.p_rayhit[i][j].filePath);
+            }
+    }
+    for (int i = 0; i < all_files.size(); i++)
+    {
+        std::string file = all_files[i];
+        if (file.size() != 0 && m_modules_map.find(file) == m_modules_map.end())
+        {
+            OptixModule temp_module = {};
+            size_t      inputSize = 0;
+            const char* input = sutil::getInputData("optixPathTracer", "optixPathTracer", file.c_str(), inputSize);
+
+            char log[2048];
+            size_t sizeof_log = sizeof(log);
+            OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
+                m_context,
+                &module_compile_options,
+                &m_pipeline_compile_options,
+                input,
+                inputSize,
+                log,
+                &sizeof_log,
+                &temp_module
+            ));
+            m_modules_map[file] = temp_module;
+        }
+    }
+}
+
+SUTILAPI void Scene::switchRayGen(ProgSet& progset)
+{
+    OptixProgramGroup* raygen_group = nullptr;
+    OptixProgramGroup* miss_groups[RayType::RAY_TYPE_COUNT] = {};
+    OptixProgramGroup* hit_groups[RayHitType::RAYHIT_TYPE_COUNT][RayType::RAY_TYPE_COUNT] = {};
+
+    raygen_group = &(progset.p_raygen.progGroup);
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+    {
+        if (progset.p_missing[i].ignored)continue;
+        miss_groups[i] = &(progset.p_missing[i].progGroup);
+    }
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+        for (int j = 0; j < RayHitType::RAYHIT_TYPE_COUNT; j++)
+        {
+            if (progset.p_rayhit[i][j].ignored)continue;
+            hit_groups[i][j] = &(progset.p_rayhit[i][j].progGroup);
+        }
+
+    {
+        const size_t raygen_record_size = sizeof(EmptyRecord);
+        EmptyRecord rg_sbt;
+        OPTIX_CHECK(optixSbtRecordPackHeader(*raygen_group, &rg_sbt));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(m_sbt.raygenRecord),
+            &rg_sbt,
+            raygen_record_size,
+            cudaMemcpyHostToDevice
+        ));
+    }
+
+    {
+        const size_t miss_record_size = sizeof(EmptyRecord);
+        EmptyRecord ms_sbt[RayType::RAY_TYPE_COUNT];
+        for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+        {
+            OPTIX_CHECK(optixSbtRecordPackHeader(*miss_groups[i], &ms_sbt[i]));
+        }
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(m_sbt.missRecordBase),
+            ms_sbt,
+            miss_record_size * RayType::RAY_TYPE_COUNT,
+            cudaMemcpyHostToDevice
+        ));
+    }
+
+    {
+        std::vector<HitGroupRecord> hitgroup_records;
+        for (const auto instance : m_instances)
+        {
+            const auto mesh = m_meshes[instance->mesh_idx];
+            for (size_t i = 0; i < mesh->material_idx.size(); ++i)
+            {
+                HitGroupRecord rec = {};
+                const int32_t mat_idx = mesh->material_idx[i];
+                {
+                    for (int j = 0; j < RayType::RAY_TYPE_COUNT; j++)
+                    {
+                        if (j == RayType::RAY_TYPE_OCCLUSION)
+                        {
+                            /// <summary>
+                            /// occlusion ray
+                            /// </summary> 
+                            //                    OPTIX_CHECK(optixSbtRecordPackHeader(m_occlusion_hit_group, &rec));
+                            OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION], &rec));
+                            hitgroup_records.push_back(rec);
+                        }
+                        else
+                        {
+                            /// <summary>
+                            /// radiance ray or other types
+                            /// </summary>
+                            if (mat_idx >= 0 && (length(m_materials[mat_idx].emissive_factor) > 0))
+                            {
+                                //OPTIX_CHECK(optixSbtRecordPackHeader(m_lightsource_hit_group, &rec));
+                                OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][j], &rec));
+                            }
+                            else
+                            {
+                                //OPTIX_CHECK(optixSbtRecordPackHeader(m_radiance_hit_group, &rec));
+                                OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][j], &rec));
+                            }
+                            rec.data.geometry_data.type = GeometryData::TRIANGLE_MESH;
+                            rec.data.geometry_data.triangle_mesh.positions = mesh->positions[i];
+                            rec.data.geometry_data.triangle_mesh.normals = mesh->normals[i];
+                            for (size_t k = 0; k < GeometryData::num_textcoords; ++k)
+                                rec.data.geometry_data.triangle_mesh.texcoords[k] = mesh->texcoords[k][i];
+                            rec.data.geometry_data.triangle_mesh.colors = mesh->colors[i];
+                            rec.data.geometry_data.triangle_mesh.indices = mesh->indices[i];
+
+                            if (mat_idx >= 0)
+                                rec.data.material_data = m_materials[mat_idx];
+                            else
+                                rec.data.material_data = MaterialData();
+                            rec.data.material_data.id = mat_idx;
+                            hitgroup_records.push_back(rec);
+                        }
+                    }
+                } 
+            }
+        } 
+        const size_t hitgroup_record_size = sizeof(HitGroupRecord);
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(m_sbt.hitgroupRecordBase),
+            hitgroup_records.data(),
+            hitgroup_record_size * hitgroup_records.size(),
+            cudaMemcpyHostToDevice
+        ));
+    } 
+}
+
 void Scene::createPTXModule()
 {
     std::string raygen_file = std::string("raygen.cu");
@@ -727,23 +896,45 @@ void Scene::createPTXModule()
 
     } 
 }
- 
+
+void Scene::test()
+{ 
+    {
+        char log2[2048];
+        size_t sizeof_log2 = 2048;
+        OptixProgramGroupDesc raygen_prog_group_desc = {};
+        OptixProgramGroupOptions program_group_options2 = {};
+        raygen_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+        raygen_prog_group_desc.raygen.module = m_ptx_module;
+        raygen_prog_group_desc.raygen.entryFunctionName = "__raygen__TrainData";
+        OptixProgramGroup temp_group;
+        optixProgramGroupCreate(
+            m_context,
+            &raygen_prog_group_desc,
+            1,                             // num program groups
+            &program_group_options2,
+            nullptr,
+            nullptr,
+            &temp_group
+        );
+        printf("test_good\n");
+    }
+}
 void Scene::finalize()
 {
     createContext();
     buildMeshAccels();
     buildInstanceAccel(); 
-    createPTXModule();
-    createProgramGroups();
-    createPipeline();
-    createSBT();
+    //createPTXModule();
+    //createProgramGroups();
+    //createPipeline();
+    //createSBT();
 
     m_scene_aabb.invalidate();
     for( const auto instance: m_instances )
-        m_scene_aabb.include( instance->world_aabb );
-
+        m_scene_aabb.include( instance->world_aabb ); 
     //if( !m_cameras.empty() )
-    //    m_cameras.front().setLookat( m_scene_aabb.center() );
+    //    m_cameras.front().setLookat( m_scene_aabb.center() ); 
 }
 
 
@@ -1402,6 +1593,7 @@ void Scene::createProgramGroups()
                     )
                 );
     }
+   
     {
 
         OptixProgramGroupDesc raygen_prog_group_desc = {};
@@ -1674,10 +1866,45 @@ void Scene::createPipeline()
             &sizeof_log,
             &m_pipeline
         ));
-    }
-     
+    } 
 }
 
+void Scene::createPipeline(ProgSet &program_set)
+{
+    std::vector<OptixProgramGroup> program_groups;
+    program_groups.push_back(program_set.p_raygen.progGroup);
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+    {
+        if (program_set.p_missing[i].ignored)continue;
+        program_groups.push_back(program_set.p_missing[i].progGroup);
+    }
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+    {
+        for (int j = 0; j < RayHitType::RAYHIT_TYPE_COUNT; j++)
+        {
+            if (program_set.p_rayhit[i][j].ignored)continue;
+            program_groups.push_back(program_set.p_rayhit[i][j].progGroup); 
+        }
+    }
+
+    OptixPipelineLinkOptions pipeline_link_options = {};
+    pipeline_link_options.maxTraceDepth = whitted::MAX_TRACE_DEPTH;
+    pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+    {
+        char log[2048];
+        size_t sizeof_log = sizeof(log);
+        OPTIX_CHECK_LOG(optixPipelineCreate(
+            m_context,
+            &m_pipeline_compile_options,
+            &pipeline_link_options,
+            program_groups.data(),
+            program_groups.size(),
+            log,
+            &sizeof_log,
+            &program_set.m_pipeline
+        ));
+    }
+}
 //"SPCBPT_eye"
 //"light trace"
 //"pt"
@@ -1846,6 +2073,121 @@ void Scene::switchRaygen(std::string raygenName)
 
 }
 
+void Scene::createSBT(ProgSet& p)
+{ 
+    {
+        const size_t raygen_record_size = sizeof(EmptyRecord);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&p.m_sbt.raygenRecord), raygen_record_size));
+
+        EmptyRecord rg_sbt;
+        OPTIX_CHECK(optixSbtRecordPackHeader(p.p_raygen.progGroup, &rg_sbt));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(p.m_sbt.raygenRecord),
+            &rg_sbt,
+            raygen_record_size,
+            cudaMemcpyHostToDevice
+        ));
+    }
+
+    {
+        const size_t miss_record_size = sizeof(EmptyRecord);
+        CUDA_CHECK(cudaMalloc(
+            reinterpret_cast<void**>(&p.m_sbt.missRecordBase),
+            miss_record_size * RayType::RAY_TYPE_COUNT
+        ));
+
+        EmptyRecord ms_sbt[RayType::RAY_TYPE_COUNT];
+        for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+        {
+            if (p.p_missing[i].ignored)continue;
+            OPTIX_CHECK(optixSbtRecordPackHeader(p.p_missing[i].progGroup, &ms_sbt[i]));
+        }  
+
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(p.m_sbt.missRecordBase),
+            ms_sbt,
+            miss_record_size * RayType::RAY_TYPE_COUNT,
+            cudaMemcpyHostToDevice
+        ));
+        p.m_sbt.missRecordStrideInBytes = static_cast<uint32_t>(miss_record_size);
+        p.m_sbt.missRecordCount = RayType::RAY_TYPE_COUNT;
+    }
+
+    {
+        std::vector<HitGroupRecord> hitgroup_records;
+        for (const auto instance : m_instances)
+        {
+            const auto mesh = m_meshes[instance->mesh_idx];
+            for (size_t i = 0; i < mesh->material_idx.size(); ++i)
+            {
+                HitGroupRecord rec = {};
+                const int32_t mat_idx = mesh->material_idx[i];
+                {
+                    for (int j = 0; j < RayType::RAY_TYPE_COUNT; j++)
+                    {
+                        if (j == RayType::RAY_TYPE_OCCLUSION)
+                        {                             
+                            /// <summary>
+                            /// occlusion ray
+                            /// </summary> 
+                            //                    OPTIX_CHECK(optixSbtRecordPackHeader(m_occlusion_hit_group, &rec));
+                            if (p.p_rayhit[RayType::RAY_TYPE_OCCLUSION][RayHitType::RAYHIT_TYPE_NORMAL].ignored == false)
+                                OPTIX_CHECK(optixSbtRecordPackHeader(p.p_rayhit[RayType::RAY_TYPE_OCCLUSION][RayHitType::RAYHIT_TYPE_NORMAL].progGroup, &rec)); 
+                        }
+                        else
+                        {
+                            /// <summary>
+                            /// radiance ray or other types
+                            /// </summary>
+                            if (mat_idx >= 0 && (length(m_materials[mat_idx].emissive_factor) > 0))
+                            {
+                                //OPTIX_CHECK(optixSbtRecordPackHeader(m_lightsource_hit_group, &rec));
+                                if (p.p_rayhit[j][RayHitType::RAYHIT_TYPE_LIGHTSOURCE].ignored == false)
+                                    OPTIX_CHECK(optixSbtRecordPackHeader(p.p_rayhit[j][RayHitType::RAYHIT_TYPE_LIGHTSOURCE].progGroup, &rec));
+                            }
+                            else
+                            {
+                                //OPTIX_CHECK(optixSbtRecordPackHeader(m_radiance_hit_group, &rec));
+                                if (p.p_rayhit[j][RayHitType::RAYHIT_TYPE_NORMAL].ignored == false)
+                                    OPTIX_CHECK(optixSbtRecordPackHeader(p.p_rayhit[j][RayHitType::RAYHIT_TYPE_NORMAL].progGroup, &rec));
+                            }
+                            rec.data.geometry_data.type = GeometryData::TRIANGLE_MESH;
+                            rec.data.geometry_data.triangle_mesh.positions = mesh->positions[i];
+                            rec.data.geometry_data.triangle_mesh.normals = mesh->normals[i];
+                            for (size_t k = 0; k < GeometryData::num_textcoords; ++k)
+                                rec.data.geometry_data.triangle_mesh.texcoords[k] = mesh->texcoords[k][i];
+                            rec.data.geometry_data.triangle_mesh.colors = mesh->colors[i];
+                            rec.data.geometry_data.triangle_mesh.indices = mesh->indices[i];
+
+                            if (mat_idx >= 0)
+                                rec.data.material_data = m_materials[mat_idx];
+                            else
+                                rec.data.material_data = MaterialData();
+                            rec.data.material_data.id = mat_idx;
+                        }
+                        hitgroup_records.push_back(rec);
+                    }
+                }
+            }
+        }
+
+        const size_t hitgroup_record_size = sizeof(HitGroupRecord);
+        CUDA_CHECK(cudaMalloc(
+            reinterpret_cast<void**>(&p.m_sbt.hitgroupRecordBase),
+            hitgroup_record_size * hitgroup_records.size()
+        ));
+        CUDA_CHECK(cudaMemcpy(
+            reinterpret_cast<void*>(p.m_sbt.hitgroupRecordBase),
+            hitgroup_records.data(),
+            hitgroup_record_size * hitgroup_records.size(),
+            cudaMemcpyHostToDevice
+        ));
+        printf("hit group count %d\n", hitgroup_records.size());
+        p.m_sbt.hitgroupRecordStrideInBytes = static_cast<unsigned int>(hitgroup_record_size);
+        p.m_sbt.hitgroupRecordCount = static_cast<unsigned int>(hitgroup_records.size()); 
+    }
+     
+}
 void Scene::createSBT()
 {
     {
@@ -1955,6 +2297,80 @@ void Scene::createSBT()
         m_sbt.hitgroupRecordStrideInBytes = static_cast<unsigned int>( hitgroup_record_size );
         m_sbt.hitgroupRecordCount         = static_cast<unsigned int>( hitgroup_records.size() );
     }
+}
+
+void ProgSet::compile(Scene& scene)
+{
+    auto modules = scene.get_modules_map();
+    const int num_progs = 1 + RayType::RAY_TYPE_COUNT + RayType::RAY_TYPE_COUNT * RayHitType::RAYHIT_TYPE_COUNT;
+    OptixProgramGroup temp_groups[num_progs];
+    OptixProgramGroupOptions program_group_options = {};
+    OptixProgramGroupDesc  groups_desc[num_progs] = {};
+    char log[2048];
+    size_t sizeof_log = sizeof(log);
+
+    int prog_id = 0;
+    if (p_raygen.ignored == true)
+    {
+        printf("error: get a program set without raygen, skipping compile\n");
+        return;
+    }
+    printf("pinA\n");
+    groups_desc[prog_id].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+    groups_desc[prog_id].raygen.module = modules[p_raygen.filePath];
+    groups_desc[prog_id].raygen.entryFunctionName = p_raygen.progName.c_str();
+    prog_id++;
+    printf("pinB\n", p_raygen.progName.c_str());
+
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+    {
+        if (p_missing[i].ignored)continue;
+        groups_desc[prog_id].kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
+        groups_desc[prog_id].miss.module = modules[p_missing[i].filePath];
+        groups_desc[prog_id].miss.entryFunctionName = p_missing[i].progName.c_str();
+        prog_id++;
+        printf("pinC\n");
+    }
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+    {
+        for (int j = 0; j < RayHitType::RAYHIT_TYPE_COUNT; j++)
+        {
+            if (p_rayhit[i][j].ignored)continue;
+            groups_desc[prog_id].kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+            groups_desc[prog_id].hitgroup.moduleCH = modules[p_rayhit[i][j].filePath];
+            groups_desc[prog_id].hitgroup.entryFunctionNameCH = p_rayhit[i][j].CHName.c_str();
+            groups_desc[prog_id].hitgroup.moduleAH = modules[p_rayhit[i][j].filePath];
+            groups_desc[prog_id].hitgroup.entryFunctionNameAH = p_rayhit[i][j].AHName.c_str();
+            printf("pinD %s\n", groups_desc[prog_id].hitgroup.entryFunctionNameCH);
+            prog_id++;
+        }
+    }
+    printf("pinDD\n");
+    OPTIX_CHECK_LOG(optixProgramGroupCreate(
+        scene.context(),
+        groups_desc,
+        prog_id,                             // num program groups
+        &program_group_options,
+        log,
+        &sizeof_log,
+        temp_groups
+    ));
+    printf("pinE\n");
+    prog_id = 0;
+    p_raygen.progGroup = temp_groups[prog_id];
+    prog_id++;
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++) {
+        if (p_missing[i].ignored)continue;
+        p_missing[i].progGroup = temp_groups[prog_id]; prog_id++;
+    }
+
+    for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
+        for (int j = 0; j < RayHitType::RAYHIT_TYPE_COUNT; j++)
+        {
+            if (p_rayhit[i][j].ignored)continue;
+            p_rayhit[i][j].progGroup = temp_groups[prog_id];
+            prog_id++;
+        }
 }
 
 } // namespace sutil

@@ -63,8 +63,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         sampler_remap[i + 1] = Dst.SamplerCurrent();
     }
     for (int i = 0; i < Src.optix_materials.size(); i++)
-    {
-        printf("AAAAA\n");
+    { 
         auto& p = Src.optix_materials[i];
         MaterialData mtl;
         
@@ -104,7 +103,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
             mtl.normal_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
         }  
         materialID_remap[i] = Dst.MaterialsSize();
-        printf("material remap id %d -> %d\n", i, materialID_remap[i]);
+        //printf("material remap id %d -> %d\n", i, materialID_remap[i]);
         Dst.addMaterial(mtl);
     }
     for (int i = 0; i < Src.optix_lights.size(); i++)
@@ -113,10 +112,11 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         if (light.type != Light::Type::QUAD)
             continue;
         MaterialData mtl;
+        mtl.doubleSided = true;
         mtl.emissive_factor = light.quad.emission;
         mtl.light_id = i;
         lightsourceID_remap[i] = Dst.MaterialsSize();
-        printf("lightsource remap id %d -> %d\n", i, lightsourceID_remap[i]);
+        //printf("lightsource remap id %d -> %d\n", i, lightsourceID_remap[i]);
         Dst.addMaterial(mtl);
 
     }
@@ -291,18 +291,14 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         Dst.addMesh(mesh_ptr);
         sutil::Scene::MeshGroup& a = *mesh_ptr;
 
-        int num_points = 12;
-        int num_faces = 4;
+        int num_points = 6;
+        int num_faces = 2;
         std::vector<float3> positions;
         positions.push_back(light.quad.corner);
         positions.push_back(light.quad.u);
         positions.push_back(light.quad.v);
         positions.push_back(light.quad.u + light.quad.v - light.quad.corner);
-
-        positions.push_back(light.quad.corner - light.quad.normal * 1e-3f);
-        positions.push_back(light.quad.v - light.quad.normal * 1e-3f);
-        positions.push_back(light.quad.u - light.quad.normal * 1e-3f);
-        positions.push_back(light.quad.u + light.quad.v - light.quad.corner - light.quad.normal * 1e-3f);
+         
         std::vector<unsigned> indices;
         indices.push_back(0);
         indices.push_back(1);
@@ -310,23 +306,13 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         indices.push_back(0);
         indices.push_back(3);
         indices.push_back(2); 
-
-        indices.push_back(4);
-        indices.push_back(5);
-        indices.push_back(7);
-        indices.push_back(4);
-        indices.push_back(7);
-        indices.push_back(6);
+         
 
         std::vector<Vec2f> texcoords; 
         texcoords.push_back(make_Vec2f(0, 0));
         texcoords.push_back(make_Vec2f(1, 0));
         texcoords.push_back(make_Vec2f(0, 1));
-        texcoords.push_back(make_Vec2f(1, 1));
-        texcoords.push_back(make_Vec2f(0, 0));
-        texcoords.push_back(make_Vec2f(0, 1));
-        texcoords.push_back(make_Vec2f(1, 0));
-        texcoords.push_back(make_Vec2f(1, 1));
+        texcoords.push_back(make_Vec2f(1, 1)); 
 
 
         a.positions.push_back(HostToDeviceBuffer(

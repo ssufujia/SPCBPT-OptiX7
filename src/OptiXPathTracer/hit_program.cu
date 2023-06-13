@@ -11,6 +11,11 @@
 #include "pathControl.h"
 #include "rmis.h"
 
+
+extern "C" __global__ void __anyhit__none() 
+{
+    return; 
+}
 extern "C" __global__ void __anyhit__radiance()
 {
     //optixIgnoreIntersection();
@@ -29,8 +34,8 @@ extern "C" __global__ void __anyhit__radiance()
 extern "C" __global__ void __anyhit__occlusion()
 {
     Tracer::setPayloadOcclusion(0.f);
-    return;
     optixTerminateRay();
+    return;
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
     if (hit_group_data->material_data.pbr.base_color_tex)
     {

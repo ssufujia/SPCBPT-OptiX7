@@ -36,8 +36,9 @@
 #include <sutil/Matrix.h>
 #include <sutil/Preprocessor.h>
 #include <sutil/sutilapi.h>
-
+#include <sutil/Record.h>
 #include <cuda_runtime.h>
+#include <sutil/Exception.h>
 
 #include <optix.h>
 
@@ -45,16 +46,18 @@
 #include <string>
 #include <vector>
 #include<OptiXPathTracer/optixPathTracer.h>
+#include<map>
 
 
 namespace sutil
 {
 
-    enum programType
-    {
-        rayGenProg, missProg, lightHitProg, normalHitProg, SPCBPT_SPECIAL_rayGen, progTypeNum
-    };
+enum programType
+{
+    rayGenProg, missProg, lightHitProg, normalHitProg, SPCBPT_SPECIAL_rayGen, progTypeNum
+};
 
+struct ProgSet;
 class Scene
 {
 public:
@@ -108,24 +111,25 @@ public:
                 const int32_t          image_idx
                 );
 
-    SUTILAPI CUdeviceptr                    getBuffer ( int32_t buffer_index  )const;
-    SUTILAPI cudaArray_t                    getImage  ( int32_t image_index   )const;
-    SUTILAPI cudaTextureObject_t            getSampler( int32_t sampler_index )const;
+    SUTILAPI CUdeviceptr                                    getBuffer ( int32_t buffer_index  )const;
+    SUTILAPI cudaArray_t                                    getImage  ( int32_t image_index   )const;
+    SUTILAPI cudaTextureObject_t                            getSampler( int32_t sampler_index )const;
 
     void createPTXModule(std::string fileName);
 
     SUTILAPI void                           finalize();
     SUTILAPI void                           cleanup();
 
+    SUTILAPI const std::map<std::string, OptixModule>&      get_modules_map()const    { return m_modules_map; }
     SUTILAPI Camera                                         camera()const;
     SUTILAPI OptixPipeline                                  pipeline()const           { return m_pipeline;   } 
     SUTILAPI const OptixShaderBindingTable*                 sbt()const                { return &m_sbt;       }
     SUTILAPI OptixTraversableHandle                         traversableHandle() const { return m_ias_handle; }
     SUTILAPI sutil::Aabb                                    aabb() const              { return m_scene_aabb; }
-    SUTILAPI OptixDeviceContext                             context() const           { return m_context;    }
+    SUTILAPI OptixDeviceContext&                            context()                 { return m_context;    }
     SUTILAPI const std::vector<MaterialData>&               materials() const         { return m_materials;  }
     SUTILAPI const std::vector<std::shared_ptr<MeshGroup>>& meshes() const            { return m_meshes;     }
-    SUTILAPI const std::vector<std::shared_ptr<Instance>>&  instances() const         { return m_instances;  }
+    SUTILAPI const std::vector<std::shared_ptr<Instance>>&  instances() const         { return m_instances;  } 
 
     SUTILAPI void                                           removeCurrent()           { m_meshes.clear(); m_instances.clear(); }
     SUTILAPI int                                            ImagesSize() const        { return m_images.size(); }
@@ -141,6 +145,14 @@ public:
     SUTILAPI void addDirectionalLight(float3 dir, float3 intensity) { return dir_lights.push_back(std::make_pair(dir,intensity)); }
 
     std::vector<std::pair<float3, float3>> dir_lights;//directional light
+    SUTILAPI void loadModules();
+    std::map<std::string, ProgSet> m_progsets;
+    SUTILAPI void switchRayGen(ProgSet& progset);
+    SUTILAPI void createPipeline(ProgSet& program_set);
+    SUTILAPI void createSBT(ProgSet& program_set);
+    SUTILAPI void test();
+    OptixModule                          m_ptx_module = 0;
+    OptixDeviceContext                   m_context = 0;
 private:
     void createPTXModule();
     void createProgramGroups();
@@ -162,11 +174,10 @@ private:
     //EmptyRecord                              m_ms_sbt_host[RayType::RAY_TYPE_COUNT];
     //EmptyRecord                              m_hit_sbt_host[RayHitType::RAYHIT_TYPE_COUNT][RayType::RAY_TYPE_COUNT];
 
-    OptixDeviceContext                   m_context                  = 0;
     OptixShaderBindingTable              m_sbt                      = {};
     OptixPipelineCompileOptions          m_pipeline_compile_options = {};
-    OptixPipeline                        m_pipeline                 = 0; 
-    OptixModule                          m_ptx_module               = 0;
+    OptixPipeline                        m_pipeline                 = 0;
+    std::map<std::string, OptixModule>   m_modules_map              = {};
     OptixModule                          m_ptx_module_hit           = 0;
 
     OptixProgramGroup                    m_raygen_prog_group        = 0; 
@@ -187,6 +198,46 @@ private:
     std::string                          m_env_file_name = {};
 };
 
+struct ProgSet
+{
+    struct Prog
+    {
+        bool ignored = true;
+        std::string filePath = std::string("");
+        std::string progName = std::string("");
+        std::string CHName = std::string("");
+        std::string AHName = std::string("");
+        OptixProgramGroup progGroup;
+    };
+    Prog p_raygen;
+    Prog p_missing[RayType::RAY_TYPE_COUNT];
+    Prog p_rayhit[RayType::RAY_TYPE_COUNT][RayHitType::RAYHIT_TYPE_COUNT];
+    OptixPipeline                        m_pipeline = 0;
+    OptixShaderBindingTable              m_sbt = {};
+
+    void setRaygen(std::string filePath, std::string progName)
+    {
+        p_raygen.filePath = filePath;
+        p_raygen.progName = progName;
+        p_raygen.ignored = false;
+    }
+    void setMiss(RayType type, std::string filePath, std::string progName) 
+    {
+        p_missing[type].filePath = filePath; 
+        p_missing[type].progName = progName; 
+        p_missing[type].ignored = false;
+    }
+    void setRayHit(RayType type, RayHitType hit_type, std::string filePath, std::string CHName, std::string AHName)
+    {
+        p_rayhit[type][hit_type].filePath = filePath;
+        p_rayhit[type][hit_type].AHName = AHName;
+        p_rayhit[type][hit_type].CHName = CHName;
+        p_rayhit[type][hit_type].ignored = false;
+    }
+    SUTILAPI void compile(Scene& scene);
+    
+    
+};
 
 SUTILAPI void loadScene( const std::string& filename, Scene& scene );
 

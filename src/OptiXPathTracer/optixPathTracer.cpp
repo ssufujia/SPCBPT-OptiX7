@@ -101,7 +101,7 @@ int32_t mouse_button = -1;
 
 int32_t samples_per_launch = 1; 
 
-std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye") };
+std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye") }; 
 //std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
 int render_alg_id = 1;
 bool one_frame_render_only = false;
@@ -120,9 +120,9 @@ struct Record
     T data;
 };
 
-typedef Record<RayGenData>   RayGenRecord;
-typedef Record<MissData>     MissRecord;
-typedef Record<HitGroupData> HitGroupRecord;
+//typedef Record<RayGenData>   RayGenRecord;
+//typedef Record<MissData>     MissRecord;
+//typedef Record<HitGroupData> HitGroupRecord;
 
   
 
@@ -299,7 +299,7 @@ static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, 
         float3 eye = camera.eye();
         float3 lookat = camera.lookat();
         float3 dir = normalize(lookat - eye);
-        float speed = 0.5;
+        float speed = 3.5;
         eye += dir / render_fps * speed;
         lookat += dir / render_fps * speed;
         camera.setEye(eye);
@@ -337,7 +337,63 @@ void printUsageAndExit( const char* argv0 )
     exit( 0 );
 }
 
+void program_setup(sutil::Scene& scene)
+{
 
+    auto& prog_set_maps = scene.m_progsets;
+
+    //program setting for spcbpt
+    //also used as the sample setting for the other algorithm
+    sutil::ProgSet spcbpt_progset;
+    spcbpt_progset.setRaygen("raygen.cu", "__raygen__SPCBPT");
+
+    spcbpt_progset.setMiss(RayType::RAY_TYPE_EYESUBPATH, "raygen.cu", "__miss__env__BDPTVertex");
+    spcbpt_progset.setMiss(RayType::RAY_TYPE_OCCLUSION, "raygen.cu", "__miss__none");//no miss for occulsion
+    spcbpt_progset.setMiss(RayType::RAY_TYPE_EYESUBPATH_SIMPLE, "raygen.cu", "__miss__env__BDPTVertex");
+
+    spcbpt_progset.setRayHit(RayType::RAY_TYPE_OCCLUSION, RayHitType::RAYHIT_TYPE_NORMAL, "hit_program.cu", "__closesthit__occlusion", "__anyhit__occlusion");
+    spcbpt_progset.setRayHit(RayType::RAY_TYPE_OCCLUSION, RayHitType::RAYHIT_TYPE_LIGHTSOURCE, "hit_program.cu", "__closesthit__occlusion", "__anyhit__occlusion");
+    spcbpt_progset.setRayHit(RayType::RAY_TYPE_EYESUBPATH, RayHitType::RAYHIT_TYPE_NORMAL, "hit_program.cu", "__closesthit__eyeSubpath", "__anyhit__none");
+    spcbpt_progset.setRayHit(RayType::RAY_TYPE_EYESUBPATH, RayHitType::RAYHIT_TYPE_LIGHTSOURCE, "hit_program.cu", "__closesthit__eyeSubpath_LightSource", "__anyhit__none");
+    spcbpt_progset.setRayHit(RayType::RAY_TYPE_EYESUBPATH_SIMPLE, RayHitType::RAYHIT_TYPE_NORMAL, "hit_program.cu", "__closesthit__eyeSubpath_simple", "__anyhit__none");
+    spcbpt_progset.setRayHit(RayType::RAY_TYPE_EYESUBPATH_SIMPLE, RayHitType::RAYHIT_TYPE_LIGHTSOURCE, "hit_program.cu", "__closesthit__eyeSubpath_LightSource_simple", "__anyhit__none");
+    prog_set_maps[std::string("SPCBPT_eye")] = spcbpt_progset;
+
+
+    //program setting for pt
+    sutil::ProgSet pt_progset = spcbpt_progset;
+    pt_progset.setRaygen("raygen.cu", "__raygen__pinhole");
+    pt_progset.setMiss(RayType::RAY_TYPE_RADIANCE, "raygen.cu", "__miss__constant_radiance");
+    pt_progset.setRayHit(RayType::RAY_TYPE_RADIANCE, RayHitType::RAYHIT_TYPE_LIGHTSOURCE, "hit_program.cu", "__closesthit__lightsource", "__anyhit__none");
+    pt_progset.setRayHit(RayType::RAY_TYPE_RADIANCE, RayHitType::RAYHIT_TYPE_NORMAL, "hit_program.cu", "__closesthit__radiance", "__anyhit__none");
+    prog_set_maps[std::string("pt")] = pt_progset;
+
+    //program setting for light subpath tracing
+    sutil::ProgSet lt_progset = spcbpt_progset;
+    lt_progset.setRaygen("raygen.cu", "__raygen__lightTrace");
+    lt_progset.setMiss(RayType::RAY_TYPE_LIGHTSUBPATH, "raygen.cu", "__miss__BDPTVertex");
+    lt_progset.setRayHit(RayType::RAY_TYPE_LIGHTSUBPATH, RayHitType::RAYHIT_TYPE_NORMAL, "hit_program.cu", "__closesthit__lightSubpath", "__anyhit__none");
+    lt_progset.setRayHit(RayType::RAY_TYPE_EYESUBPATH, RayHitType::RAYHIT_TYPE_LIGHTSOURCE, "hit_program.cu", "__closesthit__lightSource_subpath", "__anyhit__none");
+    prog_set_maps[std::string("light trace")] = lt_progset;
+
+    //program setting for pretracing
+    sutil::ProgSet pretrace_progset = spcbpt_progset;
+    pretrace_progset.setRaygen("raygen.cu", "__raygen__TrainData");
+    prog_set_maps[std::string("pretrace")] = pretrace_progset;
+     
+    //compile the program
+    scene.loadModules(); 
+    for (auto p = prog_set_maps.begin(); p != prog_set_maps.end(); p++){
+        p->second.compile(scene); 
+    }
+     
+    for (auto p = prog_set_maps.begin(); p != prog_set_maps.end(); p++)
+    {
+        scene.createPipeline(p->second);
+        scene.createSBT(p->second);
+    }
+         
+}
 void initLaunchParams(const sutil::Scene& scene) {
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&params.accum_buffer),
@@ -598,13 +654,16 @@ void launchLightTrace(sutil::Scene& scene)
         0 // stream
     ));
 
-    scene.switchRaygen(std::string("light trace"));
+    //scene.switchRaygen(std::string("light trace"));
+    auto prog_set = scene.m_progsets[std::string("light trace")];
     OPTIX_CHECK(optixLaunch(
-        scene.pipeline(),
+        //scene.pipeline(),
+        prog_set.m_pipeline,
         0,
         reinterpret_cast<CUdeviceptr>(d_params),
         sizeof(MyParams),
-        scene.sbt(),
+        //scene.sbt(),
+        &prog_set.m_sbt,
         lt_params.num_core,
         1,
         1
@@ -640,13 +699,15 @@ int launchPretrace(sutil::Scene& scene)
         0 // stream
     ));
 
-    scene.switchRaygen(std::string("pretrace"));
+    //scene.switchRaygen(std::string("pretrace"));
+    auto prog_set = scene.m_progsets[std::string("pretrace")]; 
     OPTIX_CHECK(optixLaunch(
-        scene.pipeline(),
+        prog_set.m_pipeline,
         0,
         reinterpret_cast<CUdeviceptr>(d_params),
         sizeof(MyParams),
-        scene.sbt(),
+        //scene.sbt(),
+        &prog_set.m_sbt,
         pr_params.num_core,
         1,
         1
@@ -1241,7 +1302,7 @@ void preprocessing(sutil::Scene& scene)
 void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene& scene)
 {
     //printf("subframe id %d\n", params.subframe_index);
-    scene.switchRaygen(render_alg[render_alg_id]);
+    //scene.switchRaygen(render_alg[render_alg_id]);
     // Launch
     uchar4* result_buffer_data = output_buffer.map();
     params.frame_buffer = result_buffer_data;
@@ -1253,11 +1314,13 @@ void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene
     ));
 
     OPTIX_CHECK(optixLaunch(
-        scene.pipeline(),
+        //scene.pipeline(),
+        scene.m_progsets[render_alg[render_alg_id]].m_pipeline,
         0,             // stream
         reinterpret_cast<CUdeviceptr>(d_params),
         sizeof(MyParams),
-        scene.sbt(),
+        //scene.sbt(),
+        &scene.m_progsets[render_alg[render_alg_id]].m_sbt,
         params.width,  // launch width
         params.height, // launch height
         1       // launch depth
@@ -1354,15 +1417,15 @@ int main( int argc, char* argv[] )
         const float SET_ERROR = -1.0f;  
         scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
         auto myScene = LoadScene(scenePath.c_str());  
-        myScene->getMeshData(0);  
+        //myScene->getMeshData(0);  
         sutil::Scene TScene;  
         Scene_shift(*myScene, TScene);
         LightSource_shift(*myScene, params, TScene); 
-        TScene.finalize();
-         
+        TScene.finalize(); 
         //
         // Set up OptiX state
         // 
+        program_setup(TScene);
         OPTIX_CHECK(optixInit()); // Need to initialize function table
         initCameraState(TScene); 
         //estimation_setup(scenePath);
@@ -1412,7 +1475,7 @@ int main( int argc, char* argv[] )
 
                     updateState(output_buffer, params);
                     if (setting_changed) { params.subframe_index = 0; }
-                    if (params.subframe_index == 0) { sum_render_time = std::chrono::duration<double>(); }
+                    if (params.subframe_index == 0) { sum_render_time = std::chrono::duration<double>::zero(); render_time_record = 0; }
 
                     auto t0 = std::chrono::steady_clock::now();
                     if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure"))
@@ -1429,7 +1492,7 @@ int main( int argc, char* argv[] )
 
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
-                    sum_render_time += t1 - t0;
+                    sum_render_time += t1 - t0; 
                     t0 = t1; 
 
 
@@ -1443,7 +1506,6 @@ int main( int argc, char* argv[] )
                         params.pg_params.pg_enable,
                         params.error_heat_visual
                     );
-                    render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
                     glfwSwapBuffers(window);
 
                     estimation::es.estimation_mode = false;
@@ -1454,22 +1516,16 @@ int main( int argc, char* argv[] )
 
                         error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
-
-                        const float SET_ERROR = 0.04f;
-                        if (false&&error < SET_ERROR) {
-                            printf("save the data\n");
-                            img_save(sum_render_time.count(), params.subframe_index);
-                            exit(0);
-                        }
+                         
                         if (estimation_save) {
                             estimation::es.outputFile << params.subframe_index << " " <<sum_render_time.count() <<" "<< error<< endl;
                         }
                     }
                     else
                     {
-                        printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
-
+                        printf("frame %d time %f\n", params.subframe_index, sum_render_time.count()); 
                     }
+                    render_fps = 1.0 / (sum_render_time.count() - render_time_record); 
                     render_time_record = sum_render_time.count();
                     render_frame_record = params.subframe_index;
 
