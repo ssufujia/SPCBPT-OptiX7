@@ -287,8 +287,7 @@ RT_FUNCTION float pdf_small_lobe_3(float3 N, float3 dir, float roughness)
 }
 
 struct envInfo_device :envInfo
-{
-
+{ 
     RT_FUNCTION int coord2index(int2 coord)const
     {
         return coord.x + coord.y * width;
@@ -309,7 +308,7 @@ struct envInfo_device :envInfo
     RT_FUNCTION int2 uv2coord(float2 uv)const
     {
         int x = uv.x * width;
-        int y = uv.y * height;
+        int y = (1 - uv.y) * height;
         x = min(x, width - 1);
         y = min(y, height - 1);
         return make_int2(x, y);
@@ -320,13 +319,13 @@ struct envInfo_device :envInfo
         float u, v;
         u = float(coord.x + r1) / float(width);
         v = float(coord.y + r2) / float(height);
-        return make_float2(u, v);
+        return make_float2(u, 1 - v);
     }
     RT_FUNCTION float3 reverseSample(float2 uv)const
     {
         return uv2dir(uv);
-    }
-    RT_FUNCTION float3 sample(unsigned int& seed)const
+    } 
+    RT_FUNCTION float2 sample(unsigned int& seed)const
     {
         float index = rnd(seed);
         int mid = size / 2 - 1, l = 0, r = size;
@@ -343,9 +342,12 @@ struct envInfo_device :envInfo
             mid = (l + r) / 2 - 1;
         }
         int2 coord = index2coord(l);        
-        float2 uv = coord2uv(coord, seed);
-        uv.y = 1-uv.y;
-        return uv2dir(uv);
+        float2 uv = coord2uv(coord, seed); 
+        return uv; 
+    } 
+    RT_FUNCTION float3 sample3(unsigned int& seed)const
+    {
+        return uv2dir(sample(seed));
     }
     RT_FUNCTION float3 sample_projectPos(float3 dir, unsigned int& seed)const
     {
@@ -355,7 +357,7 @@ struct envInfo_device :envInfo
         Onb onb(dir);
         cosine_sample_hemisphere(r1, r2, pos);
 
-        return 10 * r * (dir) + pos.x * r * onb.m_tangent + pos.y * r * onb.m_binormal + center;
+        return pos.x * r * onb.m_tangent + pos.y * r * onb.m_binormal + center;
     }
     RT_FUNCTION float2 trace_reverse_uv(float3 position, float3 dir)const
     {
@@ -385,13 +387,13 @@ struct envInfo_device :envInfo
 
         int res_id = uv_div.x * divLevel + uv_div.y; 
 
-        return NUM_SUBSPACE - 1 - res_id;
+        return NUM_SUBSPACE - 1 - res_id - ssBase;
     }
     RT_FUNCTION float3 getColor(float3 dir)const
     {
-        float2 uv = dir2uv(dir); 
+        float2 uv = dir2uv(dir) * sampler_scale; 
        // return make_float3(pdf(dir)) * 5;
-        return make_float3(tex2D<float4>(tex, uv.x, uv.y)); 
+        return emission_scale * make_float3(tex2D<float4>(tex, uv.x, uv.y)); 
     }
 
     RT_FUNCTION float3 color(float3 dir)const
@@ -402,7 +404,7 @@ struct envInfo_device :envInfo
     RT_FUNCTION float pdf(float3 dir)const
     {
         float2 uv = dir2uv(dir);
-        uv.y = 1-uv.y;
+        //uv.y = 1-uv.y;
         int2 coord = uv2coord(uv);
         int index = coord2index(coord);
 
@@ -415,6 +417,10 @@ struct envInfo_device :envInfo
         //}
         return pdf1 * size / (4 * M_PI);
     } 
+    RT_FUNCTION const Light& light()const
+    {
+        return Tracer::params.lights[light_id];
+    }
 };
 
 #define SKY (*(reinterpret_cast<const envInfo_device*>(&Tracer::params.sky)))
@@ -817,9 +823,9 @@ namespace Tracer {
                 position = light.quad.u * r1 + light.quad.v * r2 + light.quad.corner * r3;
                 emission = light.quad.emission;
                 //printf("albedo tex %d\n",light.albedoID);
-                if (light.albedoID != 0)
+                if (light.emissionID != 0)
                 { 
-                    emission *= make_float3(tex2D<float4>(light.albedoID, uv_.x, uv_.y));
+                    emission *= make_float3(tex2D<float4>(light.emissionID, uv_.x, uv_.y));
                 }
                 pdf = 1.0 / light.quad.area;
                 pdf /= params.lights.count;
@@ -836,7 +842,7 @@ namespace Tracer {
                 direction = SKY.reverseSample(uv_);
                 emission = SKY.color(direction);
                 subspaceId = SKY.getLabel(direction);
-                uv = uv;
+                uv = uv_;
                 pdf = SKY.pdf(direction);
                 pdf /= params.lights.count;
             }
@@ -852,10 +858,10 @@ namespace Tracer {
             }
             else if (light.type == Light::Type::ENV)
             {
-                direction = SKY.sample(seed);
+                uv = SKY.sample(seed);
+                direction = uv2dir(uv);
                 emission = SKY.color(direction);
                 subspaceId = SKY.getLabel(direction);
-                uv = dir2uv(direction);
                 pdf = SKY.pdf(direction);
                 pdf /= params.lights.count;
             }
@@ -879,30 +885,42 @@ namespace Tracer {
                 {
                     return -direction;
                 }
-            }
-
+            } 
             return make_float3(0);
+        }
+        RT_FUNCTION bool is_DIRECTION()const
+        {
+            return bindLight->type == Light::Type::ENV || bindLight->type == Light::Type::DIRECTIONAL;
         }
         RT_FUNCTION float3 trace_direction()const
         {
-            return (bindLight->type == Light::Type::ENV) ? -direction : direction;
+            return is_DIRECTION() ? -direction : direction;
+        }
+
+        RT_FUNCTION float3 position_for_tracing(float3 counter_pos)
+        {
+            return is_DIRECTION() ? counter_pos + direction * SKY.r * 10 : position;
+        }
+        RT_FUNCTION float distance_attenuation(float3 counter_pos)
+        { 
+            float3 diff = position - counter_pos;
+            return is_DIRECTION()? 1: dot(diff, diff);  
         }
         RT_FUNCTION void traceMode(unsigned int& seed)
         {
-            if (bindLight->type == Light::Type::QUAD)
+            if (is_DIRECTION())
+            {
+                position = position_for_tracing(SKY.sample_projectPos(direction, seed));
+                dir_pos_pdf = SKY.projectPdf();
+            }
+            else
             {
                 float r1 = rnd(seed);
-                float r2 = rnd(seed);
-
+                float r2 = rnd(seed); 
                 Onb onb(bindLight->quad.normal);
                 cosine_sample_hemisphere(r1, r2, direction);
                 onb.inverse_transform(direction);
                 dir_pdf = abs(dot(direction, bindLight->quad.normal)) / M_PIf;
-            }
-            else if (bindLight->type == Light::Type::ENV)
-            {
-                position = SKY.sample_projectPos(direction, seed);
-                dir_pos_pdf = SKY.projectPdf();
             }
         }
     };
@@ -1946,6 +1964,7 @@ namespace Tracer
 } // namespace Tracer
 RT_FUNCTION int labelUnit::getLabel()
 {
+    if (Tracer::params.no_subspace)return 0;
     if (light_side)
     {
         if (Tracer::params.subspace_info.light_tree)

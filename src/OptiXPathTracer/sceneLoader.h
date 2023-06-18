@@ -61,8 +61,9 @@ struct Scene
     float fov;
     bool use_camera;
 	bool use_geometry_normal;
-	float env_factor;
-	float3 dirLightDir;
+	float env_factor; 
+	int env_light_id;
+	std::vector<std::pair<float3, float3>> dirLights;
 	Scene() :use_geometry_normal(false) {};
 	void getMeshData(int id, std::vector<tinyobj::shape_t>& shapes, std::vector<tinyobj::material_t>& mats);
 	void getMeshData(int id);

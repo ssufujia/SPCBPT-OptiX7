@@ -388,6 +388,21 @@ extern "C" __global__ void __raygen__SPCBPT()
         }
         payload.depth += 1;
 
+        BDPTVertex& eye_subpath = payload.path.currentVertex();
+        if (eye_subpath.depth == 1 && Tracer::params.eye_subspace_visualize || Tracer::params.light_subspace_visualize)
+        {
+            unsigned vis_id = 0;
+            if (Tracer::params.eye_subspace_visualize) {
+                labelUnit lu(eye_subpath.position, eye_subpath.normal, eye_subpath.normal, false);
+                vis_id = lu.getLabel();
+            }
+            else if (Tracer::params.light_subspace_visualize) {
+                labelUnit lu(eye_subpath.position, eye_subpath.normal, eye_subpath.normal, true);
+                vis_id = lu.getLabel();
+            }
+            result = make_float3(rnd(vis_id), rnd(vis_id), rnd(vis_id));
+            break;
+        }
          
         if (payload.path.hit_lightSource())
         {
@@ -397,10 +412,8 @@ extern "C" __global__ void __raygen__SPCBPT()
             break;
         }
         if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
-        BDPTVertex& eye_subpath = payload.path.currentVertex(); 
         for (int it = 0; it < CONNECTION_N; it++)
         {
-
             int light_id = 0;
             float pmf_firstStage = 1;
             if (Tracer::params.subspace_info.light_tree)
@@ -428,7 +441,7 @@ extern "C" __global__ void __raygen__SPCBPT()
                 }
             }
 
-        } 
+        }
     }
      
     result += payload.result;
@@ -1333,24 +1346,41 @@ extern "C" __global__ void __miss__constant_radiance()
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
     prd->done = true;
     prd->currentResult = make_float3(0);
-    if (prd->depth == 0 && SKY.valid)
+    //if (prd->depth == 0 && SKY.valid)
+    //{
+    //    prd->result = prd->throughput * SKY.color(prd->ray_direction);
+    //}
+    if (SKY.valid == false)return;
+
+    float MIS_weight = 1;
+    float2 uv = dir2uv(prd->ray_direction);
+    Tracer::lightSample light_sample;
+    light_sample.ReverseSample(SKY.light(), uv);
+    if (prd->depth != 0)
     {
-        prd->result = prd->throughput * SKY.color(prd->ray_direction);
+        float pdf_brdf = prd->pdf;
+
+        float pdf_nee = light_sample.pdf;
+        MIS_weight = pdf_brdf / (pdf_brdf + pdf_nee);
     }
+#ifdef PT_BRDF_STRATEGY_ONLY 
+    MIS_weight = 1;
+#endif 
+#ifdef PT_NEE_STRATEGY_ONLY 
+    MIS_weight = 0;
+#endif 
+    //prd->result += prd->throughput * light_sample.emission * MIS_weight;
+    prd->result += prd->throughput * light_sample.emission * MIS_weight;
 }
 
 
 extern "C" __global__ void __miss__env__BDPTVertex()
 {
-    if (SKY.valid == false)
-    {
-        Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
-        prd->done = true;
-        return;
-    }
+    
     Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
     prd->done = true;
 
+    if (SKY.valid == false) { return; }
     if (prd->path.size == 1)
     {
         prd->result = SKY.color(prd->ray_direction);
@@ -1396,6 +1426,7 @@ extern "C" __global__ void __miss__env__BDPTVertex()
     //MidVertex.dLast = LastVertex.d;
 
     MidVertex.depth = LastVertex.depth + 1;
+    MidVertex.materialId = SKY.light_id;
 
 
     float3 dir = -MidVertex.normal;
@@ -1457,6 +1488,7 @@ RT_FUNCTION void PreTrace_buildPathInfo(BDPTVertex* eye, TrainData::nVertex_devi
     path->sample_pdf += n_eye.pdf * light.pdf;
     path->fix_pdf = n_next_eye.pdf;
     path->contri = eye->flux * light.forward_light(n_eye) * seg_contri;
+
     for (int i = 0; i < path->end_ind; i++)
     {
         conn[path->end_ind - i - 1] = preTraceConnection(n_eye, light);
@@ -1556,14 +1588,15 @@ extern "C" __global__ void __raygen__TrainData()
         }
         if (payload.path.hit_lightSource())
         {
-            if (payload.path.currentVertex().type != BDPTVertex::Type::ENV_MISS && payload.path.size > 2 && rr_acc_accept(resample_number, payload.seed))
+            //if (payload.path.currentVertex().type != BDPTVertex::Type::ENV_MISS && payload.path.size > 2 && rr_acc_accept(resample_number, payload.seed))
+            if (payload.path.size > 2 && rr_acc_accept(resample_number, payload.seed))
             {
                 Tracer::lightSample light_sample;
                 int light_id = payload.path.currentVertex().materialId;
                 light_sample.ReverseSample(Tracer::params.lights[light_id], payload.path.currentVertex().uv);
 
                 BDPTVertex light_vertex;
-                init_vertex_from_lightSample(light_sample, light_vertex);
+                init_vertex_from_lightSample(light_sample, light_vertex); 
                 PreTrace_buildPathInfo(buffer + buffer_size - 1, TrainData::nVertex_device(light_vertex, false), currentPath, currentConn, buffer_size);
                 resample_number++;
             }
@@ -1583,7 +1616,7 @@ extern "C" __global__ void __raygen__TrainData()
         {
             if ((light_vertex.is_DIRECTION() && dot(light_vertex.normal, eye_subpath.normal) < 0) ||
                 (!light_vertex.is_DIRECTION() && dot(vis_vec, light_sample.normal()) < 0))
-            {
+            { 
                 PreTrace_buildPathInfo(buffer + buffer_size - 1, TrainData::nVertex_device(light_vertex, false), currentPath, currentConn, buffer_size);
                 resample_number++;
             }
@@ -1617,6 +1650,11 @@ extern "C" __global__ void __raygen__TrainData()
     if (currentPath->begin_ind == currentPath->end_ind && currentPath->valid == true)
     {
         currentPath->valid = false;
+    }
+    if (currentPath->valid == true)
+    {
+        //printf("current info %f %f %f, %f\n", currentPath->contri.x, currentPath->contri.y, currentPath->contri.z,
+        //    currentPath->sample_pdf);
     }
 
     //if (currentPath->is_caustic == false)

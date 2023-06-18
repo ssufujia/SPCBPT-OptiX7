@@ -801,7 +801,7 @@ bool displayStatsControls(std::chrono::duration<double>& state_update_time,
     {
         sprintf(display_text,
             "%5.1f fps\n\n"
-            "state update: %8.1f ms\n"
+            "light trace: %8.1f ms\n"
             "render      : %8.1f ms\n"
             "display     : %8.1f ms\n",
             last_update_frames / std::chrono::duration<double>(cur_time - last_update_time).count(),

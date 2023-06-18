@@ -76,18 +76,23 @@ struct Light
         float3 direction;
         float3 intensity;
     };
-
+    struct EnvLight
+    {
+        float3 backgroundColor;
+        float3 emission_scale;
+    };
 
     Type  type;
     int id;
     int divLevel;
     int ssBase;
-    cudaTextureObject_t albedoID;
+    cudaTextureObject_t emissionID;
     union
     {
         Point   point;
         Ambient ambient;
         QUAD quad;
         Directional directional;
+        EnvLight env;
     };
 };

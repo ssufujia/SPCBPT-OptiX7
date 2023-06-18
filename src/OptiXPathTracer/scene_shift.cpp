@@ -34,8 +34,7 @@ static std::map<int, int> sampler_remap;
 void Material_shift(Scene& Src, sutil::Scene& Dst)
 {
     for (int i = 0; i < Src.texture_map.size(); i++)
-    {
-
+    { 
         int texWidth, texHeight, texChannels;
         std::string name = std::string(SAMPLES_DIR) + std::string("/data/") + Src.texture_map[i];
         stbi_uc* pixels = stbi_load(name.c_str(),
@@ -85,19 +84,19 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
 
             float2 offset = { 0, 0 };
             float  rotation = 0;
-            float2 scale = { 1, 1 };
+            float2 scale = { 1, -1 };
             mtl.pbr.base_color_tex.texcoord_offset = offset;
             mtl.pbr.base_color_tex.texcoord_scale = scale;
             mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
         }
-        if (p.normal_tex.tex != 0)
-        {
+        if (p.normal_tex.tex != 0 && Src.use_geometry_normal == false)
+        { 
             mtl.normal_tex.tex = sampler_remap[p.normal_tex.tex];
             mtl.normal_tex.texcoord = 0;
 
             float2 offset = { 0, 0 };
             float  rotation = 0;
-            float2 scale = { 1, 1 };
+            float2 scale = { 1, -1 };
             mtl.normal_tex.texcoord_offset = offset;
             mtl.normal_tex.texcoord_scale = scale;
             mtl.normal_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
@@ -126,53 +125,24 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
 }
 void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
 { 
-    int ssBase = Src.has_envMap() ? 0.5 * NUM_SUBSPACE_LIGHTSOURCE : 0;
+    //int ssBase = Src.has_envMap() ? 0.5 * NUM_SUBSPACE_LIGHTSOURCE : 0;
+    int ssBase = 0;
 
     std::vector<Light>& lights = Src.optix_lights;
     for (int i = 0; i < lights.size(); i++)
-    {
-        //auto& SL = Src.lights[i];
-        Light& light = lights[i]; 
-        //if (SL.lightType == LightType::DIRECTION)
-        //{
-        //    Dst.addDirectionalLight(SL.direction, SL.emission);
-        //    continue;
-        //    light.type = Light::Type::DIRECTIONAL;
-        //    light.directional.intensity = SL.emission;
-        //    light.directional.direction = SL.direction;
-        //}
-        //else if (SL.lightType == LightType::QUAD)
-        //{
-        //    light.type = Light::Type::QUAD;
-        //    light.quad.emission = SL.emission;
-        //    light.quad.corner = SL.position;
-        //    light.quad.u = SL.position + SL.u;
-        //    light.quad.v = SL.position + SL.v;
-        //    light.quad.normal = normalize(cross(SL.u, SL.v));
-        //    light.quad.area = length(cross(SL.u, SL.v));
-        //}
-        //else
-        //{
-        //    continue;
-        //}
-//        light.type = SL.lightType == LightType::DIRECTION? Light::Type::DIRECTIONAL  
-        light.id = i;
-        //light.albedoID = sampler_remap[SL.albedoID];
+    { 
+        Light& light = lights[i];  
+        light.id = i; 
         light.ssBase = ssBase;
-        ssBase += light.divLevel * light.divLevel; 
-        //printf("light source info %f %f %f\nlight source info u %f %f %f\nlight source info v %f %f %f\n", light.quad.corner.x, light.quad.corner.y, light.quad.corner.z,
-        //    light.quad.u.x, light.quad.u.y, light.quad.u.z,
-        //    light.quad.v.x, light.quad.v.y, light.quad.v.z
-        //    );
+        ssBase += light.divLevel * light.divLevel;  
     }
-    if (Src.has_envMap())
-    {
-        Light light;
-        light.type = Light::Type::ENV;
-        light.id = lights.size();
-        lights.push_back(light);
-
-    }
+    //if (Src.has_envMap())
+    //{
+    //    Light light;
+    //    light.type = Light::Type::ENV;
+    //    light.id = lights.size();
+    //    lights.push_back(light); 
+    //}
     params.lights = HostToDeviceBuffer(lights.data(), lights.size());
 }
 void Camera_shift(Scene& Src, sutil::Scene& Dst)

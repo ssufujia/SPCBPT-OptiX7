@@ -103,7 +103,7 @@ int32_t samples_per_launch = 1;
 
 std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye") }; 
 //std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
-int render_alg_id = 1;
+int render_alg_id = 0;
 bool one_frame_render_only = false;
 float render_fps = 60;
 //------------------------------------------------------------------------------
@@ -433,6 +433,7 @@ void initLaunchParams(const sutil::Scene& scene) {
         params.estimate_pr.ready = true;
     }  
     params.spcbpt_pure = SPCBPT_PURE;
+    params.no_subspace = NO_SUBSPACE;
 }
 
  
@@ -550,7 +551,7 @@ thrust::device_ptr<float> envMapCMFBuild(float4* lum, int size, const envInfo& i
     }
     return MyThrustOp::envMapCMFBuild(p2.data(), size);
 }
-void env_params_setup(const sutil::Scene& scene)
+void env_params_setup(Scene& Src, const sutil::Scene& scene)
 { 
     if (scene.getEnvFilePath() == std::string(""))
     {
@@ -560,40 +561,44 @@ void env_params_setup(const sutil::Scene& scene)
     printf("load and build sampling cmf from file %s\n",scene.getEnvFilePath());
     HDRLoader hdr_env((string(SAMPLES_DIR) + string("/data/") + scene.getEnvFilePath()));
 
-    float3 default_color = make_float3(1.0);
+    params.sky.light_id = Src.env_light_id;
+    Light& light = Src.optix_lights[params.sky.light_id];
     params.sky.height = hdr_env.height();
     params.sky.width = hdr_env.width();
-    params.sky.divLevel = sqrt(0.5 * NUM_SUBSPACE_LIGHTSOURCE);
-    params.sky.ssBase = 0;
+    params.sky.divLevel = light.divLevel;
+    params.sky.ssBase = light.ssBase;
     params.sky.size = hdr_env.height() * hdr_env.width();
 
 
 
     float4* hdr_m_raster = reinterpret_cast<float4*>(hdr_env.raster());
-    for (int i = 0; i < scene.dir_lights.size(); i++)
+    for (int i = 0; i < Src.dirLights.size(); i++)
     {
-        auto& dir_light = scene.dir_lights[i];
+        auto& dir_light = Src.dirLights[i];
         float3 dir = dir_light.first;
-        dir.y = -dir.y;
-        auto uv = dir2uv(-dir);
+        //dir.y = -dir.y;
+        auto uv = dir2uv(dir);
         auto coord = params.sky.uv2coord(uv);
         auto index = params.sky.coord2index(coord);
         hdr_m_raster[index] += make_float4(dir_light.second * params.sky.size / (4 * M_PI), 0.0);
         printf("Add directional light %f %f %f in index %d\n", dir_light.first.x, dir_light.first.y, dir_light.first.z, index);
+        
     }
-    auto env_tex = hdr_env.loadTexture(default_color, nullptr);
+    auto env_tex = hdr_env.loadTexture(light.env.backgroundColor, nullptr);
     params.sky.tex = env_tex.texture;
+    light.emissionID = params.sky.tex;
     params.sky.cmf = thrust::raw_pointer_cast(envMapCMFBuild(hdr_m_raster, hdr_env.height() * hdr_env.width(), params.sky));
     params.sky.center = scene.aabb().center();
     params.sky.r = length(scene.aabb().m_min - scene.aabb().m_max);
     params.sky.valid = true;
-    params.sky.light_id = params.lights.count - 1;
+    params.sky.sampler_scale = make_float2(1, 1);
+    params.sky.emission_scale = light.env.emission_scale;
 }
 void lt_params_setup(const sutil::Scene& scene)
 {
-    lt_params.M_per_core = 100;
-    lt_params.core_padding = 800;
-    lt_params.num_core = 1000;
+    lt_params.M_per_core = 25;
+    lt_params.core_padding = 200;
+    lt_params.num_core = 4000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
     lt_params.launch_frame = 0;
 
@@ -1231,9 +1236,8 @@ void preprocessing(sutil::Scene& scene)
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
     {
-        current_sample_count += launchPretrace(scene);
-    }
-
+        current_sample_count += launchPretrace(scene); 
+    } 
     //MyThrustOp::sample_reweight();
     auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 10000);
     auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE, 0);
@@ -1275,6 +1279,7 @@ void preprocessing(sutil::Scene& scene)
     thrust::device_ptr<float> Gamma;
     //MyThrustOp::load_Q_file(Q_star);
     MyThrustOp::build_optimal_E_train_data(target_sample_count);
+    printf("run here good\n");
     MyThrustOp::preprocess_getGamma(Gamma);
     MyThrustOp::train_optimal_E(Gamma);
 
@@ -1313,14 +1318,15 @@ void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene
         0 // stream
     ));
 
+    auto prog_set = scene.m_progsets[render_alg[render_alg_id]];
     OPTIX_CHECK(optixLaunch(
         //scene.pipeline(),
-        scene.m_progsets[render_alg[render_alg_id]].m_pipeline,
+        prog_set.m_pipeline,
         0,             // stream
         reinterpret_cast<CUdeviceptr>(d_params),
         sizeof(MyParams),
         //scene.sbt(),
-        &scene.m_progsets[render_alg[render_alg_id]].m_sbt,
+        &prog_set.m_sbt,
         params.width,  // launch width
         params.height, // launch height
         1       // launch depth
@@ -1415,13 +1421,16 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
         const float SET_ERROR = -1.0f;  
-        scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
+        //scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
+        //scenePath = string(SAMPLES_DIR) + string("/data/door/door.scene");   
+        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_teaser_env2.scene");   
         auto myScene = LoadScene(scenePath.c_str());  
         //myScene->getMeshData(0);  
         sutil::Scene TScene;  
         Scene_shift(*myScene, TScene);
-        LightSource_shift(*myScene, params, TScene); 
-        TScene.finalize(); 
+        LightSource_shift(*myScene, params, TScene);
+        TScene.finalize();
+        env_params_setup(*myScene, TScene);
         //
         // Set up OptiX state
         // 
@@ -1433,7 +1442,6 @@ int main( int argc, char* argv[] )
         dropOutTracingParamsInit();
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
-        env_params_setup(TScene);
          
         //pre tracing
         { 
@@ -1462,7 +1470,7 @@ int main( int argc, char* argv[] )
                 sutil::CUDAOutputBuffer<uchar4> output_buffer(output_buffer_type, width, height);
                 sutil::GLDisplay gl_display;
 
-                std::chrono::duration<double> state_update_time(0.0);
+                std::chrono::duration<double> light_tracing_time(0.0);
                 std::chrono::duration<double> render_time(0.0);
                 std::chrono::duration<double> display_time(0.0);
                 std::chrono::duration<double> sum_render_time(0.0);
@@ -1485,7 +1493,7 @@ int main( int argc, char* argv[] )
                         updateDropOutTracingCombineWeight();
                     }
                     auto t1 = std::chrono::steady_clock::now();
-                    state_update_time += t1 - t0;
+                    light_tracing_time += t1 - t0;
                     t0 = t1;
 
                     launchSubframe(output_buffer, TScene);
@@ -1500,7 +1508,7 @@ int main( int argc, char* argv[] )
                     t1 = std::chrono::steady_clock::now();
                     display_time += t1 - t0;
 
-                    setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
+                    setting_changed = sutil::displayStatsControls(light_tracing_time, render_time, display_time,
                         params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
                         params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize,
                         params.pg_params.pg_enable,

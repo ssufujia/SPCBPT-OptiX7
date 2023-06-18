@@ -261,7 +261,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
-    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     //    if (dot(N, ray_direction) > 0.f)
     //        N = -N;
     prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed, geom.P, true);
@@ -385,7 +385,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
-    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     //if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
     //    if (dot(N, ray_direction) > 0.f)
     //        N = -N;
@@ -426,7 +426,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
-    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     // NormalTexSample(geom, hit_group_data->material_data);
     // if (dot(N, ray_direction) > 0.f)
     // N = -N;
@@ -508,7 +508,7 @@ extern "C" __global__ void __closesthit__radiance()
     RoughnessAndMetallicTexSample(geom, currentPbr);
     //float3 N = geom.N;
     float3 N = geom.Ng; 
-    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     float3 in_dir = -prd->ray_direction;
     float3 result = make_float3(0.0f);
 
@@ -525,7 +525,42 @@ extern "C" __global__ void __closesthit__radiance()
     /* 计算 NEE */
     int light_id = clamp(static_cast<int>(floorf(rnd(prd->seed) * Tracer::params.lights.count)), int(0), int(Tracer::params.lights.count - 1));
     Light light = Tracer::params.lights[light_id];
-    if (light.type == Light::Type::QUAD)
+    { 
+        Tracer::lightSample light_sample;
+        light_sample(light, prd->seed);
+
+        float3 light_position = light_sample.position_for_tracing(geom.P);
+        const float  L_dist2 = light_sample.distance_attenuation(geom.P);
+        const float3 L = normalize(light_position - geom.P);
+        const float3 V = -normalize(optixGetWorldRayDirection());
+        const float3 LN = light_sample.normal();
+        const float  L_dot_LN = dot(-L, LN);
+        const float  N_dot_L = abs(dot(N, L));
+        const float  N_dot_V = abs(dot(N, V));
+        //printf("normal %f %f %f %f- %f %f %f\n",SKY.r, light_position.x, light_position.y, light_position.z, LN.x, LN.y, LN.z);
+        if (L_dot_LN > 0.0f)
+        { 
+            prd->vis_pos_A = geom.P;
+            prd->vis_pos_B = light_position;
+            float3 eval = Tracer::Eval(currentPbr, N, V, L);
+             
+            float pdf_nee = light_sample.pdf;
+            float pdf_brdf = Tracer::Pdf(currentPbr, N, V, L, geom.P, true) * abs(L_dot_LN) / L_dist2 * rr_rate;
+            float MIS_weight = pdf_nee / (pdf_brdf + pdf_nee); 
+#ifdef PT_BRDF_STRATEGY_ONLY 
+            MIS_weight = 0;
+#endif // PT_BRDF_STRATEGY_ONLY 
+
+#ifdef PT_NEE_STRATEGY_ONLY 
+            MIS_weight = 1;
+#endif // PT_BRDF_STRATEGY_ONLY 
+            //printf("gethere\n");
+            result += prd->throughput * light_sample.emission / light_sample.pdf
+                * N_dot_L * L_dot_LN / L_dist2 * eval * MIS_weight;// *make_float3(1.0, 0.0, 1.0);
+        } 
+    }
+
+    if (false && light.type == Light::Type::QUAD)
     {
         Tracer::lightSample light_sample;
         light_sample(light, prd->seed);
@@ -570,23 +605,23 @@ extern "C" __global__ void __closesthit__radiance()
             }
         }
     }
-    else if (light.type == Light::Type::ENV)
-    {
-        Tracer::lightSample light_sample;
-        light_sample(light, prd->seed);
+    //else if (light.type == Light::Type::ENV)
+    //{
+    //    Tracer::lightSample light_sample;
+    //    light_sample(light, prd->seed);
 
-        const float3 V = -normalize(optixGetWorldRayDirection());
-        const float3 L = light_sample.direction;
-        float L_dot_N = dot(light_sample.direction, N);
-        if (L_dot_N > 0.0)
-        {
-            prd->vis_pos_A = geom.P;
-            prd->vis_pos_B = geom.P + light_sample.direction * SKY.r * 10;
-            //            printf("light_sample dir %f %f %f\n", light_sample.direction.x, light_sample.direction.y, light_sample.direction.z);
-            float3 eval = Tracer::Eval(currentPbr, N, V, L);
-            result += prd->throughput * light_sample.emission / light_sample.pdf * eval * L_dot_N;
-        }
-    }
+    //    const float3 V = -normalize(optixGetWorldRayDirection());
+    //    const float3 L = light_sample.direction;
+    //    float L_dot_N = dot(light_sample.direction, N);
+    //    if (L_dot_N > 0.0)
+    //    {
+    //        prd->vis_pos_A = geom.P;
+    //        prd->vis_pos_B = geom.P + light_sample.direction * SKY.r * 10;
+    //        //            printf("light_sample dir %f %f %f\n", light_sample.direction.x, light_sample.direction.y, light_sample.direction.z);
+    //        float3 eval = Tracer::Eval(currentPbr, N, V, L);
+    //        result += prd->throughput * light_sample.emission / light_sample.pdf * eval * L_dot_N;
+    //    }
+    //}
 
     //const LocalGeometry geom = getLocalGeometry(hit_group_data->geometry_data);
     //result = make_float3(geom.texcoord[1].UV.x, geom.texcoord[0].UV.y ,0.0) + make_float3(1.0,1.0,0);
@@ -603,15 +638,14 @@ extern "C" __global__ void __closesthit__radiance()
     prd->currentResult += result;
     prd->origin = geom.P;
 
-    if (rnd(prd->seed) > rr_rate)
+    if (RR_TEST(prd->seed, rr_rate) == false)
     {
         prd->done = true;
     }
     else
     {
         prd->ray_direction = Tracer::Sample(currentPbr, N, in_dir, prd->seed, geom.P, true);
-        float pdf = Tracer::Pdf(currentPbr, N, in_dir, prd->ray_direction, geom.P, true);
-         
+        float pdf = Tracer::Pdf(currentPbr, N, in_dir, prd->ray_direction, geom.P, true); 
         if (pdf > 0.0f)
         {
             prd->throughput *= Tracer::Eval(currentPbr, N, in_dir, prd->ray_direction) * abs(dot(prd->ray_direction, N)) / pdf / rr_rate;
@@ -622,8 +656,7 @@ extern "C" __global__ void __closesthit__radiance()
             prd->done = true;
         }
     }
-
-    //Tracer::setPayloadResult( result );
+     
     if (Tracer::params.PG_grid_visualize && Tracer::params.pg_params.pg_enable)
     {
         unsigned vis_id = Tracer::params.pg_params.getStreeId(geom.P);

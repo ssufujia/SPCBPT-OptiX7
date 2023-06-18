@@ -2182,7 +2182,7 @@ void Scene::createSBT(ProgSet& p)
             hitgroup_record_size * hitgroup_records.size(),
             cudaMemcpyHostToDevice
         ));
-        printf("hit group count %d\n", hitgroup_records.size());
+        //printf("hit group count %d\n", hitgroup_records.size());
         p.m_sbt.hitgroupRecordStrideInBytes = static_cast<unsigned int>(hitgroup_record_size);
         p.m_sbt.hitgroupRecordCount = static_cast<unsigned int>(hitgroup_records.size()); 
     }
@@ -2314,13 +2314,11 @@ void ProgSet::compile(Scene& scene)
     {
         printf("error: get a program set without raygen, skipping compile\n");
         return;
-    }
-    printf("pinA\n");
+    } 
     groups_desc[prog_id].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
     groups_desc[prog_id].raygen.module = modules[p_raygen.filePath];
     groups_desc[prog_id].raygen.entryFunctionName = p_raygen.progName.c_str();
-    prog_id++;
-    printf("pinB\n", p_raygen.progName.c_str());
+    prog_id++; 
 
     for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
     {
@@ -2328,8 +2326,7 @@ void ProgSet::compile(Scene& scene)
         groups_desc[prog_id].kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
         groups_desc[prog_id].miss.module = modules[p_missing[i].filePath];
         groups_desc[prog_id].miss.entryFunctionName = p_missing[i].progName.c_str();
-        prog_id++;
-        printf("pinC\n");
+        prog_id++; 
     }
     for (int i = 0; i < RayType::RAY_TYPE_COUNT; i++)
     {
@@ -2340,12 +2337,10 @@ void ProgSet::compile(Scene& scene)
             groups_desc[prog_id].hitgroup.moduleCH = modules[p_rayhit[i][j].filePath];
             groups_desc[prog_id].hitgroup.entryFunctionNameCH = p_rayhit[i][j].CHName.c_str();
             groups_desc[prog_id].hitgroup.moduleAH = modules[p_rayhit[i][j].filePath];
-            groups_desc[prog_id].hitgroup.entryFunctionNameAH = p_rayhit[i][j].AHName.c_str();
-            printf("pinD %s\n", groups_desc[prog_id].hitgroup.entryFunctionNameCH);
+            groups_desc[prog_id].hitgroup.entryFunctionNameAH = p_rayhit[i][j].AHName.c_str(); 
             prog_id++;
         }
-    }
-    printf("pinDD\n");
+    } 
     OPTIX_CHECK_LOG(optixProgramGroupCreate(
         scene.context(),
         groups_desc,
@@ -2354,8 +2349,7 @@ void ProgSet::compile(Scene& scene)
         log,
         &sizeof_log,
         temp_groups
-    ));
-    printf("pinE\n");
+    )); 
     prog_id = 0;
     p_raygen.progGroup = temp_groups[prog_id];
     prog_id++;

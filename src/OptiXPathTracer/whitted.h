@@ -90,6 +90,7 @@ struct LaunchParams
     bool PG_grid_visualize;
     bool error_heat_visual;
     bool spcbpt_pure;
+    bool no_subspace;
 };
 
 struct PayloadRadiance

@@ -83,6 +83,7 @@ Scene* LoadScene(const char* filename)
 			material.initialize();
 			char tex_name[kMaxLineLength] = "None";
 			char normal_tex_name[kMaxLineLength] = "None";
+			char metallic_roughness_tex_name[kMaxLineLength] = "None";
 
 			while (fgets(line, kMaxLineLength, file))
 			{
@@ -95,6 +96,7 @@ Scene* LoadScene(const char* filename)
                     &material.base_color.z);
 				sscanf(line, " albedoTex %s", &tex_name);
 				sscanf(line, " normalTex %s", &normal_tex_name);
+				sscanf(line, " materialTex %s", &metallic_roughness_tex_name);
 				//sscanf(line, " emission %f %f %f", &material.emission.x, &material.emission.y,
     //                &material.emission.z);
 
@@ -114,6 +116,7 @@ Scene* LoadScene(const char* filename)
 				sscanf(line, " eta %f", &material.eta);
 				if (material.roughness < .001)material.roughness = .001;
 			}
+
 			// Check if texture is already loaded
 			if (texture_ids.find(tex_name) != texture_ids.end()) // Found Texture
 			{
@@ -126,19 +129,34 @@ Scene* LoadScene(const char* filename)
 				scene->texture_map[tex_id - 1] = tex_name;
 				material.base_color_tex.tex = tex_id;
 			}
+
+
 			//normal tex
 			if (texture_ids.find(normal_tex_name) != texture_ids.end()) // Found Texture
 			{
 				material.normal_tex.tex = texture_ids[tex_name];
 			}
-			else if (strcmp(tex_name, "None") != 0)
+			else if (strcmp(normal_tex_name, "None") != 0)
 			{
 				tex_id++;
 				texture_ids[tex_name] = tex_id;
 				scene->texture_map[tex_id - 1] = tex_name;
 				material.normal_tex.tex = tex_id;				
-			}
+			} 			
 
+
+			//material tex
+			if (texture_ids.find(metallic_roughness_tex_name) != texture_ids.end()) // Found Texture
+			{
+				material.metallic_roughness_tex.tex = texture_ids[tex_name];
+			}
+			else if (strcmp(metallic_roughness_tex_name, "None") != 0)
+			{
+				tex_id++;
+				texture_ids[tex_name] = tex_id;
+				scene->texture_map[tex_id - 1] = tex_name;
+				material.metallic_roughness_tex.tex = tex_id;
+			} 
 			// add material to map
 			materials_map[name] = material;
 		}
@@ -147,13 +165,14 @@ Scene* LoadScene(const char* filename)
 		// Light
 
 		if (strstr(line, "light"))
-		{
-			LightParameter light_old;
+		{ 
 			Light light;
 			float3 v1, v2;
 			char light_type[20] = "None";
 			int lightDivLevel = 1;
 			char tex_name[kMaxLineLength] = "None"; 
+			float3 emission = make_float3(0);
+			float3 emission_scale = make_float3(1);
 			while (fgets(line, kMaxLineLength, file))
 			{
 				// end group
@@ -162,33 +181,20 @@ Scene* LoadScene(const char* filename)
 
 				sscanf(line, " position %f %f %f", &light.quad.corner.x, &light.quad.corner.y,
 					&light.quad.corner.z);
-				sscanf(line, " emission %f %f %f", &light.quad.emission.x, &light.quad.emission.y,
-					&light.quad.emission.z);
+				sscanf(line, " emission %f %f %f", &emission.x, &emission.y,
+					&emission.z);
+				sscanf(line, " emission_scale %f %f %f", &emission_scale.x, &emission_scale.y,
+					&emission_scale.z);
 				sscanf(line, " normal %f %f %f", &light.quad.normal.x, &light.quad.normal.y,
 					&light.quad.normal.z);
 
 				sscanf(line, " direction %f %f %f", &light.directional.direction.x, &light.directional.direction.y,
-					&light.directional.direction.z); 
-
-
-
-
-				//sscanf(line, " position %f %f %f", &light.position.x, &light.position.y,
-    //                &light.position.z);
-				//sscanf(line, " emission %f %f %f", &light.emission.x, &light.emission.y,
-    //                &light.emission.z);
-				//sscanf(line, " normal %f %f %f", &light.normal.x, &light.normal.y,
-    //                &light.normal.z);
-
-    //            sscanf(line, " direction %f %f %f", &light.direction.x, &light.direction.y,
-    //                &light.direction.z);
-				//sscanf(line, " radius %f", &light.radius);
-				//sscanf(line, " u %f %f %f", &light.v1.x, &light.v1.y, &light.v1.z);
-				//sscanf(line, " v %f %f %f", &light.v2.x, &light.v2.y, &light.v2.z);
+					&light.directional.direction.z);  
 				sscanf(line, " v1 %f %f %f", &v1.x, &v1.y, &v1.z);
 				sscanf(line, " v2 %f %f %f", &v2.x, &v2.y, &v2.z);
 				sscanf(line, " type %s", light_type);
 				sscanf(line, " divLevel %d", &lightDivLevel);
+				sscanf(line, " emissionTex %s", &tex_name);
 				sscanf(line, " albedoTex %s", &tex_name);
 			}
 			light.divLevel = lightDivLevel;
@@ -199,45 +205,47 @@ Scene* LoadScene(const char* filename)
 				light.quad.v = v2;// -light.quad.corner;
 				light.quad.area = length(cross(light.quad.u - light.quad.corner, light.quad.v - light.quad.corner));
 				light.quad.normal = normalize(cross(light.quad.u - light.quad.corner, light.quad.v - light.quad.corner));
+				light.quad.emission = emission * emission_scale;
 			}
-			//else if (strcmp(light_type, "Sphere") == 0)
-			//{
-			//	light.type = SPHERE;
-			//	light.normal = normalize(light.normal);
-			//	light.area = 4.0f * M_PIf * light.radius * light.radius;
-			//}
             else if (strcmp(light_type, "Direction") == 0)
             {
 				light.type = Light::Type::DIRECTIONAL; 
-                
+				light.directional.direction = normalize(light.directional.direction);
+				light.directional.intensity = emission;
             }
             else if (strcmp(light_type, "Env") == 0)
             {
-				light.type = Light::Type::ENV;
+				light.type = Light::Type::ENV;  
+				light.env.backgroundColor = emission;
+				light.env.emission_scale = emission_scale;
+            } 
 
-            }
 			if (light.type == Light::Type::DIRECTIONAL)
 			{
-				scene->dirLightDir = light.directional.direction;
+				scene->dirLights.push_back(std::make_pair( light.directional.direction, light.directional.intensity));
 			}
-			//printf("%d\n", lightDivLevel);
-			//auto local_lights = breakLight(light, lightDivLevel);
-			//scene->lights.insert(scene->lights.end(), local_lights.begin(), local_lights.end());
-			//printf("insert lights %d\n", local_lights.size());
-			light.albedoID = 0;
-			if (texture_ids.find(tex_name) != texture_ids.end()) // Found Texture
-			{
-				light.albedoID = texture_ids[tex_name];
+			else if (light.type == Light::Type::ENV)
+			{ 
+				scene->env_file = tex_name;
+				scene->env_light_id = scene->optix_lights.size();
+				scene->optix_lights.push_back(light);
 			}
-			else if (strcmp(tex_name, "None") != 0)
-			{
-				tex_id++;
-				texture_ids[tex_name] = tex_id;
-				scene->texture_map[tex_id - 1] = tex_name;
-				light.albedoID = tex_id;
+			else
+			{ 
+				light.emissionID = 0;
+				if (texture_ids.find(tex_name) != texture_ids.end()) // Found Texture
+				{
+					light.emissionID = texture_ids[tex_name];
+				}
+				else if (strcmp(tex_name, "None") != 0)
+				{
+					tex_id++;
+					texture_ids[tex_name] = tex_id;
+					scene->texture_map[tex_id - 1] = tex_name;
+					light.emissionID = tex_id;
+				}
+				scene->optix_lights.push_back(light);
 			}
-			scene->lights.push_back(light_old);
-			scene->optix_lights.push_back(light);
 		}
 
 		//--------------------------------------------

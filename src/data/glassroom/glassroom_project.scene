@@ -97,7 +97,7 @@ light
 	v2 -42.304020 4.336473 14.640813
     divLevel 1
     emission 100300 100000 130000
-	albedoTex glassroom/projector/caster.png
+    emissionTex glassroom/projector/caster.png
     type Quad
 }
  

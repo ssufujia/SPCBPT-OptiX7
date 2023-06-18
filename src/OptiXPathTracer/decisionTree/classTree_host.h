@@ -343,7 +343,7 @@ namespace classTree
             return operator()(labeled_samples, 0.99);
         }
         
-        tree operator()(std::vector<divide_weight_with_label>& samples,float threshold, int max_depth = 15, int refer_num_class = 100)
+        tree operator()(std::vector<divide_weight_with_label>& samples,float threshold, int max_depth = 12, int refer_num_class = 100)
         {
             max_label = 0;
             //weight normalization

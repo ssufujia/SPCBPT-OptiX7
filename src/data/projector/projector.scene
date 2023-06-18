@@ -43,7 +43,7 @@ light
 	v2 1.504467 0.776432 1.620410
 	v1 1.627073 0.841246 1.620410
 	emission 80000 80000 80000   
-	albedoTex projector/textures/SIGGRAPH-Asia-2023.png
+	emissionTex projector/textures/SIGGRAPH-Asia-2023.png
 	type Quad
 }
  

@@ -1135,7 +1135,7 @@ namespace MyThrustOp
         {
             //in the case of caustic Gamma, ignore the ordinary path
             //but in the case of normal Gamma, most of the connections of caustic path are valid still.
-            if (caustic_case != h_neat_paths[i].is_caustic)
+            if (false && caustic_case != h_neat_paths[i].is_caustic)
             {
                 caustic_filter_count++;
                 if(caustic_case) continue;
@@ -1145,7 +1145,7 @@ namespace MyThrustOp
             float weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;  
             for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
             {
-                if (caustic_case)
+                if (false && caustic_case)
                 {
                     if (j - h_neat_paths[i].begin_ind != h_neat_paths[i].caustic_id)
                     {
@@ -1164,15 +1164,7 @@ namespace MyThrustOp
                 h_Gamma[GammaId] += weight2;
             }
         }
-        
-        if (caustic_case == false)
-        {
-            printf("%d / %d paths are caustic paths and deleted from the training of ordinaryGamma.\n", caustic_filter_count, h_neat_paths.size()); 
-        }
-        else
-        {
-            printf("%d / %d paths are ordinary paths and deleted from the training of causticGamma.\n", caustic_filter_count, h_neat_paths.size());
-        }
+         
 
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
@@ -1190,6 +1182,9 @@ namespace MyThrustOp
                 { 
                     h_Gamma[i * NUM_SUBSPACE + j] = 1.0 / NUM_SUBSPACE;
                 }
+
+                //h_Gamma[i * NUM_SUBSPACE + j] = 1.0 / NUM_SUBSPACE * 0.2 + 0.8 * h_Gamma[i * NUM_SUBSPACE + j];
+               // h_Gamma[i * NUM_SUBSPACE + j] = 1.0 / NUM_SUBSPACE;
             } 
         }
         d_gamma = h_Gamma;
@@ -3857,7 +3852,7 @@ namespace MyThrustOp
     void train_optimal_E(thrust::device_ptr<float>& E_ptr)
     {
         float lr = .01;
-        int epoches = 1;
+        int epoches = 2;
          
         MyMISAware_optimization::matrix_parameter theta(NUM_SUBSPACE, NUM_SUBSPACE, lr);//lr = 0.2 batch_size = 20k may be a better choice
         thrust::device_vector<float> tmp_E_buffer(E_ptr, E_ptr + NUM_SUBSPACE * NUM_SUBSPACE); 
@@ -3944,8 +3939,8 @@ namespace MyThrustOp
         {
             for (int j = 0; j < NUM_SUBSPACE; j++)
             {
-                float t = CONSERVATIVE_RATE;
-                p[i * NUM_SUBSPACE + j] = p[i * NUM_SUBSPACE + j] * (1 - t) + (1.0 / NUM_SUBSPACE) * t;
+                float t = CONSERVATIVE_RATE; 
+                p[i * NUM_SUBSPACE + j] = p[i * NUM_SUBSPACE + j] * (1 - t) + (1.0 / NUM_SUBSPACE) * t; 
             }
         }
         for (int i = 0; i < NUM_SUBSPACE; i++)

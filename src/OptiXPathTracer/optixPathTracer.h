@@ -56,6 +56,11 @@ const bool estimation_save = true;
 #define SPCBPT_TERMINATE_EARLY false
 #define DOT_BOUND_LIMIT_LESS false
 
+#define NO_SUBSPACE false
+//#ifdef NO_SUBSPACE
+//#define CONSERVATIVE_RATE (0.0f)
+//#endif // NO_SUBSPACE 
+
  
 
  
@@ -136,6 +141,8 @@ struct envInfo
     float* cmf;
     float r;
     float3 center;
+    float2 sampler_scale;
+    float3 emission_scale;
     int size;
     int width;
     int height;
@@ -164,6 +171,7 @@ struct envInfo
     }
     RT_FUNCTION __host__ int2 uv2coord(float2 uv)const
     {
+        uv = make_float2(uv.x, uv.y);
         int x = uv.x * width;
         int y = uv.y * height;
         x = min(x, width - 1);
