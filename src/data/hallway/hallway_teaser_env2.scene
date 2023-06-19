@@ -16,12 +16,12 @@ light
       emission_scale 3 3 3
       divLevel 10
 }
-#light
-#{
-#    direction -0.15  -0.2 -0.05
-#    emission 36 30 36
-#    type Direction
-#}
+light
+{
+    direction -0.15  -0.2 -0.05
+    emission 3.6 3.0 3.6
+    type Direction
+}
 
 #light
 #{

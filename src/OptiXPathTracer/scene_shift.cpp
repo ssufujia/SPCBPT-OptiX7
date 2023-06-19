@@ -89,6 +89,18 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
             mtl.pbr.base_color_tex.texcoord_scale = scale;
             mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
         }
+        if (p.metallic_roughness_tex.tex != 0)
+        {
+            mtl.pbr.metallic_roughness_tex.tex = sampler_remap[p.metallic_roughness_tex.tex];
+            mtl.pbr.metallic_roughness_tex.texcoord = 0;
+
+            float2 offset = { 0, 0 };
+            float  rotation = 0;
+            float2 scale = { 1, -1 };
+            mtl.pbr.metallic_roughness_tex.texcoord_offset = offset;
+            mtl.pbr.metallic_roughness_tex.texcoord_scale = scale;
+            mtl.pbr.metallic_roughness_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+        }
         if (p.normal_tex.tex != 0 && Src.use_geometry_normal == false)
         { 
             mtl.normal_tex.tex = sampler_remap[p.normal_tex.tex];

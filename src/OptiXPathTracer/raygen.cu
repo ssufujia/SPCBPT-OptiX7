@@ -254,11 +254,11 @@ __device__ float3 direction_connect_ZGCBPT(const BDPTVertex& a, const BDPTVertex
 {
     float3 L = make_float3(0.0f);
     float3 connectDir = -b.normal;
-    if (dot(a.normal, connectDir) > 0.0)
+    //if (dot(a.normal, connectDir) > 0.0)
     {
         MaterialData::Pbr mat_a = VERTEX_MAT(a);
         float3 f = Tracer::Eval(mat_a, a.normal, normalize(a.lastPosition - a.position), connectDir)
-            * dot(a.normal, connectDir);
+            * abs(dot(a.normal, connectDir));
         L = a.flux / a.pdf * f * b.flux / b.pdf * rmis::connection_direction_lightSource(a, b);
     }
     if (ISINVALIDVALUE(L))
@@ -1431,7 +1431,8 @@ extern "C" __global__ void __miss__env__BDPTVertex()
 
     float3 dir = -MidVertex.normal;
     BDPTVertex virtual_light;
-    rmis::construct_virtual_env_light(virtual_light, SKY.color(dir), light_sample.pdf, dir, SKY.getLabel(dir));
+    //rmis::construct_virtual_env_light(virtual_light, SKY.color(dir), light_sample.pdf, dir, SKY.getLabel(dir)); 
+    init_vertex_from_lightSample(light_sample, virtual_light);
     float dd = rmis::light_hit_env(LastVertex, virtual_light);
     //printf("env hit compare %f %f\n", dd, 1.0 / MidVertex.d);
     MidVertex.RMIS_pointer = 1.0 / dd;

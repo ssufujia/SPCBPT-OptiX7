@@ -336,6 +336,7 @@ namespace TrainData
         float3 weight;//pdf for eye vertex, light contri for light vertex
         float3 color;
         float3 shade_normal;
+        float2 uv;
         float pdf;//light vertex only, for fast compute the overall sampled path pdf 
         float save_t;
         int last_id;//for cached light vertex
@@ -381,6 +382,7 @@ namespace TrainData
             dir = a.depth == 0 ? make_float3(0.0) : normalize(a.lastPosition - a.position);
             weight = eye_side ? make_float3(pdf) : a.flux;
             shade_normal = a.get_shade_normal();
+            uv = a.uv;
             if (eye_side == false && a.depth == 0)
             {
                 if (a.type == BDPTVertex::Type::QUAD) setLightSourceFlag(false);
@@ -388,11 +390,25 @@ namespace TrainData
             }
         }
         template<typename B, typename T = MaterialData::Pbr>
-        __host__ __device__ T  getMat(B mats)const
+        __device__ T  getMat(B mats)const
         { 
             T mat = mats[materialId];
             mat.base_color = make_float4(color, 1);
             mat.shade_normal = shade_normal;
+            mat.uv = uv;
+            if (mat.metallic_roughness_tex.tex)
+            {
+                MaterialData::Texture& tex = mat.metallic_roughness_tex;
+                const float2 UV = uv * tex.texcoord_scale;
+                const float2 rotation = tex.texcoord_rotation;
+                const float2 UV_trans = make_float2(
+                    dot(UV, make_float2(rotation.y, rotation.x)),
+                    dot(UV, make_float2(-rotation.x, rotation.y))) + tex.texcoord_offset;
+                float4 mr_tex = tex2D<float4>(tex.tex, UV_trans.x, UV_trans.y);
+                mat.roughness *= mr_tex.y;
+                mat.metallic *= mr_tex.z;
+            }
+            mat.roughness = max(0.001f, mat.roughness);
             return mat;
         }
     };

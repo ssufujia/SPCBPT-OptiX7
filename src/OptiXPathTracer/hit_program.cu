@@ -202,17 +202,6 @@ RT_FUNCTION float3 normal_shift(float3 geo_normal, float3 local_normal_shader)
     onb.inverse_transform(local_normal_shader); 
     return local_normal_shader;
 }
-RT_FUNCTION void RoughnessAndMetallicTexSample(const LocalGeometry& geom, MaterialData::Pbr& pbr)
-{
-    //float  metallic  = hit_group_data->material_data.pbr.metallic;
-    //float  roughness = hit_group_data->material_data.pbr.roughness;
-    float4 mr_tex = make_float4(1.0f);
-    if (pbr.metallic_roughness_tex)
-        mr_tex = sampleTexture<float4>(pbr.metallic_roughness_tex, geom);
-    pbr.roughness *= mr_tex.y;
-    pbr.metallic *= mr_tex.z;
-    return;
-}
 RT_FUNCTION float3 NormalTexSample(const LocalGeometry& geom, const MaterialData& matData)
 {
     //
@@ -262,6 +251,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.uv = geom.texcoord[0].UV;
     //    if (dot(N, ray_direction) > 0.f)
     //        N = -N;
     prd->ray_direction = Tracer::Sample(currentPbr, N, inver_ray_direction, prd->seed, geom.P, true);
@@ -386,6 +376,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.uv = geom.texcoord[0].UV;
     //if (Tracer::params.materials[hit_group_data->material_data.id].brdf == true) { N = NormalTexSample(geom, hit_group_data->material_data); }
     //    if (dot(N, ray_direction) > 0.f)
     //        N = -N;
@@ -427,6 +418,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.uv = geom.texcoord[0].UV;
     // NormalTexSample(geom, hit_group_data->material_data);
     // if (dot(N, ray_direction) > 0.f)
     // N = -N;
@@ -509,6 +501,7 @@ extern "C" __global__ void __closesthit__radiance()
     //float3 N = geom.N;
     float3 N = geom.Ng; 
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
+    currentPbr.uv = geom.texcoord[0].UV;
     float3 in_dir = -prd->ray_direction;
     float3 result = make_float3(0.0f);
 

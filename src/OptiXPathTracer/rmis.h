@@ -15,11 +15,13 @@ namespace rmis
 
     RT_FUNCTION MaterialData::Pbr& getMat(const BDPTVertex& Vertex)
     {
+        return VERTEX_MAT(Vertex);
         MaterialData::Pbr mat = Tracer::params.materials[Vertex.materialId];
         mat.base_color = make_float4(Vertex.color, 1.0);
         mat.shade_normal = Vertex.get_shade_normal();
+        mat.uv = Vertex.uv;
         return mat;
-}
+    }
     RT_FUNCTION void tracing_init_light(BDPTVertex& MidVertex, BDPTVertex& LastVertex)//assumption:lastVertex is the light source
     {
         //    LastVertex.RMIS_pointer = LastVertex.d;
@@ -236,18 +238,19 @@ namespace rmis
         return weight / (weight + D_A + D_B);
     }
 
-    RT_FUNCTION float connection_direction_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
+    RT_FUNCTION float connection_direction_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)
     { 
-        float3 connect_dir = lightVertex.normal;
+        float3 connect_dir = -lightVertex.normal;
         float3 flux = lightVertex.flux / lightVertex.pdf;
 
-        float LL_pdf_A = getLL_pdf(lightVertex, eyeVertex, false);
-        float3 flux_multiplier_0 = getFluxMultiplier(eyeVertex, -connect_dir);
+        //float LL_pdf_A = getLL_pdf(lightVertex, eyeVertex, false);
+        float LL_pdf_A = getLast_pdf(eyeVertex, connect_dir, false);
+        float3 flux_multiplier_0 = getFluxMultiplier(eyeVertex, connect_dir);
         float3 weight_A = tracing_weight_eye(lightVertex, eyeVertex);
         float3 D_A_0 = ((eyeVertex.RMIS_pointer_3 * LL_pdf_A * flux_multiplier_0) + weight_A);
 
         float pdf_A = getPdf_from_light_source(lightVertex, eyeVertex);
-        float flux_multiplier_1 = lightVertex.is_DIRECTION() ? 1.0 / Tracer::params.sky.projectPdf() : M_PIf;
+        float flux_multiplier_1 = 1.0 / Tracer::params.sky.projectPdf();
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
 
 
@@ -309,7 +312,7 @@ namespace rmis
         float3 connect_dir = -lightVertex.normal;
         float3 flux = lightVertex.flux / lightVertex.pdf;
         float LL_pdf_A = getLast_pdf(eyeVertex, connect_dir, false);
-        float3 flux_multiplier_0 = getFluxMultiplier(eyeVertex, -connect_dir);
+        float3 flux_multiplier_0 = getFluxMultiplier(eyeVertex, connect_dir);
         float3 weight_A = tracing_weight_eye(lightVertex, eyeVertex);
         float3 D_A_0 = ((eyeVertex.RMIS_pointer_3 * LL_pdf_A * flux_multiplier_0) + weight_A);
 

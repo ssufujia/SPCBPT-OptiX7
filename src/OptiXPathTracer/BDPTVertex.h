@@ -6,7 +6,7 @@
 #include"rt_function.h" 
 #include"light_parameters.h" 
 #include"MaterialData.h"
-
+//#include<cuda/SimpleSample.h>
 //struct specularIdRecord
 //{
 //    short id;
@@ -106,7 +106,7 @@ struct BDPTVertex
         shade_normal = sn;
     }
     template<typename B, typename T = MaterialData::Pbr>
-    __host__ __device__ T  getMat(B mats)const
+    __device__ T  getMat(B mats)const
     {
         if (type != BDPTVertex::Type::NORMALHIT)
         {
@@ -116,6 +116,20 @@ struct BDPTVertex
         T mat = mats[materialId];
         mat.base_color = make_float4(color, 1);
         mat.shade_normal = get_shade_normal();
+        mat.uv = uv;
+        if (mat.metallic_roughness_tex.tex)
+        {
+            MaterialData::Texture& tex = mat.metallic_roughness_tex;
+            const float2 UV = uv * tex.texcoord_scale;
+            const float2 rotation = tex.texcoord_rotation;
+            const float2 UV_trans = make_float2(
+                dot(UV, make_float2(rotation.y, rotation.x)),
+                dot(UV, make_float2(-rotation.x, rotation.y))) + tex.texcoord_offset; 
+            float4 mr_tex = tex2D<float4>(tex.tex, UV_trans.x, UV_trans.y);
+            mat.roughness *= mr_tex.y;
+            mat.metallic *= mr_tex.z;  
+        }
+        mat.roughness = max(0.001f, mat.roughness);
         return mat;
     }
 

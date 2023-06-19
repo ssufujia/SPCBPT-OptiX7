@@ -69,6 +69,7 @@ struct MaterialData
     {
         float4               base_color;
         float3               shade_normal;
+        float2               uv;
         float                metallic;
         float                roughness;
         float                specular;

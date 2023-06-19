@@ -27,16 +27,47 @@
 
 #include <cuda/LocalGeometry.h>
 #include <cuda/MaterialData.h>
-
+//#include <cuda/SimpleSample.h>
 //------------------------------------------------------------------------------
 //
 //
 //
 //------------------------------------------------------------------------------
+template<typename T>
+__device__ __forceinline__ T sampleTexture(MaterialData::Texture tex, const float2 uv)
+{
+    if (tex.tex)
+    {
+        const float2 UV = uv * tex.texcoord_scale;
+        const float2 rotation = tex.texcoord_rotation;
+        const float2 UV_trans = make_float2(
+            dot(UV, make_float2(rotation.y, rotation.x)),
+            dot(UV, make_float2(-rotation.x, rotation.y))) + tex.texcoord_offset;
+        return tex2D<float4>(tex.tex, UV_trans.x, UV_trans.y);
+    }
+    else
+    {
+        return T();
+    }
+}
 
+__device__ __forceinline__ void RoughnessAndMetallicTexSample(const float2 uv, MaterialData::Pbr& pbr)
+{
+    //float  metallic  = hit_group_data->material_data.pbr.metallic;
+    //float  roughness = hit_group_data->material_data.pbr.roughness;
+    float4 mr_tex = make_float4(1.0f);
+    if (pbr.metallic_roughness_tex)
+        mr_tex = sampleTexture<float4>(pbr.metallic_roughness_tex, uv);
+    pbr.roughness *= mr_tex.y;
+    pbr.metallic *= mr_tex.z;
+    pbr.roughness = max(0.001f, pbr.roughness);
+    return;
+}
 template<typename T>
 __device__ __forceinline__ T sampleTexture( MaterialData::Texture tex, const LocalGeometry &geom )
 {
+    //float2 uv = geom.texcoord[tex.texcoord].UV;
+    //return sampleTexture<T>(tex, uv);
     if( tex.tex )
     {
         const float2 UV = geom.texcoord[tex.texcoord].UV * tex.texcoord_scale;
@@ -52,3 +83,48 @@ __device__ __forceinline__ T sampleTexture( MaterialData::Texture tex, const Loc
     }
 }
 
+//template<typename T>
+//__device__ __forceinline__ T sampleTexture(MaterialData::Texture tex, const float2 uv)
+//{
+//    if (tex.tex)
+//    {
+//        const float2 UV = uv * tex.texcoord_scale;
+//        const float2 rotation = tex.texcoord_rotation;
+//        const float2 UV_trans = make_float2(
+//            dot(UV, make_float2(rotation.y, rotation.x)),
+//            dot(UV, make_float2(-rotation.x, rotation.y))) + tex.texcoord_offset;
+//        return tex2D<float4>(tex.tex, UV_trans.x, UV_trans.y);
+//    }
+//    else
+//    {
+//        return T();
+//    }
+//}
+//__device__ __forceinline__ void RoughnessAndMetallicTexSample(const float2 uv, MaterialData::Pbr& pbr)
+//{
+//    //float  metallic  = hit_group_data->material_data.pbr.metallic;
+//    //float  roughness = hit_group_data->material_data.pbr.roughness;
+//    float4 mr_tex = make_float4(1.0f);
+//    if (pbr.metallic_roughness_tex)
+//        mr_tex = sampleTexture<float4>(pbr.metallic_roughness_tex, uv);
+//    pbr.roughness *= mr_tex.y;
+//    pbr.metallic *= mr_tex.z;
+//    return;
+//}
+
+__device__ __forceinline__ void RoughnessAndMetallicTexSample(const LocalGeometry& geom, MaterialData::Pbr& pbr)
+{
+    //float2 uv = geom.texcoord[pbr.metallic_roughness_tex.texcoord].UV;
+    //RoughnessAndMetallicTexSample(uv, pbr);
+    //return;
+
+    //float  metallic  = hit_group_data->material_data.pbr.metallic;
+    //float  roughness = hit_group_data->material_data.pbr.roughness;
+    float4 mr_tex = make_float4(1.0f);
+    if (pbr.metallic_roughness_tex)
+        mr_tex = sampleTexture<float4>(pbr.metallic_roughness_tex, geom);
+    pbr.roughness *= mr_tex.y;
+    pbr.metallic *= mr_tex.z;
+    pbr.roughness = max(0.001f, pbr.roughness);
+    return;
+}

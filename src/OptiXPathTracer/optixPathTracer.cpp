@@ -299,7 +299,7 @@ static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, 
         float3 eye = camera.eye();
         float3 lookat = camera.lookat();
         float3 dir = normalize(lookat - eye);
-        float speed = 3.5;
+        float speed = 1;
         eye += dir / render_fps * speed;
         lookat += dir / render_fps * speed;
         camera.setEye(eye);

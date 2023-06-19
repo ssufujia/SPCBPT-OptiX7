@@ -114,7 +114,6 @@ Scene* LoadScene(const char* filename)
 
 				sscanf(line, " trans %f", &material.trans);
 				sscanf(line, " eta %f", &material.eta);
-				if (material.roughness < .001)material.roughness = .001;
 			}
 
 			// Check if texture is already loaded
@@ -134,13 +133,13 @@ Scene* LoadScene(const char* filename)
 			//normal tex
 			if (texture_ids.find(normal_tex_name) != texture_ids.end()) // Found Texture
 			{
-				material.normal_tex.tex = texture_ids[tex_name];
+				material.normal_tex.tex = texture_ids[normal_tex_name];
 			}
 			else if (strcmp(normal_tex_name, "None") != 0)
 			{
 				tex_id++;
-				texture_ids[tex_name] = tex_id;
-				scene->texture_map[tex_id - 1] = tex_name;
+				texture_ids[normal_tex_name] = tex_id;
+				scene->texture_map[tex_id - 1] = normal_tex_name;
 				material.normal_tex.tex = tex_id;				
 			} 			
 
@@ -148,13 +147,13 @@ Scene* LoadScene(const char* filename)
 			//material tex
 			if (texture_ids.find(metallic_roughness_tex_name) != texture_ids.end()) // Found Texture
 			{
-				material.metallic_roughness_tex.tex = texture_ids[tex_name];
+				material.metallic_roughness_tex.tex = texture_ids[metallic_roughness_tex_name];
 			}
 			else if (strcmp(metallic_roughness_tex_name, "None") != 0)
 			{
 				tex_id++;
-				texture_ids[tex_name] = tex_id;
-				scene->texture_map[tex_id - 1] = tex_name;
+				texture_ids[metallic_roughness_tex_name] = tex_id;
+				scene->texture_map[tex_id - 1] = metallic_roughness_tex_name;
 				material.metallic_roughness_tex.tex = tex_id;
 			} 
 			// add material to map

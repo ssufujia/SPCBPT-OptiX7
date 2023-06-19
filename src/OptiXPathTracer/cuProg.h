@@ -38,6 +38,7 @@
 #include "BDPTVertex.h" 
 #include "decisionTree/classTree_device.h"
 #include "pathControl.h"
+#include <cuda/LocalShading.h>
 #define SCENE_EPSILON 1e-3f
 
 
@@ -121,7 +122,7 @@ RT_FUNCTION bool refract(float3& r, float3 i, float3 n, float ior)
 RT_FUNCTION bool isRefract(float3 normal, float3 in_dir, float3 out_dir)
 {
     return dot(normal, in_dir) * dot(normal, out_dir) < 0;
-}
+} 
 
 namespace Tracer {
     using namespace whitted;
