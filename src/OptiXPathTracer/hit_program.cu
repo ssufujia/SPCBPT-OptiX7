@@ -141,7 +141,7 @@ extern "C" __global__ void __closesthit__eyeSubpath_LightSource()
     MidVertex.RMIS_pointer = 1.0 / rmis::light_hit(LastVertex, virtual_light);
 }
 extern "C" __global__ void __closesthit__lightsource()
-{ 
+{  
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
 
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());

@@ -3934,7 +3934,6 @@ namespace MyThrustOp
         static thrust_dev_float d_CMFGamma;
         static thrust_dev_float d_CMFGamma_caustic;
         thrust_dev_float& d_cmf_gamma = d_CMFGamma;
-
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
             for (int j = 0; j < NUM_SUBSPACE; j++)
@@ -3943,6 +3942,30 @@ namespace MyThrustOp
                 p[i * NUM_SUBSPACE + j] = p[i * NUM_SUBSPACE + j] * (1 - t) + (1.0 / NUM_SUBSPACE) * t; 
             }
         }
+
+        //for (int i = 0; i < NUM_SUBSPACE; i++)
+        //{
+        //    float sum = 0;
+        //    for (int j = 0; j < NUM_SUBSPACE; j++)
+        //    {
+        //        if (j >= NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE)
+        //        {
+        //            sum += p[i * NUM_SUBSPACE + j];
+        //        }
+        //    }
+
+        //    for (int j = 0; j < NUM_SUBSPACE; j++)
+        //    {
+        //        if (j >= NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE)
+        //        {
+        //            p[i * NUM_SUBSPACE + j] /= sum;
+        //        }
+        //        else
+        //        {
+        //            p[i * NUM_SUBSPACE + j] = 0;
+        //        }
+        //    }
+        //}
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
             for (int j = 0; j < NUM_SUBSPACE; j++)

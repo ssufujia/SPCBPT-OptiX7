@@ -135,14 +135,97 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
     return;
 
 }
+std::vector<int> subspace_arrange(Scene& Src, MyParams& params, sutil::Scene& Dst)
+{
+    if (Src.optix_lights.size() > NUM_SUBSPACE_LIGHTSOURCE)
+    {
+        printf("light source number is more than available subspace, therefore, all the light source will be set to the same subspace\n");
+        return std::vector<int>(Src.optix_lights.size(), 0);
+    }
+    int available_subspace = NUM_SUBSPACE_LIGHTSOURCE;
+
+    std::vector<int> divLevels2;
+    int empty_lightsource = 0;
+    for (auto p = Src.optix_lights.begin(); p != Src.optix_lights.end(); p++)
+    {
+        divLevels2.push_back(p->divLevel * p->divLevel);
+        available_subspace -= p->divLevel * p->divLevel;
+        if (p->divLevel == 0 && p->type != Light::Type::ENV)
+            empty_lightsource++;        
+    }
+    if (Src.has_envMap() && divLevels2[Src.env_light_id] == 0)
+    {
+        divLevels2[Src.env_light_id] += 0.5 * NUM_SUBSPACE_LIGHTSOURCE;
+        available_subspace -= 0.5 * NUM_SUBSPACE_LIGHTSOURCE;
+    }
+    if (available_subspace < empty_lightsource)
+    {
+        for (int i = 0; i < divLevels2.size(); i++)
+        {
+            if (divLevels2[i] == 0)
+            {
+                divLevels2[i] = 1;
+                available_subspace -= 1;
+            }
+        }
+        int reduce_index = 0;
+        while (available_subspace < 0)
+        {
+            if (divLevels2[reduce_index] != 1)
+            {
+                int divLevel = sqrt(divLevels2[reduce_index]);
+                divLevel -= 1;                
+                divLevels2[reduce_index] = divLevel * divLevel;
+                available_subspace += (divLevel + 1) * (divLevel + 1) - divLevel * divLevel;
+            }
+            reduce_index++;
+            if (reduce_index == Src.optix_lights.size())reduce_index = 0;
+        }
+    }
+    else
+    {
+        float area_sum = 0;
+        for (int i = 0; i < divLevels2.size(); i++)
+        {
+            if (divLevels2[i] != 0)continue;
+            if (divLevels2[i] == 0 && Src.optix_lights[i].type == Light::Type::QUAD)
+            {
+                area_sum += Src.optix_lights[i].quad.area;
+            }
+            else
+            {
+                divLevels2[i] = 1;
+                available_subspace -= 1;
+            }            
+        }
+        for (int i = 0; i < divLevels2.size(); i++)
+        {
+            if (divLevels2[i] == 0)
+            {
+                int divLevel = sqrt(available_subspace * (Src.optix_lights[i].quad.area / area_sum));
+                divLevel = divLevel < 1 ? 1 : divLevel;
+                divLevels2[i] = divLevel * divLevel;
+            }
+        } 
+    }
+    return divLevels2;
+
+}
 void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
 { 
     //int ssBase = Src.has_envMap() ? 0.5 * NUM_SUBSPACE_LIGHTSOURCE : 0;
     int ssBase = 0;
-
+    
+    std::vector<int> divLevels2 = subspace_arrange(Src, params, Dst);
+    printf("Subspace arrange for light source:\n");
+    for (int i = 0; i < divLevels2.size(); i++)
+    {
+        printf("light id: %d, light subspace number: %d\n", i, divLevels2[i]);
+    }    
     std::vector<Light>& lights = Src.optix_lights;
     for (int i = 0; i < lights.size(); i++)
     { 
+        lights[i].divLevel = sqrt(divLevels2[i]);
         Light& light = lights[i];  
         light.id = i; 
         light.ssBase = ssBase;
@@ -256,7 +339,7 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         //break;
     }
     //return;
-    for (int i = 0; i < Src.lights.size(); i++)
+    for (int i = 0; i < Src.optix_lights.size(); i++)
     {
         //auto &SLight = Src.lights[i];
         auto &SLight = Src.optix_lights[i];

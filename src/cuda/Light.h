@@ -30,7 +30,9 @@
 
 struct Light
 {
-    Light() {}
+    Light() {
+        divLevel = 0;
+    }
 
     enum class Falloff : int
     {

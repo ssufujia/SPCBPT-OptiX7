@@ -279,7 +279,7 @@ namespace rmis
         float3 D_A_0 = ((eyeVertex.RMIS_pointer_3 * LL_pdf_A * flux_multiplier_0) + weight_A);
 
         float pdf_A = getPdf_from_light_source(lightVertex, eyeVertex);
-        float flux_multiplier_1 = lightVertex.is_DIRECTION() ? 1.0 / Tracer::params.sky.projectPdf() : M_PIf;
+        float flux_multiplier_1 = M_PIf;
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
 
 

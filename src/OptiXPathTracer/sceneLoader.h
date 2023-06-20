@@ -46,8 +46,8 @@ struct Scene
 	std::vector<std::string> mesh_names;
 	std::vector<std::string> uv_mesh_names;
 	//std::vector<Matrix4x4> transforms;
-	std::vector<MaterialParameter> materials;
-	std::vector<LightParameter> lights;
+	//std::vector<MaterialParameter> materials;
+	//std::vector<LightParameter> lights;
 	
 	std::vector<Light> optix_lights;
 	std::vector<MaterialData::Pbr> optix_materials;

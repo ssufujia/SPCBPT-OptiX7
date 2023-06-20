@@ -103,7 +103,7 @@ int32_t samples_per_launch = 1;
 
 std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye") }; 
 //std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
-int render_alg_id = 0;
+int render_alg_id = 1;
 bool one_frame_render_only = false;
 float render_fps = 60;
 //------------------------------------------------------------------------------
@@ -1231,13 +1231,15 @@ void updateDropOutTracingParams()
 
 void preprocessing(sutil::Scene& scene)
 { 
+    printf("begin pretracing\n");
     MyThrustOp::clear_training_set();
     const int target_sample_count = 1000000;
     int current_sample_count = 0;
     while (current_sample_count < target_sample_count)
     {
         current_sample_count += launchPretrace(scene); 
-    } 
+    }
+    printf("pretracing complete\n");
     //MyThrustOp::sample_reweight();
     auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 10000);
     auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE, 0);
@@ -1278,8 +1280,7 @@ void preprocessing(sutil::Scene& scene)
 
     thrust::device_ptr<float> Gamma;
     //MyThrustOp::load_Q_file(Q_star);
-    MyThrustOp::build_optimal_E_train_data(target_sample_count);
-    printf("run here good\n");
+    MyThrustOp::build_optimal_E_train_data(target_sample_count); 
     MyThrustOp::preprocess_getGamma(Gamma);
     MyThrustOp::train_optimal_E(Gamma);
 
@@ -1422,8 +1423,8 @@ int main( int argc, char* argv[] )
         string scenePath = " ";
         const float SET_ERROR = -1.0f;  
         //scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
-        //scenePath = string(SAMPLES_DIR) + string("/data/door/door.scene");   
-        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_teaser_env2.scene");   
+        scenePath = string(SAMPLES_DIR) + string("/data/door/door.scene");   
+        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_teaser_env2.scene");   
         auto myScene = LoadScene(scenePath.c_str());  
         //myScene->getMeshData(0);  
         sutil::Scene TScene;  

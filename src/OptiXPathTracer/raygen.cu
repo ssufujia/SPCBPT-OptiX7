@@ -268,7 +268,7 @@ __device__ float3 direction_connect_ZGCBPT(const BDPTVertex& a, const BDPTVertex
     return L;
 
 }
-__device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b)
+RT_FUNCTION float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b)
 {
     if (b.is_DIRECTION())
     {
@@ -304,11 +304,11 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
         }
     }
 
-    float3 contri = a.flux * b.flux * fa * fb * G;
-    float pdf = a.pdf * b.pdf;
+    //float3 contri = a.flux * b.flux * fa * fb * G;
+    //float pdf = a.pdf * b.pdf;
     //float3 ans = contri / pdf;// *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
     float3 ans = (a.flux / a.pdf) * (b.flux / b.pdf) * fa * fb * G
-         *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
+        * (b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
 
     if (ISINVALIDVALUE(ans))
     {
@@ -428,7 +428,6 @@ extern "C" __global__ void __raygen__SPCBPT()
             float pmf_secondStage;
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
-
             if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, light_subpath))
             {
                 //printf("debug info %f\n", float3weight(tmp_float3));
