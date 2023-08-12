@@ -774,6 +774,9 @@ void displayStats( std::chrono::duration<double>& state_update_time,
 bool displayStatsControls(std::chrono::duration<double>& state_update_time,
     std::chrono::duration<double>& render_time,
     std::chrono::duration<double>& display_time,
+    int subframe,
+    int& renderAlgo,
+    std::vector<std::string> renderAlgoNames,
     bool &eye_subspace_visualize, 
     bool &light_subspace_visualize, 
     bool &caustic_path_only, 
@@ -800,10 +803,11 @@ bool displayStatsControls(std::chrono::duration<double>& state_update_time,
     if (cur_time - last_update_time > display_update_min_interval_time || total_subframe_count == 0)
     {
         sprintf(display_text,
-            "%5.1f fps\n\n"
-            "light trace: %8.1f ms\n"
+            "%d spp %5.1f fps\n\n"
+            "light trace : %8.1f ms\n"
             "render      : %8.1f ms\n"
             "display     : %8.1f ms\n",
+            subframe,
             last_update_frames / std::chrono::duration<double>(cur_time - last_update_time).count(),
             (durationMs(state_update_time) / last_update_frames).count(),
             (durationMs(render_time) / last_update_frames).count(),
@@ -824,15 +828,45 @@ bool displayStatsControls(std::chrono::duration<double>& state_update_time,
     ImGui::SetNextWindowPos(ImVec2(2.0f, 70.0f));
     ImGui::Begin("controls", 0, window_flags); 
     bool changed = false;
-    if (ImGui::CollapsingHeader("debugMode", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("debugMode", ImGuiTreeNodeFlags_DefaultOpen)) { 
+        char** rendering_algorithms = new char* [renderAlgoNames.size()];
+        for (size_t i = 0; i < renderAlgoNames.size(); ++i) {
+            rendering_algorithms[i] = new char[renderAlgoNames[i].size() + 1];
+            strcpy(rendering_algorithms[i], renderAlgoNames[i].c_str());
+        }
+        //char* rendering_algorithms[] = { "PT" ,"SPCBPT" };
+        char* current_algorithm = rendering_algorithms[renderAlgo];
+
+        if (ImGui::BeginCombo("rendering algorithm", current_algorithm)) // The second parameter is the label previewed before opening the combo.
+        {
+            for (int n = 0; n < renderAlgoNames.size(); n++)
+            {
+                bool is_selected = (current_algorithm == rendering_algorithms[n]); // You can store your selection however you want, outside or inside your objects
+                if (ImGui::Selectable(rendering_algorithms[n], is_selected))
+                {
+                    current_algorithm = rendering_algorithms[n];
+                    renderAlgo = n;
+                    changed = true;
+                }
+                if (is_selected)
+                {
+                    ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                }
+            
+            }
+            ImGui::EndCombo();
+        }
+        for (size_t i = 0; i < renderAlgoNames.size(); ++i) { delete[] rendering_algorithms[i]; }
+        delete[] rendering_algorithms;
+
         if (ImGui::Checkbox("eye subspace visible", &eye_subspace_visualize)) changed = true;
         if (ImGui::Checkbox("light subspace visible", &light_subspace_visualize)) changed = true;
-        if (ImGui::Checkbox("caustic_path_only", &caustic_path_only))changed = true;
-        if (ImGui::Checkbox("specular_subspace_visualize", &specular_subspace_visualize))changed = true;
-        if (ImGui::Checkbox("caustic_prob_visualize", &caustic_prob_visualize))changed = true;
-        if (ImGui::Checkbox("PG_grid_visualize", &PG_grid_visualize))changed = true;
-        if (ImGui::Checkbox("PG_enable", &PG_enable))changed = true;
-        if (ImGui::Checkbox("error_heat_visualize", &error_heat_visual)) {}
+        //if (ImGui::Checkbox("caustic_path_only", &caustic_path_only))changed = true;
+        //if (ImGui::Checkbox("specular_subspace_visualize", &specular_subspace_visualize))changed = true;
+        //if (ImGui::Checkbox("caustic_prob_visualize", &caustic_prob_visualize))changed = true;
+        //if (ImGui::Checkbox("PG_grid_visualize", &PG_grid_visualize))changed = true;
+        //if (ImGui::Checkbox("PG_enable", &PG_enable))changed = true;
+        //if (ImGui::Checkbox("error_heat_visualize", &error_heat_visual)) {}
     }
     ImGui::End();
     endFrameImGui();

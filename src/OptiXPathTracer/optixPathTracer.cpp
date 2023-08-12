@@ -76,17 +76,19 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
-
+#include"cjson/cJSON.cpp"
+#define NUM_SUBSPACE params.subspace_info.num_subspace
+#define NUM_SUBSPACE_LIGHTSOURCE params.subspace_info.num_subspace_lightsource
 using namespace std;
- 
+
 static double render_time_record = 0;
 static int render_frame_record = 0;
 
 bool resize_dirty = false;
-bool minimized    = false; 
+bool minimized = false;
 // Camera state
 bool             camera_changed = true;
-MyParams* d_params = nullptr; 
+MyParams* d_params = nullptr;
 sutil::Camera    camera;
 sutil::Trackball trackball;
 MyParams   params = {};
@@ -94,16 +96,15 @@ LightTraceParams& lt_params = params.lt;
 PreTraceParams& pr_params = params.pre_tracer;
 subspaceMacroInfo& subspaceInfo = params.subspace_info;
 DropOutTracing_params& dot_params = params.dot_params;
-int32_t                 width = 1920;
-int32_t                 height = 1000; 
 // Mouse state
 int32_t mouse_button = -1;
 
-int32_t samples_per_launch = 1; 
+int32_t samples_per_launch = 1;
 
-std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye") }; 
+string initial_algrithm;
+std::vector<sutil::renderMainProg> render_main_progs;
 //std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
-int render_alg_id = 1;
+int render_alg_id = 0;
 bool one_frame_render_only = false;
 float render_fps = 60;
 //------------------------------------------------------------------------------
@@ -116,7 +117,7 @@ float render_fps = 60;
 template <typename T>
 struct Record
 {
-    __align__( OPTIX_SBT_RECORD_ALIGNMENT ) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+    __align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     T data;
 };
 
@@ -124,7 +125,7 @@ struct Record
 //typedef Record<MissData>     MissRecord;
 //typedef Record<HitGroupData> HitGroupRecord;
 
-  
+
 
 //------------------------------------------------------------------------------
 //
@@ -132,15 +133,15 @@ struct Record
 //
 //------------------------------------------------------------------------------
 
-static void mouseButtonCallback( GLFWwindow* window, int button, int action, int mods )
+static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     double xpos, ypos;
-    glfwGetCursorPos( window, &xpos, &ypos );
+    glfwGetCursorPos(window, &xpos, &ypos);
 
-    if( action == GLFW_PRESS )
+    if (action == GLFW_PRESS)
     {
         mouse_button = button;
-        trackball.startTracking( static_cast<int>( xpos ), static_cast<int>( ypos ) );
+        trackball.startTracking(static_cast<int>(xpos), static_cast<int>(ypos));
     }
     else
     {
@@ -149,52 +150,52 @@ static void mouseButtonCallback( GLFWwindow* window, int button, int action, int
 }
 
 
-static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
+static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
-    MyParams* params = static_cast<MyParams*>( glfwGetWindowUserPointer( window ) );
+    MyParams* params = static_cast<MyParams*>(glfwGetWindowUserPointer(window));
 
-    if( mouse_button == GLFW_MOUSE_BUTTON_LEFT )
+    if (mouse_button == GLFW_MOUSE_BUTTON_LEFT)
     {
-        trackball.setViewMode( sutil::Trackball::LookAtFixed );
-        trackball.updateTracking( static_cast<int>( xpos ), static_cast<int>( ypos ), params->width, params->height );
+        trackball.setViewMode(sutil::Trackball::LookAtFixed);
+        trackball.updateTracking(static_cast<int>(xpos), static_cast<int>(ypos), params->width, params->height);
         camera_changed = true;
         params->image_resize();
     }
-    else if( mouse_button == GLFW_MOUSE_BUTTON_RIGHT )
+    else if (mouse_button == GLFW_MOUSE_BUTTON_RIGHT)
     {
-        trackball.setViewMode( sutil::Trackball::EyeFixed );
-        trackball.updateTracking( static_cast<int>( xpos ), static_cast<int>( ypos ), params->width, params->height );
+        trackball.setViewMode(sutil::Trackball::EyeFixed);
+        trackball.updateTracking(static_cast<int>(xpos), static_cast<int>(ypos), params->width, params->height);
         camera_changed = true;
         params->image_resize();
     }
 }
 
 
-static void windowSizeCallback( GLFWwindow* window, int32_t res_x, int32_t res_y )
+static void windowSizeCallback(GLFWwindow* window, int32_t res_x, int32_t res_y)
 {
     // Keep rendering at the current resolution when the window is minimized.
-    if( minimized )
+    if (minimized)
         return;
 
     // Output dimensions must be at least 1 in both x and y.
-    sutil::ensureMinimumSize( res_x, res_y );
+    sutil::ensureMinimumSize(res_x, res_y);
 
-    MyParams* params = static_cast<MyParams*>( glfwGetWindowUserPointer( window ) );
-    params->width  = res_x;
+    MyParams* params = static_cast<MyParams*>(glfwGetWindowUserPointer(window));
+    params->width = res_x;
     params->height = res_y;
     camera_changed = true;
-    resize_dirty   = true;
+    resize_dirty = true;
     params->image_resize();
 }
 
 
-static void windowIconifyCallback( GLFWwindow* window, int32_t iconified )
+static void windowIconifyCallback(GLFWwindow* window, int32_t iconified)
 {
-    minimized = ( iconified > 0 );
+    minimized = (iconified > 0);
 }
 
 
-void img_save(double render_time=-1,int frame=0)
+void img_save(double render_time = -1, int frame = 0)
 {
     sutil::ImageBuffer outputbuffer;
 
@@ -213,7 +214,7 @@ void img_save(double render_time=-1,int frame=0)
         _mkdir("data");
     }
     else
-        std::cout <<"already has data" << std::endl;
+        std::cout << "already has data" << std::endl;
 
     // 将时间格式化为字符串
     std::stringstream ss;
@@ -222,13 +223,13 @@ void img_save(double render_time=-1,int frame=0)
     // 获取格式化后的文件名
     std::string filename = ss.str();
     //printf("save %s\n",filename);
-    
-    sutil::saveImage((filename+".png").c_str(), outputbuffer, true);
+
+    sutil::saveImage((filename + ".png").c_str(), outputbuffer, true);
 
 
     auto p = MyThrustOp::copy_to_host(params.accum_buffer, params.height * params.width);
     std::ofstream outFile;
-    outFile.open((filename + ".txt").c_str()); 
+    outFile.open((filename + ".txt").c_str());
     outFile << params.width << " " << params.height << std::endl;
     for (int i = 0; i < params.width * params.height; i++)
     {
@@ -242,13 +243,13 @@ void img_save(double render_time=-1,int frame=0)
 
 }
 
-static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, int32_t action, int32_t /*mods*/ )
+static void keyCallback(GLFWwindow* window, int32_t key, int32_t /*scancode*/, int32_t action, int32_t /*mods*/)
 {
-    if( action == GLFW_PRESS )
+    if (action == GLFW_PRESS)
     {
-        if( key == GLFW_KEY_ESCAPE )
+        if (key == GLFW_KEY_ESCAPE)
         {
-            glfwSetWindowShouldClose( window, true );
+            glfwSetWindowShouldClose(window, true);
         }
 
         else if (key == GLFW_KEY_C)
@@ -262,34 +263,26 @@ static void keyCallback( GLFWwindow* window, int32_t key, int32_t /*scancode*/, 
 
         else if (key == GLFW_KEY_S)
         {
-            img_save(render_time_record,render_frame_record);
+            img_save(render_time_record, render_frame_record);
         }
         else if (key == GLFW_KEY_SPACE)
         {
             render_alg_id++;
-            if (render_alg_id >= render_alg.size())
+            if (render_alg_id >= render_main_progs.size())
             {
                 render_alg_id = 0;
             }
-            if (render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure"))
-            {
-                params.spcbpt_pure = true;
-            }
-            else 
-            {
-                params.spcbpt_pure = SPCBPT_PURE;
-            }
-            printf("raygen switching to %s\n", render_alg[render_alg_id].c_str());
+            printf("raygen switching to %s\n", render_main_progs[render_alg_id].mainProgName.c_str());
             camera_changed = true;
             resize_dirty = true;
-        } 
+        }
         else if (key == GLFW_KEY_P)
         {
             one_frame_render_only = one_frame_render_only ^ true;
         }
 
     }
-    else if( key == GLFW_KEY_G )
+    else if (key == GLFW_KEY_G)
     {
         // toggle UI draw
     }
@@ -328,22 +321,18 @@ static void scrollCallback(GLFWwindow* window, double xscroll, double yscroll)
 //
 //------------------------------------------------------------------------------
 
-void printUsageAndExit( const char* argv0 )
+std::vector<string> mainProgNames()
 {
-    std::cerr << "Usage  : " << argv0 << " [options]\n";
-    std::cerr << "         --no-gl-interop             Disable GL interop for display\n";
-    std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 1920x1000\n";
-    std::cerr << "         --help | -h                 Print this usage message\n";
-    exit( 0 );
+    std::vector<string> ans;
+    for (int i = 0; i < render_main_progs.size(); i++) ans.push_back(render_main_progs[i].mainProgName);
+    return ans;
 }
-
 void program_setup(sutil::Scene& scene)
 {
-
     auto& prog_set_maps = scene.m_progsets;
 
     //program setting for spcbpt
-    //also used as the sample setting for the other algorithm
+    //also used as the template setting for the other algorithm
     sutil::ProgSet spcbpt_progset;
     spcbpt_progset.setRaygen("raygen.cu", "__raygen__SPCBPT");
 
@@ -359,6 +348,17 @@ void program_setup(sutil::Scene& scene)
     spcbpt_progset.setRayHit(RayType::RAY_TYPE_EYESUBPATH_SIMPLE, RayHitType::RAYHIT_TYPE_LIGHTSOURCE, "hit_program.cu", "__closesthit__eyeSubpath_LightSource_simple", "__anyhit__none");
     prog_set_maps[std::string("SPCBPT_eye")] = spcbpt_progset;
 
+    if (params.enable_proxy_sampling)
+    {
+        sutil::ProgSet proxy_progset = spcbpt_progset;
+        proxy_progset.setRaygen("raygen.cu", "__raygen__shift_combine");
+        prog_set_maps[std::string("proxy_SPCBPT_eye")] = proxy_progset;
+
+    }
+
+    sutil::ProgSet dot_progset = spcbpt_progset;
+    dot_progset.setRaygen("raygen.cu", "__raygen__shift_combine");
+    prog_set_maps[std::string("ProxyTracing_eye")] = dot_progset;
 
     //program setting for pt
     sutil::ProgSet pt_progset = spcbpt_progset;
@@ -380,41 +380,71 @@ void program_setup(sutil::Scene& scene)
     sutil::ProgSet pretrace_progset = spcbpt_progset;
     pretrace_progset.setRaygen("raygen.cu", "__raygen__TrainData");
     prog_set_maps[std::string("pretrace")] = pretrace_progset;
-     
+
     //compile the program
-    scene.loadModules(); 
-    for (auto p = prog_set_maps.begin(); p != prog_set_maps.end(); p++){
-        p->second.compile(scene); 
+    scene.loadModules();
+    for (auto p = prog_set_maps.begin(); p != prog_set_maps.end(); p++) {
+        p->second.compile(scene);
     }
-     
+
     for (auto p = prog_set_maps.begin(); p != prog_set_maps.end(); p++)
     {
         scene.createPipeline(p->second);
         scene.createSBT(p->second);
     }
-         
+
+
+    //注册渲染算法以供运行时切换
+    sutil::renderMainProg render_prog;
+    render_prog.eyeRaygenProgName = "pt";
+    render_prog.mainProgName = "PT";
+    render_prog.need_light_trace = false;
+    render_main_progs.push_back(render_prog);
+
+
+    render_prog.eyeRaygenProgName = "SPCBPT_eye";
+    render_prog.mainProgName = "SPCBPT";
+    render_prog.need_light_trace = true;
+    render_main_progs.push_back(render_prog);
+
+    if (params.enable_proxy_sampling)
+    {
+        sutil::renderMainProg render_prog;
+        render_prog.eyeRaygenProgName = "proxy_SPCBPT_eye";
+        render_prog.mainProgName = "proxy_SPCBPT";
+        render_prog.need_light_trace = true;
+        render_prog.is_dropout_tracing_proxy_sampling = true;
+        render_main_progs.push_back(render_prog);
+    }
+
+    for (int i = 0; i < render_main_progs.size(); i++)
+    {
+        if (initial_algrithm == render_main_progs[i].mainProgName)
+            render_alg_id = i;
+    }
+    printf("set %s as the initial rendering algorithm\n", render_main_progs[render_alg_id].mainProgName);
 }
 void initLaunchParams(const sutil::Scene& scene) {
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&params.accum_buffer),
-        width * height * sizeof(float4)
+        params.width * params.height * sizeof(float4)
     ));
     params.frame_buffer = nullptr; // Will be set when output buffer is mapped
 
     params.subframe_index = 0u;
 
     const float loffset = scene.aabb().maxExtent();
-    
+
     std::vector<MaterialData::Pbr> material_vec;
     for (int i = 0; i < scene.materials().size(); i++)
     {
         material_vec.push_back(scene.materials()[i].pbr);
     }
-    
-    params.materials = HostToDeviceBuffer(material_vec.data(), material_vec.size());
-     
 
-    params.miss_color = make_float3(0.1f); 
+    params.materials = HostToDeviceBuffer(material_vec.data(), material_vec.size());
+
+
+    params.miss_color = make_float3(0.1f);
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_params), sizeof(MyParams)));
 
     params.handle = scene.traversableHandle();
@@ -431,27 +461,26 @@ void initLaunchParams(const sutil::Scene& scene) {
         params.estimate_pr.height = estimation::es.ref_height;
         params.estimate_pr.width = estimation::es.ref_width;
         params.estimate_pr.ready = true;
-    }  
-    params.spcbpt_pure = SPCBPT_PURE;
+    }
     params.no_subspace = NO_SUBSPACE;
 }
 
- 
 
-void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, MyParams& params )
+
+void handleResize(sutil::CUDAOutputBuffer<uchar4>& output_buffer, MyParams& params)
 {
-    if( !resize_dirty )
+    if (!resize_dirty)
         return;
     resize_dirty = false;
 
-    output_buffer.resize( params.width, params.height );
+    output_buffer.resize(params.width, params.height);
 
     // Realloc accumulation buffer
-    CUDA_CHECK( cudaFree( reinterpret_cast<void*>( params.accum_buffer ) ) );
-    CUDA_CHECK( cudaMalloc(
-                reinterpret_cast<void**>( &params.accum_buffer ),
-                params.width * params.height * sizeof( float4 )
-                ) );
+    CUDA_CHECK(cudaFree(reinterpret_cast<void*>(params.accum_buffer)));
+    CUDA_CHECK(cudaMalloc(
+        reinterpret_cast<void**>(&params.accum_buffer),
+        params.width * params.height * sizeof(float4)
+    ));
 }
 
 
@@ -461,13 +490,13 @@ void handleResize(sutil::CUDAOutputBuffer<uchar4>& output_buffer)
         return;
     resize_dirty = false;
 
-    output_buffer.resize(width, height);
+    output_buffer.resize(params.width, params.height);
 
     // Realloc accumulation buffer
     CUDA_CHECK(cudaFree(reinterpret_cast<void*>(params.accum_buffer)));
     CUDA_CHECK(cudaMalloc(
         reinterpret_cast<void**>(&params.accum_buffer),
-        width * height * sizeof(float4)
+        params.width * params.height * sizeof(float4)
     ));
 }
 
@@ -495,10 +524,13 @@ void updateState(sutil::CUDAOutputBuffer<uchar4>& output_buffer, MyParams& param
     // Update params on device
     if (camera_changed || resize_dirty || one_frame_render_only)
         params.subframe_index = 0;
-     
-    handleCameraUpdate( params );
-    handleResize( output_buffer, params );
-     
+
+    handleCameraUpdate(params);
+    handleResize(output_buffer, params);
+
+    params.skip_proxy_dropout_tracing = !render_main_progs[render_alg_id].is_dropout_tracing_proxy_sampling;
+
+
 }
 
 std::vector<int> surroundsIndex(int index, const envInfo& infos)
@@ -524,7 +556,7 @@ std::vector<int> surroundsIndex(int index, const envInfo& infos)
     return ans;
 }
 thrust::device_ptr<float> envMapCMFBuild(float4* lum, int size, const envInfo& infos)
-{ 
+{
 
     std::vector<float> p2(size);
     float uniform_rate = 0.25;
@@ -552,13 +584,13 @@ thrust::device_ptr<float> envMapCMFBuild(float4* lum, int size, const envInfo& i
     return MyThrustOp::envMapCMFBuild(p2.data(), size);
 }
 void env_params_setup(Scene& Src, const sutil::Scene& scene)
-{ 
+{
     if (scene.getEnvFilePath() == std::string(""))
     {
         params.sky.valid = false;
         return;
     }
-    printf("load and build sampling cmf from file %s\n",scene.getEnvFilePath());
+    printf("load and build sampling cmf from file %s\n", scene.getEnvFilePath());
     HDRLoader hdr_env((string(SAMPLES_DIR) + string("/data/") + scene.getEnvFilePath()));
 
     params.sky.light_id = Src.env_light_id;
@@ -582,7 +614,7 @@ void env_params_setup(Scene& Src, const sutil::Scene& scene)
         auto index = params.sky.coord2index(coord);
         hdr_m_raster[index] += make_float4(dir_light.second * params.sky.size / (4 * M_PI), 0.0);
         printf("Add directional light %f %f %f in index %d\n", dir_light.first.x, dir_light.first.y, dir_light.first.z, index);
-        
+
     }
     auto env_tex = hdr_env.loadTexture(light.env.backgroundColor, nullptr);
     params.sky.tex = env_tex.texture;
@@ -604,8 +636,8 @@ void lt_params_setup(const sutil::Scene& scene)
 
     BDPTVertex* LVC_ptr;
     bool* valid_ptr;
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&LVC_ptr),   sizeof(BDPTVertex) * lt_params.get_element_count()));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&valid_ptr), sizeof(bool)       * lt_params.get_element_count())); 
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&LVC_ptr), sizeof(BDPTVertex) * lt_params.get_element_count()));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&valid_ptr), sizeof(bool) * lt_params.get_element_count()));
     lt_params.ans = LVC_ptr;// BufferView<BDPTVertex>(LVC_ptr, lt_params.get_element_count());
     lt_params.validState = valid_ptr;// BufferView<bool>(valid_ptr, lt_params.get_element_count());
     //params.lt = lt_params; 
@@ -620,16 +652,16 @@ void estimation_setup(const string& path) {
     default:algo += "error"; break;
     }
     string name = path.substr(path.rfind('/') + 1);
-    name = name.substr(0, name.rfind('\.')) ;
+    name = name.substr(0, name.rfind('\.'));
     string outpath = name + "_" + algo + ".txt";
     cout << "save our estimate to " << outpath << endl;
     estimation::es.outputFile.open(outpath);
     estimation::es.outputFile << "{\n"
         << "name:" << name << endl
         << "height:" << params.height << endl
-        << "width:" << params.width <<endl
-        <<"algo:"<< algo<<endl
-        << "}"<<endl;
+        << "width:" << params.width << endl
+        << "algo:" << algo << endl
+        << "}" << endl;
 
 
     estimation::es.estimation_update("./ref/" + name + ".txt", false);
@@ -640,9 +672,9 @@ void preTracer_params_setup(const sutil::Scene& scene)
     pr_params.num_core = 10000;
     pr_params.padding = 10;
     pr_params.iteration = 0;
-    preTracePath*       pretrace_path_ptr;
+    preTracePath* pretrace_path_ptr;
     preTraceConnection* pretrace_conn_ptr;
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pretrace_path_ptr), sizeof(preTracePath)       * pr_params.num_core));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pretrace_path_ptr), sizeof(preTracePath) * pr_params.num_core));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pretrace_conn_ptr), sizeof(preTraceConnection) * pr_params.get_element_count()));
     pr_params.paths = pretrace_path_ptr;
     pr_params.conns = pretrace_conn_ptr;
@@ -673,17 +705,17 @@ void launchLightTrace(sutil::Scene& scene)
         1,
         1
     ));
-    CUDA_SYNC_CHECK();  
+    CUDA_SYNC_CHECK();
 }
 void launchLVCTrace(sutil::Scene& scene)
-{ 
-    if (!SPCBPT_PURE && !params.spcbpt_pure) { dot_params.discard_ratio = dot_params.discard_ratio_next; }
-    launchLightTrace(scene); 
+{
+    if (!params.skip_proxy_dropout_tracing) { dot_params.discard_ratio = dot_params.discard_ratio_next; }
+    launchLightTrace(scene);
     auto p_v = thrust::device_pointer_cast(params.lt.ans);
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
-    auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count()); 
+    auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count());
     params.sampler = sampler;
-    if (!SPCBPT_PURE&&!params.spcbpt_pure)
+    if (!params.skip_proxy_dropout_tracing)
     {
         sampler = MyThrustOp::LVC_Process_glossyOnly(p_v, p_valid, params.lt.get_element_count(), params.materials);
         params.sampler.glossy_count = sampler.glossy_count;
@@ -705,7 +737,7 @@ int launchPretrace(sutil::Scene& scene)
     ));
 
     //scene.switchRaygen(std::string("pretrace"));
-    auto prog_set = scene.m_progsets[std::string("pretrace")]; 
+    auto prog_set = scene.m_progsets[std::string("pretrace")];
     OPTIX_CHECK(optixLaunch(
         prog_set.m_pipeline,
         0,
@@ -721,7 +753,7 @@ int launchPretrace(sutil::Scene& scene)
     int validSample = MyThrustOp::valid_sample_gather(
         thrust::device_pointer_cast(pr_params.paths), pr_params.num_core,
         thrust::device_pointer_cast(pr_params.conns), pr_params.get_element_count()
-        );
+    );
     return validSample;
 }
 void path_guiding_params_setup(sutil::Scene& scene)
@@ -729,7 +761,7 @@ void path_guiding_params_setup(sutil::Scene& scene)
     int pg_training_data_batch = 10;
     int pg_training_data_online_batch = 0;
     const int batch_sample_count = 1000000;
-    
+
     if (!PG_ENABLE) {
         params.pg_params.pg_enable = 0;
         return;
@@ -741,6 +773,7 @@ void path_guiding_params_setup(sutil::Scene& scene)
     int build_iteration_max = 12;
     //g_mats = MyThrustOp::get_data_for_path_guiding();
 
+    //是否使用path guiding自己的训练结果来引导path guiding的训练
     if (PG_SELF_TRAIN)
     {
         build_iteration_max = 12;
@@ -795,7 +828,7 @@ void path_guiding_params_setup(sutil::Scene& scene)
         }
     }
     else
-    { 
+    {
         for (int i = 0; i < pg_training_data_batch; i++)
         {
             MyThrustOp::clear_training_set();
@@ -850,7 +883,7 @@ void dropOutTracingParamsInit()
 }
 void dropOutTracingParamsSetup(sutil::Scene& scene)
 {
-    if (SPCBPT_PURE|| params.spcbpt_pure)return;
+    if (params.skip_proxy_dropout_tracing)return;
 
     dot_params.pixel_dirty = true;
     dot_params.discard_ratio = dropOut_tracing::light_subpath_caustic_discard_ratio;
@@ -870,9 +903,9 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
         current_sample_count += launchPretrace(scene);
     }
 
-    auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000); 
+    auto unlabeled_samples = MyThrustOp::getCausticCentroidCandidate(false, 100000);
     auto specular_subspace = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, dot_params.specularSubSpaceNumber - 1, 1);
-    dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size); 
+    dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(specular_subspace.v, specular_subspace.size);
 
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
     // surface Id 0 is remain for EMPTY SURFACEID
@@ -886,8 +919,9 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
 
     /////////////////////////////////////////////////////////
     ////////////Assign the Memory For Statistics/////////////
+    ////////////////为统计数据的存储分配显存空间////////////////
     /////////////////////////////////////////////////////////
-    dot_params.data.size = 
+    dot_params.data.size =
         dot_params.specularSubSpaceNumber * dot_params.surfaceSubSpaceNumber * dropOut_tracing::slot_number * int(dropOut_tracing::DropOutType::DropOutTypeNumber);
     thrust::host_vector<dropOut_tracing::statistics_data_struct> DOT_statics_data(dot_params.data.size);
     thrust::fill(DOT_statics_data.begin(), DOT_statics_data.end(), dropOut_tracing::statistics_data_struct());
@@ -896,8 +930,8 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
 
     thrust::host_vector<dropOut_tracing::PGParams> DOT_PG_data(dot_params.specularSubSpaceNumber * dot_params.surfaceSubSpaceNumber * dropOut_tracing::max_u);
     dot_params.data.device_PGParams = MyThrustOp::DOT_PG_data_to_device(DOT_PG_data);
-    dot_params.data.on_GPU = true; 
-     
+    dot_params.data.on_GPU = true;
+
 
 
     //thrust::host_vector<dropOut_tracing::statistic_record> h_record(lt_params.get_element_count());
@@ -923,10 +957,10 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
 //update the probability for caustic subspace sampling and caustic frac
 void updateDropOutTracingCombineWeight()
 {
+    if (params.skip_proxy_dropout_tracing) return;
     static int train_iter = 0;
-    if (train_iter > 0 && train_iter> dropOut_tracing::iteration_stop_learning)return;
+    if (train_iter > 0 && train_iter > dropOut_tracing::iteration_stop_learning)return;
     train_iter++;
-    if (SPCBPT_PURE|| params.spcbpt_pure) return;
     static thrust::host_vector<float> h_frac(params.width * params.height, 0.5);
     static thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
     static vector<float> normal_weight(params.width * params.height, 0);
@@ -937,7 +971,7 @@ void updateDropOutTracingCombineWeight()
     static vector<float> gamma_non_normalized_single(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0.000001);
     static vector<int> gamma_count(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE, 0);
     if (dot_params.pixel_dirty)
-    {  
+    {
         h_frac.resize(params.width * params.height);
         thrust::fill(h_frac.begin(), h_frac.end(), 0.5);
         normal_weight.resize(params.width * params.height);
@@ -958,13 +992,13 @@ void updateDropOutTracingCombineWeight()
         auto h_record = MyThrustOp::DOT_get_pixelRecords();
         for (int i = 0; i < h_record.size(); i++)
         {
-            if (h_record[i].valid() == false||h_record[i].is_caustic() == false)continue;
+            if (h_record[i].valid() == false || h_record[i].is_caustic() == false)continue;
             if (isnan(h_record[i].record) || isinf(h_record[i].record))continue;
             float weight = abs(h_record[i].record) * h_caustic_gamma[h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId];
             if (weight > 1000000) weight = 1000000;
             unsigned id = h_record[i].eyeId * dropOut_tracing::default_specularSubSpaceNumber + h_record[i].specularId;
             gamma_count[id] += 1;
-            gamma_non_normalized[id] += weight *weight;
+            gamma_non_normalized[id] += weight * weight;
             gamma_non_normalized_single[id] = lerp(gamma_non_normalized_single[id], weight * weight, 1.0 / gamma_count[id]);
             //gamma_non_normalized_single[id] = gamma_non_normalized[id];
 
@@ -988,7 +1022,7 @@ void updateDropOutTracingCombineWeight()
                 unsigned id = j + i * dropOut_tracing::default_specularSubSpaceNumber;
                 h_caustic_gamma[id] =
                     //sqrt(gamma_non_normalized[i * dropOut_tracing::default_specularSubSpaceNumber + j]) / gamma_sum[i] * (1-CONSERVATIVE_RATE) +
-                    sqrt(gamma_non_normalized_single[id]) / gamma_sum[i] * (1-CONSERVATIVE_RATE) +
+                    sqrt(gamma_non_normalized_single[id]) / gamma_sum[i] * (1 - CONSERVATIVE_RATE) +
                     1.0 / dropOut_tracing::default_specularSubSpaceNumber * (CONSERVATIVE_RATE);
                 //printf("eye %d-%d pmf %f\n",i , j, h_caustic_gamma[i * dropOut_tracing::default_specularSubSpaceNumber + j]);
             }
@@ -999,7 +1033,7 @@ void updateDropOutTracingCombineWeight()
             if (!h_record[i].valid())continue;
             if (h_record[i].record < 0)continue;
             //if (abs(h_record[i].record) == 0)continue;
-            uint2 pixel_label = dot_params.Id2pixel(i, make_uint2(params.width,params.height)); 
+            uint2 pixel_label = dot_params.Id2pixel(i, make_uint2(params.width, params.height));
             int final_label = dot_params.pixel2unitId(pixel_label, make_uint2(params.width, params.height));
 
             if (!h_record[i].is_caustic())
@@ -1011,7 +1045,7 @@ void updateDropOutTracingCombineWeight()
             {
                 caustic_count[final_label]++;
                 caustic_weight[final_label] += h_record[i].record;
-            } 
+            }
         }
         for (int i = 0; i < h_frac.size(); i++)
         {
@@ -1027,7 +1061,7 @@ void updateDropOutTracingCombineWeight()
                 else h_frac[i] = 1;
 
             }
-        } 
+        }
         subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
         dot_params.CMF_Gamma = subspaceInfo.CMFCausticGamma;
         dot_params.pixel_caustic_refract = MyThrustOp::DOT_causticFrac_to_device(h_frac);
@@ -1044,12 +1078,13 @@ std::vector<std::vector<std::vector<bool>>> TrainFinish(dropOut_tracing::max_u,
         std::vector<bool>(dropOut_tracing::default_surfaceSubSpaceNumber,
             0)));
 
-const int capacity=30000;
+const int capacity = 30000;
 
 void updateDropOutTracingParams()
 {
-    if (SPCBPT_PURE|| params.spcbpt_pure) return;
+    if (params.skip_proxy_dropout_tracing) return;
     static int train_iter = 0;
+    //迭代数目超过指定数目后终止统计
     if (train_iter > 0 && train_iter > dropOut_tracing::iteration_stop_learning)
     {
         if (train_iter == dropOut_tracing::iteration_stop_learning + 1)
@@ -1058,7 +1093,7 @@ void updateDropOutTracingParams()
             printf("iteration more than stop point, stop params learning\n");
         }
         return;
-    } 
+    }
     train_iter++;
     bool disable_print = !DOT_DEBUG_INFO_ENABLE;
     thrust::host_vector<dropOut_tracing::statistics_data_struct>statics_data = MyThrustOp::DOT_statistics_data_to_host();
@@ -1072,12 +1107,13 @@ void updateDropOutTracingParams()
     /////////////////////////////////////////////////////////////////////////////////////////////////// 
 
     //Average Computation
-    {  
+    //基于子空间统计倒数评估的平均值和方差
+    {
         // Create temporary vectors to store the counter and data for each subspace 
         static std::vector<std::vector<std::vector<int>>> tempVector_counter(dropOut_tracing::max_u,
             std::vector<std::vector<int>>(dot_params.specularSubSpaceNumber,
                 std::vector<int>(dot_params.surfaceSubSpaceNumber, 0)));
-        static std::vector<std::vector<std::vector<float>>> tempVector(dropOut_tracing::max_u, 
+        static std::vector<std::vector<std::vector<float>>> tempVector(dropOut_tracing::max_u,
             std::vector<std::vector<float>>(dot_params.specularSubSpaceNumber,
                 std::vector<float>(dot_params.surfaceSubSpaceNumber, 0)));
 
@@ -1095,17 +1131,17 @@ void updateDropOutTracingParams()
                 int& count = tempVector_counter[int(record.type)][record.specular_subspaceId][record.surface_subspaceId];
                 average = lerp(average, float(record), 1.0 / (count + 1));
                 variance = lerp(variance, float(record) * float(record), 1.0 / (count + 1));
-                count++; 
+                count++;
             }
         }
-        for(int i = 0;i<dropOut_tracing::max_u;i++)
-            for(int j=0;j< dot_params.specularSubSpaceNumber; j++)
+        for (int i = 0; i < dropOut_tracing::max_u; i++)
+            for (int j = 0; j < dot_params.specularSubSpaceNumber; j++)
                 for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
                 {
                     auto& statistic_data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k);
-  
+
                     if (statistic_data.valid)
-                    { 
+                    {
                         // Linearly interpolate the data in dot_params with the new data from tempVector
                         statistic_data.average = tempVector[i][j][k];// lerp(statistic_data.average, tempVector[i][j][k], 1.0 / float(dot_params.statistics_iteration_count + 1));
                         statistic_data.variance = variance_vector[i][j][k];
@@ -1120,7 +1156,8 @@ void updateDropOutTracingParams()
     }
 
     //Bound Process
-    {  
+    //基于子空间，统计评估的上界
+    {
         std::vector<std::vector<std::vector<float>>> tempVector(dropOut_tracing::max_u,
             std::vector<std::vector<float>>(dot_params.specularSubSpaceNumber,
                 std::vector<float>(dot_params.surfaceSubSpaceNumber, 0)));
@@ -1133,24 +1170,25 @@ void updateDropOutTracingParams()
             if (record.data_slot == DOT_usage::Bound)
             {
                 if (isinf(record))continue;
-                tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId] = 
-                    max( float(record), tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId]);
-                
+                tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId] =
+                    max(float(record), tempVector[int(record.type)][record.specular_subspaceId][record.surface_subspaceId]);
+
             }
         }
         for (int i = 0; i < dropOut_tracing::max_u; i++)
             for (int j = 0; j < dot_params.specularSubSpaceNumber; j++)
                 for (int k = 0; k < dot_params.surfaceSubSpaceNumber; k++)
                 {
-                    auto& statistic_data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k); 
-                    statistic_data.bound = max(statistic_data.bound,tempVector[i][j][k]);
+                    auto& statistic_data = dot_params.get_statistic_data(dropOut_tracing::DropOutType(i), j, k);
+                    statistic_data.bound = max(statistic_data.bound, tempVector[i][j][k]);
                     if (statistic_data.valid && !disable_print)
                         printf("Bound Setting for ID S:%d C:%d U:%d is %f\n", j, k, i, statistic_data.bound);
                 }
     }
 
     //PG training
-    if(dropOut_tracing::PG_reciprocal_estimation_enable)
+    //并未经过测试的，使用path guiding来加速倒数评估流程的代码段
+    if (dropOut_tracing::PG_reciprocal_estimation_enable)
     {
         int count = 0;
 
@@ -1172,23 +1210,24 @@ void updateDropOutTracingParams()
                 {
                     int num = TrainVector[i][j][k].size();
                     if (num == 0) continue;
-                    if (num==capacity && TrainFinish[i][j][k]) continue;
+                    if (num == capacity && TrainFinish[i][j][k]) continue;
                     if (num == capacity) {
-                        TrainFinish[i][j][k] = true; printf("S:%d C:%d U:%d train end!!!\n",j, k, i);
+                        TrainFinish[i][j][k] = true; printf("S:%d C:%d U:%d train end!!!\n", j, k, i);
                         dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->trainEnd = 1;
                     }
                     dot_params.get_PGParams_pointer(dropOut_tracing::DropOutType(i), j, k)->loadIn(TrainVector[i][j][k]);
-                    if (!disable_print){
+                    if (!disable_print) {
                         printf("PG traning for ID S:%d C:%d U:%d with size %d\n", j, k, i, num);
                     }
                 }
         printf("we get %d record success\n", count);
     }
-        
+
     dot_params.statistics_iteration_count++;
-    printf("received %lld valid records in the Light Tracing\n",records.size());
-    
+    printf("received %lld valid records in the Light Tracing\n", records.size());
+
     // Bad Block Ratio
+    //如果统计数据出现异常，则被视为坏块，这些坏块的比率在本段代码中被计算
     float sum = dropOut_tracing::max_u * dot_params.specularSubSpaceNumber * dot_params.surfaceSubSpaceNumber;
     int bad_cnt = 0;
     for (int i = 0; i < dropOut_tracing::max_u; i++)
@@ -1215,9 +1254,10 @@ void updateDropOutTracingParams()
     dot_params.data.on_GPU = true;
 
 
-    dot_params.selection_const =  dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
+    //selection const被用于MIS计算中
+    dot_params.selection_const = dropOut_tracing::connection_uniform_sample ? lt_params.M_per_core * lt_params.num_core / float(params.sampler.glossy_count)
         : lt_params.M_per_core * lt_params.num_core;
-   // dot_params.selection_const *= DOT_LESS_MIS_WEIGHT ? (1 - dot_params.discard_ratio) : 1;
+    // dot_params.selection_const *= DOT_LESS_MIS_WEIGHT ? (1 - dot_params.discard_ratio) : 1;
     dot_params.selection_const *= (1 - dot_params.discard_ratio);
     dot_params.specular_Q = MyThrustOp::DOT_get_Q();
 
@@ -1230,58 +1270,62 @@ void updateDropOutTracingParams()
 }
 
 void preprocessing(sutil::Scene& scene)
-{ 
+{
     printf("begin pretracing\n");
     MyThrustOp::clear_training_set();
     const int target_sample_count = 1000000;
     int current_sample_count = 0;
+    //用PT追踪训练数据直到一百万条完整路径被追踪出来
     while (current_sample_count < target_sample_count)
     {
-        current_sample_count += launchPretrace(scene); 
+        current_sample_count += launchPretrace(scene);
     }
     printf("pretracing complete\n");
     //MyThrustOp::sample_reweight();
+    //从完整路径中取出能用于子空间分类的样本
     auto unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(true, 10000);
+    //根据这些样本建立子空间决策树
     auto h_eye_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE, 0);
 
     unlabeled_samples = MyThrustOp::get_weighted_point_for_tree_building(false, 10000);
     auto h_light_tree = classTree::buildTreeBaseOnExistSample()(unlabeled_samples, NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE, 0);
 
+
+    //数据分配到GPU中
     auto d_DecisionTree = MyThrustOp::eye_tree_to_device(h_eye_tree.v, h_eye_tree.size);
     subspaceInfo.eye_tree = d_DecisionTree;
     d_DecisionTree = MyThrustOp::light_tree_to_device(h_light_tree.v, h_light_tree.size);
     subspaceInfo.light_tree = d_DecisionTree;
-    //{
-    //    std::vector<classTree::tree_node> eye_load, light_load;
-    //    classTree::tree_load(eye_load, light_load); 
-    //    printf("load tree size %d %d\n", eye_load.size(), light_load.size());
-    //    auto d_DecisionTree = MyThrustOp::eye_tree_to_device(eye_load.data(), eye_load.size());
-    //    subspaceInfo.eye_tree = d_DecisionTree;
-    //    d_DecisionTree = MyThrustOp::light_tree_to_device(light_load.data(), light_load.size());
-    //    subspaceInfo.light_tree = d_DecisionTree; 
-    //}
+
 
     const int target_Q_samples = 2000000;
     int current_Q_samples = 0;
     thrust::device_ptr<float> Q_star = nullptr;
     while (current_Q_samples < target_Q_samples)
     {
+        //追踪光子路以确定每个光子空间的能量值Q的大小
         //launchLightTrace(scene);
         launchLVCTrace(scene);
         auto p_v = thrust::device_pointer_cast(params.lt.ans);
-        auto p_valid = thrust::device_pointer_cast(params.lt.validState); 
+        auto p_valid = thrust::device_pointer_cast(params.lt.validState);
         current_Q_samples += MyThrustOp::preprocess_getQ(p_v, p_valid, params.lt.get_element_count(), Q_star);
 
+        //在预处理阶段可以顺带把统计数据算一下
         updateDropOutTracingParams();//update the statistic data for drop out sampling
 
     }
-    MyThrustOp::Q_zero_handle(Q_star); 
+    //如果有能量为0的光子空间，将其能量设为无穷大以避免评估的时候出现问题
+    MyThrustOp::Q_zero_handle(Q_star);
+    //根据光子空间树和视子空间树来给完整路径打上标识
     MyThrustOp::node_label(subspaceInfo.eye_tree, subspaceInfo.light_tree);
 
     thrust::device_ptr<float> Gamma;
     //MyThrustOp::load_Q_file(Q_star);
-    MyThrustOp::build_optimal_E_train_data(target_sample_count); 
+    //将最优化所需的各种数据统一装配以供训练
+    MyThrustOp::build_optimal_E_train_data(target_sample_count);
+    //计算基于贡献值的初始化的Gamma矩阵
     MyThrustOp::preprocess_getGamma(Gamma);
+    //训练全局方差最优化的Gamma矩阵
     MyThrustOp::train_optimal_E(Gamma);
 
     //MyThrustOp::load_Gamma_file(Gamma); 
@@ -1293,8 +1337,9 @@ void preprocessing(sutil::Scene& scene)
     //thrust::device_ptr<float> CausticGamma;
     //MyThrustOp::preprocess_getGamma(CausticGamma, true);
 
-    if (!SPCBPT_PURE&&!params.spcbpt_pure)
-    { 
+    if (!params.skip_proxy_dropout_tracing)
+    {
+        //如果启用了proxy sampling，则初始化镜面子空间的Gamma矩阵
         thrust::host_vector<float> h_caustic_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE);
         thrust::fill(h_caustic_gamma.begin(), h_caustic_gamma.end(), 1.0 / dropOut_tracing::default_specularSubSpaceNumber);
         subspaceInfo.CMFCausticGamma = MyThrustOp::DOT_causticCMFGamma_to_device(h_caustic_gamma);
@@ -1319,7 +1364,7 @@ void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene
         0 // stream
     ));
 
-    auto prog_set = scene.m_progsets[render_alg[render_alg_id]];
+    auto prog_set = scene.m_progsets[render_main_progs[render_alg_id].eyeRaygenProgName];
     OPTIX_CHECK(optixLaunch(
         //scene.pipeline(),
         prog_set.m_pipeline,
@@ -1336,28 +1381,28 @@ void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene
     CUDA_SYNC_CHECK();
 }
 
- 
-void displaySubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::GLDisplay& gl_display, GLFWwindow* window )
+
+void displaySubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::GLDisplay& gl_display, GLFWwindow* window)
 {
     // Display
     int framebuf_res_x = 0;  // The display's resolution (could be HDPI res)
     int framebuf_res_y = 0;  //
-    glfwGetFramebufferSize( window, &framebuf_res_x, &framebuf_res_y );
+    glfwGetFramebufferSize(window, &framebuf_res_x, &framebuf_res_y);
     gl_display.display(
-            output_buffer.width(),
-            output_buffer.height(),
-            framebuf_res_x,
-            framebuf_res_y,
-            output_buffer.getPBO()
-            );
+        output_buffer.width(),
+        output_buffer.height(),
+        framebuf_res_x,
+        framebuf_res_y,
+        output_buffer.getPBO()
+    );
 }
 
-static void context_log_cb( unsigned int level, const char* tag, const char* message, void* /*cbdata */ )
+static void context_log_cb(unsigned int level, const char* tag, const char* message, void* /*cbdata */)
 {
-    std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
+    std::cerr << "[" << std::setw(2) << level << "][" << std::setw(12) << tag << "]: " << message << "\n";
 }
 
- 
+
 
 void initCameraState(const sutil::Scene& scene)
 {
@@ -1369,106 +1414,105 @@ void initCameraState(const sutil::Scene& scene)
     trackball.setReferenceFrame(make_float3(1.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 1.0f), make_float3(0.0f, 1.0f, 0.0f));
     trackball.setGimbalLock(true);
 }
- 
- 
- 
+
+string scenePath = " ";
+void readConfig()
+{
+    string config_path = string(SAMPLES_DIR) + string("/config.json");
+    FILE* config_fp = fopen(config_path.c_str(), "r");
+    char buf[1024] = { 0 };
+    fread(buf, 1, sizeof(buf), config_fp);
+    cJSON* root = cJSON_Parse(buf);
+    auto out = cJSON_Print(root);
+
+    params.width = cJSON_GetObjectItem(root, "width")->valueint;
+    params.height = cJSON_GetObjectItem(root, "height")->valueint;
+    params.conservative_rate = cJSON_GetObjectItem(root, "conservative_rate")->valuedouble;
+    params.n_connections = cJSON_GetObjectItem(root, "n_connections")->valueint;
+    scenePath = string(SAMPLES_DIR) + string(cJSON_GetObjectItem(root, "scene_path")->valuestring);
+    params.path_length_limited = static_cast<bool> (cJSON_GetObjectItem(root, "path_length_limited")->valueint);
+    params.min_RR_rate = cJSON_GetObjectItem(root, "min_RR_rate")->valuedouble;
+    params.enable_proxy_sampling = static_cast<bool> (cJSON_GetObjectItem(root, "enable_proxy_sampling")->valueint);
+
+    params.subspace_info.num_subspace = cJSON_GetObjectItem(root, "num_subspace")->valueint;
+    params.subspace_info.num_subspace_lightsource = cJSON_GetObjectItem(root, "num_subspace_lightsource")->valueint;
+
+    params.skip_proxy_dropout_tracing = !params.enable_proxy_sampling;
+
+    initial_algrithm = cJSON_GetObjectItem(root, "initial_algorithm")->valuestring;
+    MyThrustOp::params_to_thrust(params);
+    //std::cout << out;
+}
+
 //------------------------------------------------------------------------------
 //
 // Main
 //
 //------------------------------------------------------------------------------ 
-int main( int argc, char* argv[] )
-{ 
-    //Cthrust;
-    //PathTracerState state;
-    params.width = 1920;
-    params.height = 1000;
+int main(int argc, char* argv[])
+{
+    //读取config.json获知渲染配置
+    readConfig();
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
     _putenv("OPTIX_FORCE_DEPRECATED_LAUNCHER=1");
 
-    //
-    // Parse command line options
-    //
-    std::string outfile;
 
-    for( int i = 1; i < argc; ++i )
-    {
-        const std::string arg = argv[i];
-        if( arg == "--help" || arg == "-h" )
-        {
-            printUsageAndExit( argv[0] );
-        }
-        else if( arg == "--no-gl-interop" )
-        {
-            output_buffer_type = sutil::CUDAOutputBufferType::CUDA_DEVICE;
-        }
-        else if( arg.substr( 0, 6 ) == "--dim=" )
-        {
-            const std::string dims_arg = arg.substr( 6 );
-            int w, h;
-            sutil::parseDimensions( dims_arg.c_str(), w, h );
-            params.width  = w;
-            params.height = h;
-        }
-        else
-        {
-            std::cerr << "Unknown option '" << argv[i] << "'\n";
-            printUsageAndExit( argv[0] );
-        }
-    }
-     
 
     try
     {
-        string scenePath = " ";
-        const float SET_ERROR = -1.0f;  
-        //scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
-        scenePath = string(SAMPLES_DIR) + string("/data/door/door.scene");   
+        //scenePath = string(SAMPLES_DIR) + string("/data/door/door.scene");   
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_teaser_env2.scene");   
-        auto myScene = LoadScene(scenePath.c_str());  
-        //myScene->getMeshData(0);  
-        sutil::Scene TScene;  
-        Scene_shift(*myScene, TScene);
-        LightSource_shift(*myScene, params, TScene);
-        TScene.finalize();
-        env_params_setup(*myScene, TScene);
-        //
-        // Set up OptiX state
-        // 
-        program_setup(TScene);
+        //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");   
+        //scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
+
+        //读取场景文件
+        auto myScene = LoadScene(scenePath.c_str());
+
+        //将场景配置文件中的信息传到optix后端
+        sutil::Scene OptiXScene;
+        Scene_shift(*myScene, OptiXScene);//场景几何处理
+        LightSource_shift(*myScene, params, OptiXScene,params.subspace_info.num_subspace_lightsource);//光源信息处理
+        OptiXScene.finalize();//创建optix context和加速结构
+        env_params_setup(*myScene, OptiXScene);//环境贴图设置
+        program_setup(OptiXScene);//加载device端的cuda程序，包括装配SBT等
+
+
         OPTIX_CHECK(optixInit()); // Need to initialize function table
-        initCameraState(TScene); 
+        initCameraState(OptiXScene); //摄像机参数初始化
         //estimation_setup(scenePath);
-        initLaunchParams(TScene);
-        dropOutTracingParamsInit();
-        lt_params_setup(TScene);
-        preTracer_params_setup(TScene);
-         
+        initLaunchParams(OptiXScene);//params通用参数设置
+        dropOutTracingParamsInit();//用于proxy sampling的参数params简单初始化，只是把一些指针置空，真正的参数设置在下面的dropOutTracingParamsSetup函数里
+        lt_params_setup(OptiXScene);//用于light trace的参数params设置
+        preTracer_params_setup(OptiXScene);//用于预追踪的参数params设置
+
         //pre tracing
-        { 
-            handleCameraUpdate(params);
-            path_guiding_params_setup(TScene);
-            dropOutTracingParamsSetup(TScene);
-            preprocessing(TScene);
-        }
-        
-        //if( outfile.empty() )
-        if(true)
         {
-            GLFWwindow* window = sutil::initUI( "optixPathTracer", width, height );
-            glfwSetMouseButtonCallback( window, mouseButtonCallback );
-            glfwSetCursorPosCallback( window, cursorPosCallback );
-            glfwSetWindowSizeCallback( window, windowSizeCallback );
-            glfwSetWindowIconifyCallback( window, windowIconifyCallback );
-            glfwSetKeyCallback( window, keyCallback );
-            glfwSetScrollCallback( window, scrollCallback );
-            glfwSetWindowUserPointer( window, &params );
+            handleCameraUpdate(params);//更新相机参数
+            path_guiding_params_setup(OptiXScene);//用于path guiding的参数params设置
+            dropOutTracingParamsSetup(OptiXScene);//用于proxy sampling的参数params设置
+            preprocessing(OptiXScene);//预处理，追踪完整路径，建立子空间，训练Gamma矩阵（在代码里也被称为E矩阵），统计Q向量，
+            //如果启用了proxy sampling，那么也会统计proxy sampling的数据，
+            //得到的大部分信息都会传入device端，在params里存储device端指针
+        }
+
+        if (true)
+        {
+            //设置各种callback
+            GLFWwindow* window = sutil::initUI("optixPathTracer", params.width, params.height);
+            glfwSetMouseButtonCallback(window, mouseButtonCallback);
+            glfwSetCursorPosCallback(window, cursorPosCallback);
+            glfwSetWindowSizeCallback(window, windowSizeCallback);
+            glfwSetWindowIconifyCallback(window, windowIconifyCallback);
+            glfwSetKeyCallback(window, keyCallback);
+            glfwSetScrollCallback(window, scrollCallback);
+            glfwSetWindowUserPointer(window, &params);
 
             //
             // Render loop
+            // 主循环
             //
             {
-                sutil::CUDAOutputBuffer<uchar4> output_buffer(output_buffer_type, width, height);
+                sutil::CUDAOutputBuffer<uchar4> output_buffer(output_buffer_type, params.width, params.height);
                 sutil::GLDisplay gl_display;
 
                 std::chrono::duration<double> light_tracing_time(0.0);
@@ -1487,36 +1531,48 @@ int main( int argc, char* argv[] )
                     if (params.subframe_index == 0) { sum_render_time = std::chrono::duration<double>::zero(); render_time_record = 0; }
 
                     auto t0 = std::chrono::steady_clock::now();
-                    if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure"))
+                    if (render_main_progs[render_alg_id].need_light_trace)
                     {
-                        launchLVCTrace(TScene);
+                        //光子路追踪
+                        //追踪到的光子路会存到LVC里
+                        launchLVCTrace(OptiXScene);
+                        //统计proxy sampling信息
                         updateDropOutTracingParams();
+                        //统计proxy sampling启用时，SPCBPT用于重要性采样镜面顶点的CMF
                         updateDropOutTracingCombineWeight();
                     }
                     auto t1 = std::chrono::steady_clock::now();
                     light_tracing_time += t1 - t0;
                     t0 = t1;
 
-                    launchSubframe(output_buffer, TScene);
+                    //调用渲染算法的视子路追踪部分
+                    launchSubframe(output_buffer, OptiXScene);
 
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
-                    sum_render_time += t1 - t0; 
-                    t0 = t1; 
+                    sum_render_time += t1 - t0;
+                    t0 = t1;
 
 
                     displaySubframe(output_buffer, gl_display, window);
                     t1 = std::chrono::steady_clock::now();
                     display_time += t1 - t0;
 
+                    //控件操作
                     setting_changed = sutil::displayStatsControls(light_tracing_time, render_time, display_time,
-                        params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
+                        params.subframe_index,
+                        render_alg_id, mainProgNames(),
+                        params.eye_subspace_visualize, params.light_subspace_visualize,
+                        //从这里以下的几个参数都是暂时不用的
+                        //或者说只有在proxy sampling(DOT)里会用到，真要用到的话进函数里把相应注释解除吧
+                        params.caustic_path_only,
                         params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize,
                         params.pg_params.pg_enable,
                         params.error_heat_visual
                     );
                     glfwSwapBuffers(window);
 
+                    //评估代码，暂时注释
                     estimation::es.estimation_mode = false;
                     if (estimation::es.estimation_mode == true)
                     {
@@ -1525,16 +1581,16 @@ int main( int argc, char* argv[] )
 
                         error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
-                         
+
                         if (estimation_save) {
-                            estimation::es.outputFile << params.subframe_index << " " <<sum_render_time.count() <<" "<< error<< endl;
+                            estimation::es.outputFile << params.subframe_index << " " << sum_render_time.count() << " " << error << endl;
                         }
                     }
                     else
                     {
-                        printf("frame %d time %f\n", params.subframe_index, sum_render_time.count()); 
+                        printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
                     }
-                    render_fps = 1.0 / (sum_render_time.count() - render_time_record); 
+                    render_fps = 1.0 / (sum_render_time.count() - render_time_record);
                     render_time_record = sum_render_time.count();
                     render_frame_record = params.subframe_index;
 
@@ -1542,12 +1598,12 @@ int main( int argc, char* argv[] )
                 } while (!glfwWindowShouldClose(window));
                 CUDA_SYNC_CHECK();
             }
-            sutil::cleanupUI( window );
+            sutil::cleanupUI(window);
         }
 
-       // cleanupState( state );
+        // cleanupState( state );
     }
-    catch( std::exception& e )
+    catch (std::exception& e)
     {
         std::cerr << "Caught exception: " << e.what() << "\n";
         return 1;

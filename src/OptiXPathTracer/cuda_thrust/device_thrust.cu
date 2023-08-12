@@ -27,12 +27,14 @@
 #define CHECK(res) { if(res != cudaSuccess){printf("Error ：%s:%d , ", __FILE__,__LINE__);   \
 printf("code : %d , reason : %s \n", res,cudaGetErrorString(res));exit(-1);}}
 
+#define NUM_SUBSPACE params_p->subspace_info.num_subspace
+#define NUM_SUBSPACE_LIGHTSOURCE params_p->subspace_info.num_subspace_lightsource
 using std::default_random_engine;
 
 timerecord_stage time_records;
 default_random_engine random_generator_;
 
-
+MyParams *params_p;
 
 
 float rnd_float()
@@ -505,7 +507,7 @@ namespace MyThrustOp
     }
 
 
-    static thrust_host_float h_Q_vec(NUM_SUBSPACE);
+    static thrust_host_float h_Q_vec;
     static thrust_dev_float Q_vec;
     void Q_zero_handle(thrust::device_ptr<float>& Q)
     {
@@ -968,7 +970,7 @@ namespace MyThrustOp
     }
     static thrust_dev_float Gamma_vec;
     static thrust_dev_float Gamma_vec_caustic;
-    static thrust_host_float h_Gamma(NUM_SUBSPACE* NUM_SUBSPACE);
+    static thrust_host_float h_Gamma;
 
     void get_caustic_frac(thrust::device_ptr<float>& frac)
     {
@@ -1692,8 +1694,8 @@ namespace MyThrustOp
                     thrust::divides<float>());
 
                 //conservative sampling
-                thrust::transform(E.begin(), E.end(), thrust::make_constant_iterator(1 - CONSERVATIVE_RATE), E.begin(), thrust::multiplies<float>());
-                thrust::transform(E.begin(), E.end(), thrust::make_constant_iterator(CONSERVATIVE_RATE / float(NUM_SUBSPACE)), E.begin(), thrust::plus<float>());
+                thrust::transform(E.begin(), E.end(), thrust::make_constant_iterator(1 - params_p->conservative_rate), E.begin(), thrust::multiplies<float>());
+                thrust::transform(E.begin(), E.end(), thrust::make_constant_iterator(params_p->conservative_rate / float(NUM_SUBSPACE)), E.begin(), thrust::plus<float>());
                 return E;
             }
 
@@ -3882,7 +3884,7 @@ namespace MyThrustOp
         int id_light = 0;
         while (inFile >> value)
         {
-            if (id_light < NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE)
+            if (true||id_light < NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE)
             {
                 h_E.push_back(value); 
             }
@@ -3938,7 +3940,7 @@ namespace MyThrustOp
         {
             for (int j = 0; j < NUM_SUBSPACE; j++)
             {
-                float t = CONSERVATIVE_RATE; 
+                float t = params_p->conservative_rate; 
                 p[i * NUM_SUBSPACE + j] = p[i * NUM_SUBSPACE + j] * (1 - t) + (1.0 / NUM_SUBSPACE) * t; 
             }
         }
@@ -3981,5 +3983,12 @@ namespace MyThrustOp
         
         d_cmf_gamma = p;
         return d_cmf_gamma.data();
+    }
+
+    void params_to_thrust(MyParams& params)
+    {
+        params_p = &params;
+        h_Gamma.resize(NUM_SUBSPACE * NUM_SUBSPACE);
+        h_Q_vec.resize(NUM_SUBSPACE);
     }
 }

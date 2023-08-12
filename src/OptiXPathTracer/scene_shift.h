@@ -27,7 +27,7 @@ BufferView<T> HostToDeviceBuffer(T* ptr, int count, int UniNum = 1)
     return ans;
 }
 void Geometry_shift(Scene& Src, sutil::Scene& Dst);
-void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst);
+void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst, int num_subspace_lightsource);
 void Scene_shift(Scene& Src, sutil::Scene& Dst);
 
 

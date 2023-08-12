@@ -66,9 +66,10 @@ struct LaunchParams
     unsigned int             width;
     unsigned int             height;
     unsigned int             subframe_index;
+    int                      n_connections;
     float4*                  accum_buffer;
     uchar4*                  frame_buffer;
-    int                      max_depth;
+
     //float                    scene_epsilon;
     //float                    scene_maximum;
 
@@ -76,7 +77,8 @@ struct LaunchParams
     float3                   U;
     float3                   V;
     float3                   W;
-
+    float                    conservative_rate;
+    float                    min_RR_rate;
     BufferView<Light>        lights;
     BufferView<MaterialData::Pbr> materials;
     float3                   miss_color;
@@ -89,8 +91,11 @@ struct LaunchParams
     bool caustic_prob_visualize;
     bool PG_grid_visualize;
     bool error_heat_visual;
-    bool spcbpt_pure;
     bool no_subspace;
+    bool path_length_limited;
+    bool enable_proxy_sampling;
+    bool skip_proxy_dropout_tracing;
+    bool spcbpt_pure;
 };
 
 struct PayloadRadiance

@@ -33,6 +33,7 @@ static std::map<int, int> lightsourceID_remap;
 static std::map<int, int> sampler_remap;
 void Material_shift(Scene& Src, sutil::Scene& Dst)
 {
+    //加载贴图
     for (int i = 0; i < Src.texture_map.size(); i++)
     { 
         int texWidth, texHeight, texChannels;
@@ -61,6 +62,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         Dst.addSampler(address_s, address_t, filter, image_id); 
         sampler_remap[i + 1] = Dst.SamplerCurrent();
     }
+    //转化材质
     for (int i = 0; i < Src.optix_materials.size(); i++)
     { 
         auto& p = Src.optix_materials[i];
@@ -117,6 +119,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         //printf("material remap id %d -> %d\n", i, materialID_remap[i]);
         Dst.addMaterial(mtl);
     }
+    //光源材质处理，所有emissive_factor大于0的材质都会在后续代码中被识别为光源材质
     for (int i = 0; i < Src.optix_lights.size(); i++)
     {
         auto &light = Src.optix_lights[i];
@@ -135,14 +138,14 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
     return;
 
 }
-std::vector<int> subspace_arrange(Scene& Src, MyParams& params, sutil::Scene& Dst)
+std::vector<int> subspace_arrange(Scene& Src, int num_subspace_lightsource, sutil::Scene& Dst)
 {
-    if (Src.optix_lights.size() > NUM_SUBSPACE_LIGHTSOURCE)
+    if (Src.optix_lights.size() > num_subspace_lightsource)
     {
-        printf("light source number is more than available subspace, therefore, all the light source will be set to the same subspace\n");
+        printf("lightsource number %d vs available subspace number %d, light source number is more than available subspace, therefore, all the light source will be set to the same subspace\n", Src.optix_lights.size(), num_subspace_lightsource);
         return std::vector<int>(Src.optix_lights.size(), 0);
     }
-    int available_subspace = NUM_SUBSPACE_LIGHTSOURCE;
+    int available_subspace = num_subspace_lightsource;
 
     std::vector<int> divLevels2;
     int empty_lightsource = 0;
@@ -155,8 +158,8 @@ std::vector<int> subspace_arrange(Scene& Src, MyParams& params, sutil::Scene& Ds
     }
     if (Src.has_envMap() && divLevels2[Src.env_light_id] == 0)
     {
-        divLevels2[Src.env_light_id] += 0.5 * NUM_SUBSPACE_LIGHTSOURCE;
-        available_subspace -= 0.5 * NUM_SUBSPACE_LIGHTSOURCE;
+        divLevels2[Src.env_light_id] += 0.5 * num_subspace_lightsource;
+        available_subspace -= 0.5 * num_subspace_lightsource;
     }
     if (available_subspace < empty_lightsource)
     {
@@ -211,12 +214,11 @@ std::vector<int> subspace_arrange(Scene& Src, MyParams& params, sutil::Scene& Ds
     return divLevels2;
 
 }
-void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
+void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst, int num_subspace_lightsource)
 { 
     //int ssBase = Src.has_envMap() ? 0.5 * NUM_SUBSPACE_LIGHTSOURCE : 0;
     int ssBase = 0;
-    
-    std::vector<int> divLevels2 = subspace_arrange(Src, params, Dst);
+    std::vector<int> divLevels2 = subspace_arrange(Src, num_subspace_lightsource, Dst);
     printf("Subspace arrange for light source:\n");
     for (int i = 0; i < divLevels2.size(); i++)
     {
@@ -315,6 +317,7 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
                 a.texcoords[i].push_back(BV);
 
             }
+            //着色法线，如果使用法线贴图的话即便use_geometry_normal为True也依然会读取法线贴图，这里use_geometry_normal只决定几何模型里附带的着色法线是否使用
             /* ********************************** */
             if(!Src.use_geometry_normal)
                 a.normals.push_back(HostToDeviceBuffer(
@@ -339,6 +342,7 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         //break;
     }
     //return;
+    //为面积光创造几何模型
     for (int i = 0; i < Src.optix_lights.size(); i++)
     {
         //auto &SLight = Src.lights[i];

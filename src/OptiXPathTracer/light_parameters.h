@@ -30,17 +30,6 @@ struct LightParameter
 	int divLevel;
 	int id;
 };
-
-struct LightSample
-{
-	float3 surfacePos;
-	float3 normal;
-	float3 emission;
-	float3 dir;
-	float2 uv;
-	float pdf;
-	float pdf_dir;
-	int zoneId;
-};
+ 
 
 #endif

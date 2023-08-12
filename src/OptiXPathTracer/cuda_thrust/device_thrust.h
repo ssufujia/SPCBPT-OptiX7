@@ -166,7 +166,7 @@ namespace MyThrustOp
     thrust::host_vector<dropOut_tracing::pixelRecord> DOT_get_pixelRecords();
     dropOut_tracing::pixelRecord* DOT_set_pixelRecords_size(int size);
     float* DOT_get_Q();
-
+    void params_to_thrust(MyParams& params);
 
     path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size);
     path_guiding::Spatio_tree_node* spatio_tree_to_device(path_guiding::Spatio_tree_node* a, int size);

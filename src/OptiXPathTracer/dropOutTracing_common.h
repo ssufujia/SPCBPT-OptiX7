@@ -10,30 +10,60 @@
 namespace dropOut_tracing
 {
     const int slot_number = 5;
+    //默认情况下的镜面子空间数目，注意镜面子空间ID=0代表着该顶点不属于子空间，因此这里实际上是多了1的
     const int default_specularSubSpaceNumber = 101;
+    //默认情况下，控制点所处的子空间对渲染的提升不大，反而会加大统计训练数据的难度，因此设为1禁用
     const int default_surfaceSubSpaceNumber = 1; 
+    //统计数据的record的倍率，设为1代表着每个LVC中的光顶点平均而言会生成一个统计数据record
+    //实际上镜面点的数量要远少于一般光顶点，所以1在很多情况下都是足够的
+    //如果不够，那么我的cuda代码“应该会”输出信息要求增大该值
     const int record_buffer_width = 1;
+
+    //倒数评估的最长可变顶点数目
     const int max_u = 3;
+
+
     const unsigned pixel_unit_size = 10;
+
+    //是否引入MIS来和其他算法混合，建议开启
     const bool MIS_COMBINATION = true;
     const bool debug_PT_ONLY = false;
+    //是否使用path guiding来做倒数评估加强，相关代码目前尚未测试，不建议开启
     const bool PG_reciprocal_estimation_enable = false;
 
+    //可处理的路径筛选flag
+    //是否允许多个bounce情况下的倒数评估
     const bool multi_bounce_disable = false; // if true, u must be 1
+    //是否使用control Point
     const bool CP_disable = true; // if true, only no control point is valid
+    //如果使用control point，那么control point是否限定在光源上
     const bool CP_lightsource_only = true; // if true, CP must be on light source
+    //如果使用control point，那么control point是否不能在光源上
     const bool CP_lightsource_disable = false; // if true, CP can't be on light source
+    //是否筛除掉所有没有control point的路径
     const bool CP_require = false; // if true, control point is required
     //true  true  true  false false = LSDE  enable
     //true  false true  false true  = LDSDE enable
     //true  false false true  true  = L(A)*DSDE enable 
+
+    //bound的最大值，注意这里bound的设置是一个很玄学的东西，跟场景尺度有关
+    //bound太大的情况下，一部分倒数评估计算会过于漫长了，不如直接把bound设小然后进入坏块处理
+    //bound太小则坏块太多
+    //但是一个场景的bound范围跟这个场景的尺度有关，如果光源离镜面非常非常非常接近那么bound得设大一点
     const int max_bound = DOT_BOUND_LIMIT_LESS? 10000:100;
+    //倒数评估到这个loop次数后将会直接结束评估，防止特殊状况发生
     const int max_loop = 1000;
+    //以多少的概率筛除掉光顶点，我们只会对少部分光子路做倒数评估，然后用路径重用思想来完成处理
     const float light_subpath_caustic_discard_ratio = DOT_MORE_PROXY_LIGHT_SUBPATH_NUM?0.5:0.95;
+    //不过我后来写了一个自适应版本，现在discard ratio会自动调节到会让大约target_num_incomplete_subpath = 400个光子路被评估的程度
     const int target_num_incomplete_subpath = 400;
+    //多次倒数评估以减少倒数评估的方差
     const int reciprocal_iteration = 5;
+    //采样候选残缺路径时是否不用SPCBPT而是均匀采样
     const bool connection_uniform_sample = false;
+    //到多少次迭代之后结束训练以最大化效率
     const int iteration_stop_learning = DOT_STOP_LEARNING_LATER ? 400 : 40;
+    //倒数评估时与多少条残缺路径连接
     const int specular_connection_N = 1;
 #define DOT_VERY_CLOSE_DISTANCE2 0.04
 #define DOT_EMPTY_SURFACEID 0

@@ -73,6 +73,7 @@ OPTIX_add_sample_executable( optixPathTracer target_name
   decisionTree/classTree_host.h
   decisionTree/classTree_device.h 
   dropOutTracing_common.h
+
   OPTIONS -rdc true
   )
   

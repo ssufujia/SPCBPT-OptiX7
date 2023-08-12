@@ -1,0 +1,17 @@
+{
+    "height": 1000,
+    "width":1920,
+    "num_subspace": 1000,
+    "num_subspace_lightsource":200,
+
+    "initial_algorithm":"SPCBPT",
+    "scene_path":"/data/door/door.scene",
+    "min_RR_rate":0.3,
+    "conservative_rate": 0.2,
+    "n_connections":1,
+
+
+    "path_length_limited":0,
+    "enable_proxy_sampling":0
+
+}

@@ -28,16 +28,20 @@
 #ifndef OPTIXPATHTRACER_H
 #define OPTIXPATHTRACER_H
 
-#define NUM_SUBSPACE 1000
-#define NUM_SUBSPACE_LIGHTSOURCE (int(0.2 * NUM_SUBSPACE))
+//#define NUM_SUBSPACE 1000
+//#define NUM_SUBSPACE_LIGHTSOURCE (int(0.2 * NUM_SUBSPACE))
 
 #define RR_MIN_LIMIT
-#define MIN_RR_RATE 0.3
-#define CONSERVATIVE_RATE 0.2
-#define CONNECTION_N 1
+//#define MIN_RR_RATE 0.3
+//#define CONSERVATIVE_RATE 0.2
+//#define CONNECTION_N 3
+//#define MAX_PATH_LENGTH_FOR_MIS 7
+//#define LIMIT_PATH_TERMINATE false
+#define MIN_RR_RATE Tracer::params.min_RR_rate
+#define CONSERVATIVE_RATE params.conservative_rate
+#define CONNECTION_N Tracer::params.n_connections
 #define MAX_PATH_LENGTH_FOR_MIS 7
-#define LIMIT_PATH_TERMINATE false
-
+#define LIMIT_PATH_TERMINATE Tracer::params.path_length_limited
 #define DIR_JUDGE 0 
 #define RMIS_FLAG true
 
@@ -210,7 +214,8 @@ RT_FUNCTION __host__ float2 dir2uv(float3 dir)
 
 struct subspaceMacroInfo
 {
-    int subspaceNum;
+    int num_subspace;
+    int num_subspace_lightsource;
     classTree::tree_node* eye_tree;
     classTree::tree_node* light_tree;
     float* Q;
@@ -221,8 +226,8 @@ struct subspaceMacroInfo
     {
         if (CMFGamma && Q)
         {
-            return light_id == 0 ? CMFGamma[eye_id * NUM_SUBSPACE + light_id] :
-                CMFGamma[eye_id * NUM_SUBSPACE + light_id] - CMFGamma[eye_id * NUM_SUBSPACE + light_id - 1]; 
+            return light_id == 0 ? CMFGamma[eye_id * num_subspace + light_id] :
+                CMFGamma[eye_id * num_subspace + light_id] - CMFGamma[eye_id * num_subspace + light_id - 1];
         }
         return 1;
     }

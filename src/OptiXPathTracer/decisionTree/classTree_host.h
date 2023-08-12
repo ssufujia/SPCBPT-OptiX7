@@ -18,7 +18,6 @@ namespace classTree
         eye.clear();
         light.clear();
         {
-
             std::ifstream inFile;
             inFile.open("tree_eye.txt");
             bool leaf;

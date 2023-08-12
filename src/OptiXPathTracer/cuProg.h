@@ -44,6 +44,8 @@
 
 #define ISINVALIDVALUE(ans) (ans.x>1000000.0f|| isnan(ans.x)||ans.y>1000000.0f|| isnan(ans.y)||ans.z>1000000.0f|| isnan(ans.z))
 #define VERTEX_MAT(v) (v.getMat(Tracer::params.materials))
+#define NUM_SUBSPACE Tracer::params.subspace_info.num_subspace
+#define NUM_SUBSPACE_LIGHTSOURCE Tracer::params.subspace_info.num_subspace_lightsource
 struct labelUnit
 {
     float3 position;
@@ -810,7 +812,6 @@ namespace Tracer {
         int subspaceId;
 
 
-        Light::Type type;
         RT_FUNCTION void ReverseSample(const Light& light, float2 uv_)
         {
             bindLight = &light;
@@ -2000,10 +2001,13 @@ namespace TrainData
 
             depth = b.depth + 1;
             //save_t = 0;
-
+            shade_normal = a.shade_normal;
+            uv = a.uv;
             //brdf_tracing_branch(a, b, eye_side);
 
         }
+        RT_FUNCTION nVertex_device(const BDPTVertex& a, bool eye_side) :nVertex(a, eye_side) {}
+        RT_FUNCTION nVertex_device() {}
         RT_FUNCTION void brdf_tracing_branch(const nVertex& a, const nVertex_device& b, bool eye_side)
         {
             if (b.isBrdf == false && a.isBrdf == true)
@@ -2045,8 +2049,6 @@ namespace TrainData
             }
             return 0;//to be rewrote
         }
-        RT_FUNCTION nVertex_device(const BDPTVertex& a, bool eye_side) :nVertex(a, eye_side) {}
-        RT_FUNCTION nVertex_device() {}
 
         RT_FUNCTION float forward_light_pdf(const nVertex& b)const
         {

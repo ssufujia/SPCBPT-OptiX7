@@ -237,6 +237,10 @@ extern "C" __global__ void __closesthit__lightSource_subpath()
     prd->done = true;
 
 }
+RT_FUNCTION float3 ffnomal(float3 normal, float3 ray_direction)
+{
+    return dot(normal, ray_direction) < 0 ? normal : -normal;
+}
 
 extern "C" __global__ void __closesthit__eyeSubpath()
 {
@@ -250,6 +254,7 @@ extern "C" __global__ void __closesthit__eyeSubpath()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
+    N = currentPbr.trans > 0.0 ? N : ffnomal(N, ray_direction);
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     currentPbr.uv = geom.texcoord[0].UV;
     //    if (dot(N, ray_direction) > 0.f)
@@ -417,6 +422,7 @@ extern "C" __global__ void __closesthit__lightSubpath()
     ColorTexSample(geom, currentPbr);
     RoughnessAndMetallicTexSample(geom, currentPbr);
     float3 N = geom.Ng;
+    N = currentPbr.trans > 0.0 ? N : ffnomal(N, ray_direction);
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     currentPbr.uv = geom.texcoord[0].UV;
     // NormalTexSample(geom, hit_group_data->material_data);
@@ -500,6 +506,7 @@ extern "C" __global__ void __closesthit__radiance()
     RoughnessAndMetallicTexSample(geom, currentPbr);
     //float3 N = geom.N;
     float3 N = geom.Ng; 
+    N = currentPbr.trans > 0.0 ? N : ffnomal(N, prd->ray_direction);
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].normal_tex.tex != 0 ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     currentPbr.uv = geom.texcoord[0].UV;
     float3 in_dir = -prd->ray_direction;
@@ -627,6 +634,7 @@ extern "C" __global__ void __closesthit__radiance()
 
     ////if (prd->depth > 5) result *= 0;
     //prd->result = make_float3(currentPbr.base_color);
+    //prd->result = N + make_float3(1);
     //prd->done = true;
     prd->currentResult += result;
     prd->origin = geom.P;

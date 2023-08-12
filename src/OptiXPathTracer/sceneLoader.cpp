@@ -256,23 +256,23 @@ Scene* LoadScene(const char* filename)
 		prop.height = 1001;
 		scene->properties = prop;
 
-		if (strstr(line, "properties"))
-		{
+		//if (strstr(line, "properties"))
+		//{
 
-			while (fgets(line, kMaxLineLength, file))
-			{
-				// end group
-				if (strchr(line, '}'))
-					break;
+		//	while (fgets(line, kMaxLineLength, file))
+		//	{
+		//		// end group
+		//		if (strchr(line, '}'))
+		//			break;
 
-				sscanf(line, " width %i", &prop.width);
-				sscanf(line, " height %i", &prop.height);
-			}
-			scene->properties = prop;
-		}
+		//		sscanf(line, " width %i", &prop.width);
+		//		sscanf(line, " height %i", &prop.height);
+		//	}
+		//	scene->properties = prop;
+		//}
 
 		//--------------------------------------------
-        if (strstr(line, "cameraSetting"))
+        if (strstr(line, "cameraSetting")|| strstr(line, "Setting"))
         {
             scene->use_camera = true;
             float3 eye, lookat,up = make_float3(0,1,0);

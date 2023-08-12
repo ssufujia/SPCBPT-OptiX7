@@ -198,6 +198,14 @@ private:
     std::string                          m_env_file_name = {};
 };
 
+struct renderMainProg
+{
+    bool need_light_trace = false;
+    bool is_dropout_tracing_proxy_sampling = false;
+    std::string mainProgName;
+    std::string eyeRaygenProgName;
+
+};
 struct ProgSet
 {
     struct Prog
@@ -214,6 +222,9 @@ struct ProgSet
     Prog p_rayhit[RayType::RAY_TYPE_COUNT][RayHitType::RAYHIT_TYPE_COUNT];
     OptixPipeline                        m_pipeline = 0;
     OptixShaderBindingTable              m_sbt = {};
+    
+    
+
 
     void setRaygen(std::string filePath, std::string progName)
     {
