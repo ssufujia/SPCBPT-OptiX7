@@ -333,7 +333,7 @@ namespace MyThrustOp
             ));
         h_Vsubspace_info = d_Vsubspace_info;
         h_weight = d_weight; 
-         
+        
         thrust_host_int num_subspace_vertex(NUM_SUBSPACE);
         thrust_host_float Q_subspace_vertex(NUM_SUBSPACE);
         std::vector<std::vector<int>> sparse_jump_vector(NUM_SUBSPACE);

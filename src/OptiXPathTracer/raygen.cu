@@ -451,6 +451,7 @@ extern "C" __global__ void __raygen__SPCBPT()
     ////  
     //result = make_float3(rnd(first_hit_id), rnd(first_hit_id), rnd(first_hit_id));  
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
+    result = Tracer::params.lt.lightImage[image_index];// light_trace
     float3             accum_color = result;
 
     if (subframe_index > 0)
@@ -1139,7 +1140,7 @@ extern "C" __global__ void __raygen__shift_combine()
     ////   
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
     float3             accum_color = result;
-
+    
     if (subframe_index > 0)
     {
         const float  a = 1.0f / static_cast<float>(subframe_index + 1);
@@ -1187,12 +1188,73 @@ RT_FUNCTION void pushVertexToLVC(BDPTVertex& v, unsigned int& putId, int bufferB
     putId++;
 }
 
+RT_FUNCTION int getPixelIndex(float3 dir, float3 U, float3 V, float3 W)
+{
+    dir = normalize(dir);
+    if (dot(W, dir) <= 0)//invalid
+        return -1;
+    dir = dot(W,W) * dir / dot(W, dir);
+    float2 d = make_float2((double)dot(U, dir) / (double)dot(U, U), (double)dot(V, dir) / (double)dot(V, V));
+    d = (d +1.0) / 2.0;
+
+    int id_x = (int)(d.x * static_cast<float>(Tracer::params.width));
+    int id_y = (int)(d.y * static_cast<float>(Tracer::params.height));
+    int index = id_x + id_y * Tracer::params.width;
+    if (index >= 0 && index < Tracer::params.width * Tracer::params.height)
+        return index;
+    return -1;// invalid
+}
+
+RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, float3 V, float3 W, unsigned int& putId, int bufferBias)
+{
+    /* dir: eye--->v */
+    int index = getPixelIndex(dir, U, V, W);
+    if (index < 0)
+        return;
+    const LightTraceParams& lt_params = Tracer::params.lt;
+
+    float G = abs(dot(v.normal, normalize(dir))) / dot(dir, dir);
+
+    float3 fv;
+    if (!v.isOrigin)
+    {
+        MaterialData::Pbr mat_v = VERTEX_MAT(v);
+        float3 Lv = normalize(v.lastPosition - v.position);
+        fv = Tracer::Eval(mat_v, v.normal, -normalize(dir),Lv);
+    }
+    else
+    {
+        if (dot(v.normal, dir) > 0.0f)
+        {
+            fv = make_float3(0.0f);
+        }
+        else
+        {
+            fv = make_float3(1.0f);
+        }
+    }
+
+    dir = normalize(dir);
+    dir = dot(W, W) * dir / dot(W, dir);
+    float factor = (Tracer::params.width / length(U) / 2) * (Tracer::params.height / length(V) / 2) * dot(dir, dir) / dot(normalize(dir), normalize(W));
+    
+    float3 res = v.flux / v.pdf * fv * G * factor;
+
+    lt_params.lightBuffer[putId + bufferBias] = res;
+    lt_params.lightIndex[putId + bufferBias] = index;
+}
+
 extern "C" __global__ void __raygen__lightTrace()
 {
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const int    subframe_index = Tracer::params.lt.launch_frame;
     unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+
+    const float3 eye = Tracer::params.eye;
+    const float3 U = Tracer::params.U;
+    const float3 V = Tracer::params.V;
+    const float3 W = Tracer::params.W;
 
     Tracer::PayloadBDPTVertex payload;
     payload.seed = seed;
@@ -1223,6 +1285,9 @@ extern "C" __global__ void __raygen__lightTrace()
         float3 ray_direction = light_sample.trace_direction();
         float3 ray_origin = light_sample.position;
         init_lightSubPath_from_lightSample(light_sample, payload.path);
+        /* 插入light trace贡献值 */
+        //if (Tracer::visibilityTest(Tracer::params.handle, payload.path.currentVertex().position, eye))
+            pushVertexToLightImage(payload.path.currentVertex(), payload.path.currentVertex().position - eye, U, V, W, lightVertexCount, bufferBias);
         /* lightVertexCount 在经过这个函数后会加 1 */
         pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias);
         CheckLightBufferState;
@@ -1249,6 +1314,9 @@ extern "C" __global__ void __raygen__lightTrace()
                 curVertex.path_record = payload.path_record;
 
                 float e = curVertex.contri_float();
+                /* 插入light trace贡献值 */
+                //if (Tracer::visibilityTest(Tracer::params.handle, curVertex.position, eye))
+                    pushVertexToLightImage(curVertex, curVertex.position - eye, U, V, W, lightVertexCount, bufferBias);
 
                 /* lightVertexCount 在经过这个函数后会加 1 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias);

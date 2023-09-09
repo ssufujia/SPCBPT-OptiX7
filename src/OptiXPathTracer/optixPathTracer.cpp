@@ -636,10 +636,20 @@ void lt_params_setup(const sutil::Scene& scene)
 
     BDPTVertex* LVC_ptr;
     bool* valid_ptr;
+    float3* Light_image;
+    int* pixel_id;
+    float3* Light_buffer;
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&LVC_ptr), sizeof(BDPTVertex) * lt_params.get_element_count()));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&valid_ptr), sizeof(bool) * lt_params.get_element_count()));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&Light_image), sizeof(float3) * params.width * params.height));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pixel_id), sizeof(int) * lt_params.get_element_count()));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&Light_buffer), sizeof(float3) * lt_params.get_element_count()));
+
     lt_params.ans = LVC_ptr;// BufferView<BDPTVertex>(LVC_ptr, lt_params.get_element_count());
     lt_params.validState = valid_ptr;// BufferView<bool>(valid_ptr, lt_params.get_element_count());
+    lt_params.lightImage = Light_image;
+    lt_params.lightBuffer = Light_buffer;
+    lt_params.lightIndex = pixel_id;
     //params.lt = lt_params; 
 }
 void estimation_setup(const string& path) {
@@ -707,6 +717,40 @@ void launchLightTrace(sutil::Scene& scene)
     ));
     CUDA_SYNC_CHECK();
 }
+void setLightImage()
+{
+    float3* light_buffer = new float3[params.lt.get_element_count()];
+    int* index = new int[params.lt.get_element_count()];
+    float3* light_image = new float3[params.width * params.height];
+    bool* valid = new bool[params.lt.get_element_count()];
+
+    cudaMemcpy(light_buffer, params.lt.lightBuffer, params.lt.get_element_count() * sizeof(float3), cudaMemcpyDeviceToHost);
+    cudaMemcpy(index, params.lt.lightIndex, params.lt.get_element_count() * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(valid, params.lt.validState, params.lt.get_element_count() * sizeof(bool), cudaMemcpyDeviceToHost);
+
+    memset(light_image, 0, params.width * params.height * sizeof(float3));
+ 
+    for (int i = 0; i < params.lt.get_element_count(); i++)
+    {
+        if (!valid[i])
+            continue;
+        int id = index[i];
+        if (id > 0)
+        {
+            light_image[id] += light_buffer[i];
+        }            
+    }
+    for (int i = 0; i < params.width * params.height; i++)
+        light_image[i] /= params.lt.M;
+
+    cudaMemcpy(params.lt.lightImage, light_image, params.width * params.height * sizeof(float3), cudaMemcpyHostToDevice);
+
+    delete[] valid;
+    delete[] light_buffer;
+    delete[] index;
+    delete[] light_image;
+
+}
 void launchLVCTrace(sutil::Scene& scene)
 {
     if (!params.skip_proxy_dropout_tracing) { dot_params.discard_ratio = dot_params.discard_ratio_next; }
@@ -714,6 +758,8 @@ void launchLVCTrace(sutil::Scene& scene)
     auto p_v = thrust::device_pointer_cast(params.lt.ans);
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
     auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count());
+    setLightImage();
+
     params.sampler = sampler;
     if (!params.skip_proxy_dropout_tracing)
     {
@@ -1464,7 +1510,7 @@ int main(int argc, char* argv[])
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_teaser_env2.scene");   
         //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");   
         //scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
-
+        scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell.scene");
         //读取场景文件
         auto myScene = LoadScene(scenePath.c_str());
 

@@ -61,7 +61,7 @@ mesh
 {
 #	file cornell_box/cbox_smallbox.obj
 	file cornell_box/cbox_small_sphere.obj
-	material Glass
+	material white
 }
 
 mesh
