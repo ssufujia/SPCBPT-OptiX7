@@ -2562,7 +2562,7 @@ namespace Shift
         }
     };
     RT_FUNCTION void info_print(PathContainer& path, float3 anchor, float3 dir)
-    {  
+    {
         return;
         if (path.size() == 3)
         {
@@ -2572,7 +2572,7 @@ namespace Shift
                 path.get(1).position.x, -path.get(1).position.z, path.get(1).position.y,
                 dir.x, -dir.z, dir.y,
                 path.get(0).normal.x, -path.get(0).normal.z, path.get(0).normal.y
-                );
+            );
         }
     }
 
@@ -2586,12 +2586,18 @@ namespace Shift
     }
     RT_FUNCTION float GeometryTerm(const BDPTVertex& a, const BDPTVertex& b)
     {
-        if (a.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::ENV || a.type == BDPTVertex::Type::ENV_MISS || b.type == BDPTVertex::Type::ENV_MISS)
-        {
-            printf("Geometry Term call in Env light but we haven't implement it");
-        }
         float3 diff = a.position - b.position;
         float3 dir = normalize(diff);
+        if (a.type == BDPTVertex::Type::ENV || a.type == BDPTVertex::Type::ENV_MISS)
+        {
+            // printf("Geometry Term call in Env light but we haven't implement it");
+            return abs(dot(dir, b.normal)) / dot(diff, diff);
+        }
+        if (b.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::ENV_MISS)
+        {
+            return abs(dot(dir, a.normal)) / dot(diff, diff);
+        }
+
         return abs(dot(dir, a.normal) * dot(dir, b.normal)) / dot(diff, diff);
     }
     RT_FUNCTION float tracingPdf(const BDPTVertex& a, const BDPTVertex& b)
@@ -2752,7 +2758,7 @@ namespace Shift
                     bool success_hit;
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                    if (success_hit == false || (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE && np.type != BDPTVertex::Type::ENV_MISS))
                         continue;
                     Light light = Tracer::params.lights[np.materialId];
                     Tracer::lightSample light_sample;
@@ -3063,7 +3069,7 @@ namespace Shift
                 /* 到了最后一次，追光源顶点 */
                 if (i == d - 1)
                 {
-                    if (success_hit == false || np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                    if (success_hit == false || (np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE && np2.type != BDPTVertex::Type::ENV_MISS))
                     {
                         retrace_state = 0;
                         break;
@@ -3074,6 +3080,7 @@ namespace Shift
                     /* 之前 d-1 次，追 glossy 顶点 */
                 {
                     if (success_hit == false || np2.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                        np2.type == BDPTVertex::Type::ENV_MISS ||
                         !Shift::glossy(np2))
                     {
                         retrace_state = 0;
@@ -3213,7 +3220,7 @@ namespace Shift
                     /* 到了最后一次，追光源顶点 */
                     if (i == d - 1)
                     {
-                        if (success_hit == false || np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                        if (success_hit == false || (np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE && np2.type != BDPTVertex::Type::ENV_MISS))
                         {
                             retrace_state = 0;
                             ++bb;
@@ -3223,8 +3230,8 @@ namespace Shift
                     else 
                     /* 之前 d-1 次，追 glossy 顶点 */
                     {
-                        if (success_hit == false || np2.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
-                            !Shift::glossy(np2))
+                        if (success_hit == false || np2.type == BDPTVertex::Type::HIT_LIGHT_SOURCE 
+                            || np2.type == BDPTVertex::Type::ENV_MISS || !Shift::glossy(np2))
                         {
                             retrace_state = 0;
                             ++bb;

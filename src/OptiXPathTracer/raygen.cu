@@ -451,7 +451,7 @@ extern "C" __global__ void __raygen__SPCBPT()
     ////  
     //result = make_float3(rnd(first_hit_id), rnd(first_hit_id), rnd(first_hit_id));  
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
-    result = Tracer::params.lt.lightImage[image_index];// light_trace
+    result = Tracer::params.lt.lightImage[image_index];// use light_trace method
     float3             accum_color = result;
 
     if (subframe_index > 0)
@@ -921,8 +921,9 @@ extern "C" __global__ void __raygen__shift_combine()
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
 
+
                 if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC) && !Tracer::params.skip_proxy_dropout_tracing)
-                {
+                {                    
                     //float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
                     //float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
                     //res = contri / pdf * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
@@ -932,6 +933,8 @@ extern "C" __global__ void __raygen__shift_combine()
                 else if (!Tracer::params.caustic_path_only)
                 {
                     res = lightStraghtHit(payload.path.currentVertex());
+                    if (payload.path.currentVertex().type == BDPTVertex::Type::ENV_MISS && buffer_size <= 2)
+                        printf("error: env light in straght hit!\n");
                 }
             }
             if (ISINVALIDVALUE(res))
@@ -1135,6 +1138,7 @@ extern "C" __global__ void __raygen__shift_combine()
             break;
         }
     }
+    result += payload.result;
     //
     // Update results 
     ////   
@@ -1205,13 +1209,22 @@ RT_FUNCTION int getPixelIndex(float3 dir, float3 U, float3 V, float3 W)
     return -1;// invalid
 }
 
-RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, float3 V, float3 W, unsigned int& putId, int bufferBias)
+RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, float3 V, float3 W, unsigned int& putId, int bufferBias, bool vis = true)
 {
+    const LightTraceParams& lt_params = Tracer::params.lt;
+
     /* dir: eye--->v */
     int index = getPixelIndex(dir, U, V, W);
-    if (index < 0)
+    if (index < 0 || !vis)
+    {
+        float3 res;
+        res.x = 0;
+        res.y = 0;
+        res.z = 0;
+        lt_params.lightBuffer[putId + bufferBias] = res;
+        lt_params.lightIndex[putId + bufferBias] = -1;
         return;
-    const LightTraceParams& lt_params = Tracer::params.lt;
+    }
 
     float G = abs(dot(v.normal, normalize(dir))) / dot(dir, dir);
 
@@ -1237,8 +1250,11 @@ RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, flo
     dir = normalize(dir);
     dir = dot(W, W) * dir / dot(W, dir);
     float factor = (Tracer::params.width / length(U) / 2) * (Tracer::params.height / length(V) / 2) * dot(dir, dir) / dot(normalize(dir), normalize(W));
-    
+
     float3 res = v.flux / v.pdf * fv * G * factor;
+
+    if (res.x < 0 || res.y < 0 || res.z < 0)
+        printf("invalid color!\n");
 
     lt_params.lightBuffer[putId + bufferBias] = res;
     lt_params.lightIndex[putId + bufferBias] = index;
@@ -1286,8 +1302,9 @@ extern "C" __global__ void __raygen__lightTrace()
         float3 ray_origin = light_sample.position;
         init_lightSubPath_from_lightSample(light_sample, payload.path);
         /* 插入light trace贡献值 */
-        //if (Tracer::visibilityTest(Tracer::params.handle, payload.path.currentVertex().position, eye))
-            pushVertexToLightImage(payload.path.currentVertex(), payload.path.currentVertex().position - eye, U, V, W, lightVertexCount, bufferBias);
+        bool vis = Tracer::visibilityTest(Tracer::params.handle, payload.path.currentVertex().position, eye);
+        pushVertexToLightImage(payload.path.currentVertex(), payload.path.currentVertex().position - eye, U, V, W, lightVertexCount, bufferBias, !vis);
+
         /* lightVertexCount 在经过这个函数后会加 1 */
         pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias);
         CheckLightBufferState;
@@ -1315,8 +1332,8 @@ extern "C" __global__ void __raygen__lightTrace()
 
                 float e = curVertex.contri_float();
                 /* 插入light trace贡献值 */
-                //if (Tracer::visibilityTest(Tracer::params.handle, curVertex.position, eye))
-                    pushVertexToLightImage(curVertex, curVertex.position - eye, U, V, W, lightVertexCount, bufferBias);
+                bool vis = Tracer::visibilityTest(Tracer::params.handle, curVertex.position, eye);
+                pushVertexToLightImage(curVertex, curVertex.position - eye, U, V, W, lightVertexCount, bufferBias, !vis);
 
                 /* lightVertexCount 在经过这个函数后会加 1 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias);

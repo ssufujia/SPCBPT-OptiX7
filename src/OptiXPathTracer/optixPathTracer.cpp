@@ -741,8 +741,9 @@ void setLightImage()
         }            
     }
     for (int i = 0; i < params.width * params.height; i++)
+    {
         light_image[i] /= params.lt.M;
-
+    }
     cudaMemcpy(params.lt.lightImage, light_image, params.width * params.height * sizeof(float3), cudaMemcpyHostToDevice);
 
     delete[] valid;
@@ -1510,7 +1511,8 @@ int main(int argc, char* argv[])
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway_teaser_env2.scene");   
         //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");   
         //scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene");   
-        scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_env.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom_b/scene_v4.scene");  
         //读取场景文件
         auto myScene = LoadScene(scenePath.c_str());
 

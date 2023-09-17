@@ -12,6 +12,6 @@
 
 
     "path_length_limited":0,
-    "enable_proxy_sampling":0
+    "enable_proxy_sampling":1
 
 }
