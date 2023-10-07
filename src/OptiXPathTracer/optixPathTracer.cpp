@@ -27,16 +27,12 @@
 //
 
 #include <glad/glad.h>  // Needs to be included before gl_interop
-
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
-
 #include <optix.h>
 #include <optix_function_table_definition.h>
 #include <optix_stubs.h>
-
 #include <sampleConfig.h>
-
 #include <sutil/CUDAOutputBuffer.h>
 #include <sutil/Camera.h>
 #include <sutil/Exception.h>
@@ -46,9 +42,7 @@
 #include <sutil/sutil.h>
 #include <sutil/vec_math.h>
 #include <optix_stack_size.h>
-
 #include <GLFW/glfw3.h>
-
 #include "optixPathTracer.h"
 
 #include <array>
@@ -60,25 +54,24 @@
 #include <sstream>
 #include <cstdlib>
 #include <string>
-#include<sutil/Scene.h> 
-#include"sceneLoader.h"
-#include"scene_shift.h"
-#include<sutil/Record.h>
+#include <sutil/Scene.h> 
+#include "sceneLoader.h"
+#include "scene_shift.h"
+#include <sutil/Record.h>
 #include <io.h>
 
-#include<thrust/device_vector.h>
-#include<thrust/host_vector.h>
-#include"cuda_thrust/device_thrust.h"
-#include"decisionTree/classTree_host.h"
-#include"PG_host.h"
-#include"frame_estimation.h"
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include "cuda_thrust/device_thrust.h"
+#include "decisionTree/classTree_host.h"
+#include "PG_host.h"
+#include "frame_estimation.h"
 #include <direct.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
 using namespace std;
- 
 static double render_time_record = 0;
 static int render_frame_record = 0;
 
@@ -223,7 +216,6 @@ void img_save(double render_time=-1,int frame=0)
     //printf("save %s\n",filename);
     
     sutil::saveImage((filename+".png").c_str(), outputbuffer, true);
-
 
     auto p = MyThrustOp::copy_to_host(params.accum_buffer, params.height * params.width);
     std::ofstream outFile;
@@ -596,7 +588,6 @@ void estimation_setup(const string& path) {
         <<"algo:"<< algo<<endl
         << "}"<<endl;
 
-
     estimation::es.estimation_update("./ref/" + name + ".txt", false);
 }
 
@@ -653,8 +644,8 @@ void launchLVCTrace(sutil::Scene& scene)
         params.sampler.glossy_subspace_bias = sampler.glossy_subspace_bias;
         params.sampler.glossy_subspace_num = sampler.glossy_subspace_num;
     }
-
 }
+
 int launchPretrace(sutil::Scene& scene)
 {
     pr_params.iteration += 1;
@@ -695,7 +686,6 @@ void path_guiding_params_setup(sutil::Scene& scene)
         return;
     }
     //pr_params.PG_mode = true;
-
 
     std::vector<path_guiding::PG_training_mat> g_mats;
     int build_iteration_max = 12;
@@ -754,8 +744,7 @@ void path_guiding_params_setup(sutil::Scene& scene)
             g_mats.clear();
         }
     }
-    else
-    { 
+    else { 
         for (int i = 0; i < pg_training_data_batch; i++)
         {
             MyThrustOp::clear_training_set();
@@ -1168,8 +1157,6 @@ void updateDropOutTracingParams()
     ////////////Update the Statstics Data In The Above Data Block//////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
     dot_params.data.device_data = MyThrustOp::DOT_statistics_data_to_device(statics_data);
     dot_params.data.device_PGParams = MyThrustOp::DOT_PG_data_to_device(pg_data);
     dot_params.data.on_GPU = true;
@@ -1231,7 +1218,7 @@ void preprocessing(sutil::Scene& scene)
         auto p_valid = thrust::device_pointer_cast(params.lt.validState); 
         current_Q_samples += MyThrustOp::preprocess_getQ(p_v, p_valid, params.lt.get_element_count(), Q_star);
 
-        updateDropOutTracingParams();//update the statistic data for drop out sampling
+        updateDropOutTracingParams(); //update the statistic data for drop out sampling
 
     }
     MyThrustOp::Q_zero_handle(Q_star); 
@@ -1312,9 +1299,7 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
 {
     std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
-
  
-
 void initCameraState(const sutil::Scene& scene)
 {
     camera = scene.camera();
@@ -1325,9 +1310,7 @@ void initCameraState(const sutil::Scene& scene)
     trackball.setReferenceFrame(make_float3(1.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 1.0f), make_float3(0.0f, 1.0f, 0.0f));
     trackball.setGimbalLock(true);
 }
- 
- 
- 
+  
 //------------------------------------------------------------------------------
 //
 // Main
@@ -1335,6 +1318,9 @@ void initCameraState(const sutil::Scene& scene)
 //------------------------------------------------------------------------------ 
 int main( int argc, char* argv[] )
 { 
+
+    params.caustic_path_only = 1;
+
     //Cthrust;
     //PathTracerState state;
     params.width = 1920;
@@ -1373,7 +1359,6 @@ int main( int argc, char* argv[] )
         }
     }
      
-
     try
     {
         string scenePath = " ";
@@ -1417,7 +1402,7 @@ int main( int argc, char* argv[] )
 
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-        // scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
+        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/simple_n.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
@@ -1444,14 +1429,14 @@ int main( int argc, char* argv[] )
         
         TScene.finalize();
         
-        //initCameraState();
+        // initCameraState();
 
         //
         // Set up OptiX state
         // 
         OPTIX_CHECK(optixInit()); // Need to initialize function table
         initCameraState(TScene);
-        //initCameraState(*myScene);
+        // initCameraState(*myScene);
         estimation_setup(scenePath);
         initLaunchParams(TScene);
         dropOutTracingParamsInit();
@@ -1469,8 +1454,7 @@ int main( int argc, char* argv[] )
         }
         
         //if( outfile.empty() )
-        if(true)
-        {
+        if(true) {
             GLFWwindow* window = sutil::initUI( "optixPathTracer", width, height );
             glfwSetMouseButtonCallback( window, mouseButtonCallback );
             glfwSetCursorPosCallback( window, cursorPosCallback );
@@ -1494,8 +1478,7 @@ int main( int argc, char* argv[] )
                 std::chrono::duration<double> print_time(10.0);
                 bool print = false;
                 bool setting_changed = false;
-                do
-                {
+                do {
                     auto t0 = std::chrono::steady_clock::now();
                     glfwPollEvents();
 
@@ -1507,8 +1490,7 @@ int main( int argc, char* argv[] )
                     state_update_time += t1 - t0;
                     t0 = t1;
 
-                    if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure"))
-                    {
+                    if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure")) {
                         launchLVCTrace(TScene);
                         updateDropOutTracingParams();
                         updateDropOutTracingCombineWeight();
@@ -1535,8 +1517,7 @@ int main( int argc, char* argv[] )
                     glfwSwapBuffers(window);
 
                     //estimation::es.estimation_mode = false;
-                    if (estimation::es.estimation_mode == true)
-                    {
+                    if (estimation::es.estimation_mode == true) {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
 

@@ -593,7 +593,6 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
             float dropOutTracingPdf2 = dot_statistic_data.average / dot_statistic_data.variance;
             dropOutTracingPdf = dropOutTracingPdf2 * 2 < dropOutTracingPdf ? dropOutTracingPdf / 2 : dropOutTracingPdf;
         }
-            
     }
      
     if (isinf(dropOutTracingPdf) || isnan(dropOutTracingPdf) || (dropOutTracingPdf < 0))dropOutTracingPdf = 0.0;
@@ -1086,7 +1085,14 @@ extern "C" __global__ void __raygen__shift_combine()
                     float pdf = eye_vertex.pdf * retracing_pdf * CP.pdf;
 
                     float3 contri = Tracer::contriCompute(pathBuffer, path_size);
+
+                    /* ------------------------------------------------------------------------------ */
+
+                    //float3 res = (contri / pdf / pmf) / SP.singlePdf;
+                    //printf("%f %f\n", SP.singlePdf, light_subpath.inverPdfEst);
                     float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
+                    
+                    /* ------------------------------------------------------------------------------ */
 
                     pixel_record.record = float3weight(res);
                     res *= dropOutTracing_MISWeight(pathBuffer, path_size);
@@ -1161,8 +1167,6 @@ extern "C" __global__ void __raygen__shift_combine()
     float4 val = ToneMap(make_float4(accum_color, 0.0), 1.5);
     Tracer::params.frame_buffer[image_index] = make_color(make_float3(val));
 
-
-
     if (Tracer::params.error_heat_visual && Tracer::params.estimate_pr.ready &&
         Tracer::params.estimate_pr.height == launch_dims.y && Tracer::params.estimate_pr.width == launch_dims.x)
     {
@@ -1211,6 +1215,7 @@ extern "C" __global__ void __raygen__lightTrace()
         lt_params.ans[i + bufferBias].specular_record = DOT_INVALID_SPECULARID;
         //lightVertexCount++;
     }
+
     while (true)
     {
         payload.clear();
@@ -1285,6 +1290,7 @@ extern "C" __global__ void __raygen__lightTrace()
                             statistic_prd.data.bound = 1;
                         if (statistic_prd.data.bound > dropOut_tracing::max_bound&&statistic_prd.type!=dropOut_tracing::DropOutType::LS)
                             statistic_prd.data.bound = dropOut_tracing::max_bound;
+
                         if (false&&statistic_prd.type == dropOut_tracing::pathLengthToDropOutType(1))
                         { 
                             statistic_prd.data.bound = Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);

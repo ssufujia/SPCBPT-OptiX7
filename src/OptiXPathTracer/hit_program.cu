@@ -222,12 +222,7 @@ RT_FUNCTION void ColorTexSample(const LocalGeometry& geom, MaterialData::Pbr& pb
     return;
 }
 
-RT_FUNCTION float3 normal_shift(float3 geo_normal, float3 local_normal_shader)
-{
-    Onb onb(geo_normal);
-    onb.inverse_transform(local_normal_shader); 
-    return local_normal_shader;
-}
+
 RT_FUNCTION void RoughnessAndMetallicTexSample(const LocalGeometry& geom, MaterialData::Pbr& pbr)
 {
     //float  metallic  = hit_group_data->material_data.pbr.metallic;
@@ -268,6 +263,7 @@ RT_FUNCTION float3 NormalTexSample(const LocalGeometry& geom, const MaterialData
     //    N = -N;
     return N;
 }
+
 extern "C" __global__ void __closesthit__lightSource_subpath()
 {
     Tracer::PayloadBDPTVertex* prd = Tracer::getPRD<Tracer::PayloadBDPTVertex>();
@@ -439,6 +435,8 @@ extern "C" __global__ void __closesthit__eyeSubpath_simple()
     //MidVertex.last_lum = Tracer::float3sum(LastVertex.flux / LastVertex.pdf);
 
 }
+
+/* This is called when light subpath tracing hits a triangle */
 extern "C" __global__ void __closesthit__lightSubpath()
 {
     // printf("lightSubpath\n");
@@ -520,7 +518,8 @@ extern "C" __global__ void __closesthit__lightSubpath()
         NextVertex.singlePdf *= rr_rate;
     return;
 }
-/* 这个函数应该是 PT 在打到普通面片时被调用 */
+
+/* 这个函数是在 PT 打到普通面片时被调用 */
 extern "C" __global__ void __closesthit__radiance()
 {
     // printf("__closesthit__radiance()\n");
