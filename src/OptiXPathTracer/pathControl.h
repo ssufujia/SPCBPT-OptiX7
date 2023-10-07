@@ -4,7 +4,6 @@
 //#define PT_NEE_STRATEGY_ONLY
 
 
-
 /* 如果想要控制BDPT渲染哪些光路，需要打开这个开关 */
 static const bool BDPT_CONTROL = 0;
 
@@ -38,32 +37,4 @@ static const bool LS_SDE_ENABLE = 0;
 static const bool LSSDE_ENABLE = 0;
 static const bool LSSSDE_ENABLE = 0;
 
-enum class LightSubpathType
-{
-	LS,
-	LDS,
-	LSS,
-	LDDS,
-	LDSS,
-	LSSS,
-	LDDDS,
-	LDDSS,
-	LSDDS,
-	LDSSS,
-	LSSSS,
-	LightSubpathNumber
-};
 
-static const char LightSubpathName[20][10] = {
-	"LS",
-	"LDS",
-	"LSS",
-	"LDDS",
-	"LDSS",
-	"LSSS",
-	"LDDDS",
-	"LDDSS",
-	"LSDDS",
-	"LDSSS",
-	"LSSSS"
-};

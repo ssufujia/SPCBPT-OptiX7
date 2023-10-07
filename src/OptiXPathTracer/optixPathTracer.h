@@ -57,8 +57,8 @@ const bool estimation_save = true;
 #define DOT_BOUND_LIMIT_LESS false
 
 
-//#define SCENE_BEDROOM
-#define SCENE_BREAKFAST
+#define SCENE_BEDROOM
+//#define SCENE_BREAKFAST
 //#define SCENE_PROJECTOR
 //#define SCENE_HALLWAY
 //#define SCENE_KITCHEN
@@ -105,7 +105,6 @@ const bool estimation_save = true;
 #include"decisionTree/classTree_common.h"
 #include"PG_common.h"
 #include"dropOutTracing_common.h"
-#include "tester.h"
 
 struct Subspace
 {   

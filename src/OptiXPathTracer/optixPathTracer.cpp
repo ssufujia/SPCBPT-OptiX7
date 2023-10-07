@@ -848,7 +848,6 @@ void dropOutTracingParamsSetup(sutil::Scene& scene)
     dot_params.data.on_GPU = true; 
      
 
-
     //thrust::host_vector<dropOut_tracing::statistic_record> h_record(lt_params.get_element_count());
     dot_params.record_buffer_core = lt_params.num_core;
     dot_params.record_buffer_padding = lt_params.core_padding * dropOut_tracing::record_buffer_width;
@@ -1332,32 +1331,6 @@ int main( int argc, char* argv[] )
     // Parse command line options
     //
     std::string outfile;
-
-    for( int i = 1; i < argc; ++i )
-    {
-        const std::string arg = argv[i];
-        if( arg == "--help" || arg == "-h" )
-        {
-            printUsageAndExit( argv[0] );
-        }
-        else if( arg == "--no-gl-interop" )
-        {
-            output_buffer_type = sutil::CUDAOutputBufferType::CUDA_DEVICE;
-        }
-        else if( arg.substr( 0, 6 ) == "--dim=" )
-        {
-            const std::string dims_arg = arg.substr( 6 );
-            int w, h;
-            sutil::parseDimensions( dims_arg.c_str(), w, h );
-            params.width  = w;
-            params.height = h;
-        }
-        else
-        {
-            std::cerr << "Unknown option '" << argv[i] << "'\n";
-            printUsageAndExit( argv[0] );
-        }
-    }
      
     try
     {
@@ -1400,14 +1373,13 @@ int main( int argc, char* argv[] )
          //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
         // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
 
-
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/simple_n.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_mirror_emitter.scene");
-        
+
         //scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool2.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
@@ -1415,20 +1387,20 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
 
-        auto myScene = LoadScene(scenePath.c_str()); 
-        
+        auto myScene = LoadScene(scenePath.c_str());
+
         myScene->getMeshData(0);
         //cout << scenePath << std::endl;
-        
+
         sutil::Scene TScene;
         //char scene_path2[] = "D:/optix7PlayGround/OptiX SDK 7.5.0/SDK/data/house/Victorian House Blendswap.gltf";
         //sutil::loadScene(scene_path2, TScene); 
 
         Scene_shift(*myScene, TScene);
         LightSource_shift(*myScene, params, TScene);
-        
+
         TScene.finalize();
-        
+
         // initCameraState();
 
         //
@@ -1445,112 +1417,105 @@ int main( int argc, char* argv[] )
         env_params_setup(TScene);
 
         //render_alg[render_alg_id] = std::string("pt");
-        //pre tracing
-        { 
+        /* pre tracing */
+        {
             handleCameraUpdate(params);
             path_guiding_params_setup(TScene);
             dropOutTracingParamsSetup(TScene);
             preprocessing(TScene);
         }
-        
+
         //if( outfile.empty() )
-        if(true) {
-            GLFWwindow* window = sutil::initUI( "optixPathTracer", width, height );
-            glfwSetMouseButtonCallback( window, mouseButtonCallback );
-            glfwSetCursorPosCallback( window, cursorPosCallback );
-            glfwSetWindowSizeCallback( window, windowSizeCallback );
-            glfwSetWindowIconifyCallback( window, windowIconifyCallback );
-            glfwSetKeyCallback( window, keyCallback );
-            glfwSetScrollCallback( window, scrollCallback );
-            glfwSetWindowUserPointer( window, &params );
+        GLFWwindow* window = sutil::initUI("optixPathTracer", width, height);
+        glfwSetMouseButtonCallback(window, mouseButtonCallback);
+        glfwSetCursorPosCallback(window, cursorPosCallback);
+        glfwSetWindowSizeCallback(window, windowSizeCallback);
+        glfwSetWindowIconifyCallback(window, windowIconifyCallback);
+        glfwSetKeyCallback(window, keyCallback);
+        glfwSetScrollCallback(window, scrollCallback);
+        glfwSetWindowUserPointer(window, &params);
 
-            //
-            // Render loop
-            //
-            {
-                sutil::CUDAOutputBuffer<uchar4> output_buffer(output_buffer_type, width, height);
-                sutil::GLDisplay gl_display;
+        /* Render loop */
 
-                std::chrono::duration<double> state_update_time(0.0);
-                std::chrono::duration<double> render_time(0.0);
-                std::chrono::duration<double> display_time(0.0);
-                std::chrono::duration<double> sum_render_time(0.0);
-                std::chrono::duration<double> print_time(10.0);
-                bool print = false;
-                bool setting_changed = false;
-                do {
-                    auto t0 = std::chrono::steady_clock::now();
-                    glfwPollEvents();
+        sutil::CUDAOutputBuffer<uchar4> output_buffer(output_buffer_type, width, height);
+        sutil::GLDisplay gl_display;
 
-                    updateState(output_buffer, params);
-                    if (setting_changed) { params.subframe_index = 0; }
-                    if (params.subframe_index == 0) { sum_render_time = std::chrono::duration<double>(); }
+        std::chrono::duration<double> state_update_time(0.0);
+        std::chrono::duration<double> render_time(0.0);
+        std::chrono::duration<double> display_time(0.0);
+        std::chrono::duration<double> sum_render_time(0.0);
+        std::chrono::duration<double> print_time(10.0);
+        bool print = false;
+        bool setting_changed = false;
 
-                    auto t1 = std::chrono::steady_clock::now();
-                    state_update_time += t1 - t0;
-                    t0 = t1;
+        do {
+            auto t0 = std::chrono::steady_clock::now();
+            glfwPollEvents();
 
-                    if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure")) {
-                        launchLVCTrace(TScene);
-                        updateDropOutTracingParams();
-                        updateDropOutTracingCombineWeight();
-                    }
-                    launchSubframe(output_buffer, TScene);
+            updateState(output_buffer, params);
+            if (setting_changed) { params.subframe_index = 0; }
+            if (params.subframe_index == 0) { sum_render_time = std::chrono::duration<double>(); }
 
-                    t1 = std::chrono::steady_clock::now();
-                    render_time += t1 - t0;
-                    sum_render_time += t1 - t0;
-                    t0 = t1; 
+            auto t1 = std::chrono::steady_clock::now();
+            state_update_time += t1 - t0;
+            t0 = t1;
 
-
-                    displaySubframe(output_buffer, gl_display, window);
-                    t1 = std::chrono::steady_clock::now();
-                    display_time += t1 - t0;
-
-                    setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
-                        params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
-                        params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize,
-                        params.pg_params.pg_enable,
-                        params.error_heat_visual
-                    );
-                    render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
-                    glfwSwapBuffers(window);
-
-                    //estimation::es.estimation_mode = false;
-                    if (estimation::es.estimation_mode == true) {
-                        float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
-                        printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
-
-                        error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
-                        printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
-
-                        const float SET_ERROR = 0.04f;
-                        if (false&&error < SET_ERROR) {
-                            printf("save the data\n");
-                            img_save(sum_render_time.count(), params.subframe_index);
-                            exit(0);
-                        }
-                        if (estimation_save) {
-                            estimation::es.outputFile << params.subframe_index << " " <<sum_render_time.count() <<" "<< error<< endl;
-                        }
-                    }
-                    else
-                    {
-                        printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
-
-                    }
-                    render_time_record = sum_render_time.count();
-                    render_frame_record = params.subframe_index;
-
-                    ++params.subframe_index;
-                } while (!glfwWindowShouldClose(window));
-                CUDA_SYNC_CHECK();
+            if (render_alg[render_alg_id] == std::string("SPCBPT_eye") || render_alg[render_alg_id] == std::string("SPCBPT_eye_ForcePure")) {
+                launchLVCTrace(TScene);
+                updateDropOutTracingParams();
+                updateDropOutTracingCombineWeight();
             }
-            sutil::cleanupUI( window );
-        }
+            launchSubframe(output_buffer, TScene);
 
-       // cleanupState( state );
+            t1 = std::chrono::steady_clock::now();
+            render_time += t1 - t0;
+            sum_render_time += t1 - t0;
+            t0 = t1;
+
+            displaySubframe(output_buffer, gl_display, window);
+            t1 = std::chrono::steady_clock::now();
+            display_time += t1 - t0;
+
+            setting_changed = sutil::displayStatsControls(state_update_time, render_time, display_time,
+                params.eye_subspace_visualize, params.light_subspace_visualize, params.caustic_path_only,
+                params.specular_subspace_visualize, params.caustic_prob_visualize, params.PG_grid_visualize,
+                params.pg_params.pg_enable,
+                params.error_heat_visual
+            );
+            render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
+            glfwSwapBuffers(window);
+
+            //estimation::es.estimation_mode = false;
+            if (estimation::es.estimation_mode == true) {
+                float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
+                printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
+
+                error = estimation::es.MAPE_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
+                printf("render time sum %f frame %d MAPE %f %%\n", sum_render_time, params.subframe_index, error * 100);
+
+                const float SET_ERROR = 0.04f;
+                if (false && error < SET_ERROR) {
+                    printf("save the data\n");
+                    img_save(sum_render_time.count(), params.subframe_index);
+                    exit(0);
+                }
+                if (estimation_save)
+                    estimation::es.outputFile << params.subframe_index << " " << sum_render_time.count() << " " << error << endl;
+            }
+            else
+                printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
+            
+            render_time_record = sum_render_time.count();
+            render_frame_record = params.subframe_index;
+            ++params.subframe_index;
+
+        } while (!glfwWindowShouldClose(window));
+        CUDA_SYNC_CHECK();
+
+        sutil::cleanupUI(window);
+        // cleanupState( state );
     }
+
     catch( std::exception& e )
     {
         std::cerr << "Caught exception: " << e.what() << "\n";

@@ -31,7 +31,7 @@ namespace dropOut_tracing
     const int max_loop = 1000;
     const float light_subpath_caustic_discard_ratio = DOT_MORE_PROXY_LIGHT_SUBPATH_NUM?0.5:0.95;
     const int target_num_incomplete_subpath = 400;
-    const int reciprocal_iteration = 5;
+    const int reciprocal_iteration = 4;
     const bool connection_uniform_sample = false;
     const int iteration_stop_learning = DOT_STOP_LEARNING_LATER ? 400 : 40;
     const int specular_connection_N = 1;
@@ -171,7 +171,7 @@ namespace dropOut_tracing
 
         //// Initialize statistics_iteration_count to 0, indicating that no statistics data has been collected yet.
         // It is important not to use statistics data for other operations when the count is 0, as all statistics data will be set to 0 at this time.
-        // 当计数为0时，说明尚未有任何的统计数据被统计，注意不要在此时使用统计数据来做别的操作，所有的统计数据在此时都会被设为0
+        // 褰撹鏁颁负0鏃讹紝璇存槑灏氭湭鏈変换浣曠殑缁熻鏁版嵁琚粺璁★紝娉ㄦ剰涓嶈鍦ㄦ鏃朵娇鐢ㄧ粺璁℃暟鎹潵鍋氬埆鐨勬搷浣滐紝鎵�鏈夌殑缁熻鏁版嵁鍦ㄦ鏃堕兘浼氳璁句负0
         int statistics_iteration_count;
         float selection_const; 
         float discard_ratio;

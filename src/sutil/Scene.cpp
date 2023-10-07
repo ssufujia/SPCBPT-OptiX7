@@ -1468,7 +1468,7 @@ void Scene::createProgramGroups()
         }
         else
         {
-            SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__shift_combine";
+            SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__DropoutTracing";
         }
         SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
         SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].raygen.module = m_ptx_module;
