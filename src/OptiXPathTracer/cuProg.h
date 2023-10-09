@@ -2563,12 +2563,17 @@ namespace Shift
     }
     RT_FUNCTION float GeometryTerm(const BDPTVertex& a, const BDPTVertex& b)
     {
-        if (a.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::ENV || a.type == BDPTVertex::Type::ENV_MISS || b.type == BDPTVertex::Type::ENV_MISS)
-        {
-            printf("Geometry Term call in Env light but we haven't implement it");
-        }
         float3 diff = a.position - b.position;
         float3 dir = normalize(diff);
+        if (a.type == BDPTVertex::Type::ENV || a.type == BDPTVertex::Type::ENV_MISS)
+        {
+            // printf("Geometry Term call in Env light but we haven't implement it");
+            return abs(dot(dir, b.normal)) / dot(diff, diff);
+        }
+        if (b.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::ENV_MISS)
+        {
+            return abs(dot(dir, a.normal)) / dot(diff, diff);
+        }
         return abs(dot(dir, a.normal) * dot(dir, b.normal)) / dot(diff, diff);
     }
     RT_FUNCTION float tracingPdf(const BDPTVertex& a, const BDPTVertex& b)
@@ -2729,7 +2734,7 @@ namespace Shift
                     bool success_hit;
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                    if (success_hit == false || (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE && np.type != BDPTVertex::Type::ENV_MISS))
                         continue;
                     Light light = Tracer::params.lights[np.materialId];
                     Tracer::lightSample light_sample;

@@ -124,6 +124,9 @@ struct LightTraceParams
     BDPTVertex*              ans;
     bool*                    validState;
     int                      launch_frame;
+    float3* lightImage;
+    int* lightIndex;
+    float3* lightBuffer;
 
     __host__ int get_element_count()
     {
@@ -156,6 +159,7 @@ struct PreTraceParams
 struct SubspaceSampler
 {
     const BDPTVertex* LVC;
+    const float3* Light_image;
     Subspace* subspace;
     float* cmfs;
     int* jump_buffer;
