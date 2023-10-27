@@ -1365,7 +1365,7 @@ void initCameraState(const sutil::Scene& scene)
 int main( int argc, char* argv[] )
 { 
 
-    params.caustic_path_only = 1;
+    //params.caustic_path_only = 1;
 
     //Cthrust;
     //PathTracerState state;
@@ -1419,6 +1419,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 #ifdef SCENE_PROJECTOR 
         scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project3.scene");
 #endif 
 #ifdef SCENE_KITCHEN
         scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
