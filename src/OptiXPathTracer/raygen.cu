@@ -482,7 +482,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
     {
         for (int i = 1; i < eye_subpath_end_index; i++)
         {
-            if (i == specular_index)continue;
+            if (i == specular_index) continue;
             const BDPTVertex& midPoint = path[i];
             const BDPTVertex& lastPoint = path[i - 1];
             float3 line = midPoint.position - lastPoint.position;
@@ -491,7 +491,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
         } 
         for (int i = 1; i < eye_subpath_end_index - 1; i++)
         {
-            if (i == specular_index - 1)continue;
+            if (i == specular_index - 1) continue;
             const BDPTVertex& midPoint = path[i];
             const BDPTVertex& lastPoint = path[i - 1];
             const BDPTVertex& nextPoint = path[i + 1];
@@ -571,16 +571,14 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
 
 RT_FUNCTION float dropOutTracing_MISWeight(const BDPTVertex* path, int path_size)
 {
-    if (dropOut_tracing::debug_PT_ONLY)return 0;
-    if (!dropOut_tracing::MIS_COMBINATION)return 1;
-    //if (Shift::IsCausticPath(path, path_size))
-    //{ 
-        //float upt_pdf = Tracer::pdfCompute(path, path_size, path_size);
+    if (dropOut_tracing::debug_PT_ONLY) return 0;
+    if (!dropOut_tracing::MIS_COMBINATION) return 1;
+
     float SPCBPT_pdf = Tracer::SPCBPT_MIS_sum_compute(path, path_size);
     float other_pdf = SPCBPT_pdf;
     float MIS_weight_not_normalize = dropOutTracing_MISWeight_non_normalize(path, path_size);
-    float MIS_weight_dominator = other_pdf + MIS_weight_not_normalize; 
-    return MIS_weight_not_normalize / MIS_weight_dominator; 
+    float MIS_weight_denominator = other_pdf + MIS_weight_not_normalize; 
+    return MIS_weight_not_normalize / MIS_weight_denominator; 
 } 
 
 RT_FUNCTION float3 eval_path(const BDPTVertex* path, int path_size, int strategy_id)
@@ -820,85 +818,136 @@ extern "C" __global__ void __raygen__DropoutTracing()
             if (RR_TEST(seed, rr_k) == false) continue;
             dropOut_tracing::pixelRecord& pixel_record =
                 Tracer::params.dot_params.pixel_record[Tracer::params.dot_params.pixel2Id(make_uint2(launch_idx.x, launch_idx.y), make_uint2(launch_dims.x, launch_dims.y))];
-
-            float pmf_firstStage = 1;
-            float pmf_secondStage;
-
-            const BDPTVertex* light_subpath_p;
-            if (dropOut_tracing::connection_uniform_sample)
-            {
-                const BDPTVertex& light_glossy = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleGlossy(payload.seed, pmf_secondStage);
-                light_subpath_p = &light_glossy;
-            }
-            else
-            {
-                int light_subspaceId = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossyFirstStage(eye_vertex.subspaceId, payload.seed, pmf_firstStage);
-                if (Tracer::params.sampler.glossy_subspace_num[light_subspaceId] == 0 || light_subspaceId == DOT_INVALID_SPECULARID)continue;
-                const BDPTVertex& light_glossy = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->SampleGlossySecondStage(light_subspaceId, payload.seed, pmf_secondStage);
-                light_subpath_p = &light_glossy;
-            }
-            const BDPTVertex& light_subpath = *light_subpath_p;
-
-
-            float final_pmf = (pmf_firstStage * pmf_secondStage);
-            //float final_pmf = pmf_secondStage ;
-
             pixel_record.is_valid = true;
             pixel_record.record = 0;
             pixel_record.is_caustic_record = true;
             pixel_record.eyeId = eye_vertex.subspaceId;
-            pixel_record.specularId = abs(light_subpath.get_specular_id());
+        
 
-            if (
-                (eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS) &&
-                (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
             {
-                const BDPTVertex* light_ptr = &light_subpath;
-                float pmf = Tracer::params.sampler.path_count * (1 - Tracer::params.dot_params.discard_ratio)
-                    * final_pmf * caustic_connection_prob;
+#define MMIS_N 16
+                Tracer::SubspaceSampler_device*  LVC_sampler = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler);
+                int light_subpath_index[MMIS_N];
+                const BDPTVertex* light_subpath[MMIS_N];
+                float final_pmf[MMIS_N];
 
-                if (light_subpath.depth < SHIFT_VALID_SIZE - 1)
-                {
-                    BDPTVertex light_sub_new[SHIFT_VALID_SIZE];
-                    Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
-                    Shift::PathContainer finalPath(light_sub_new, 1);
+                for (int i = 0; i < MMIS_N; ++i) {
 
-                    //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info 
-                    float retracing_pdf;
-                    u = Shift::get_imcomplete_subpath_info(originPath, SP, CP, WC);
-                    if (!Shift::valid_specular(CP, SP, u, WC))continue;
+                    float pmf_firstStage = 1;
+                    float pmf_secondStage;
 
-                    //bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
-                    bool retrace_success = Shift::retracing_with_reference(
-                        payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf, originPath);
-                    if (retrace_success == false)continue;
+                    int light_subspaceId = LVC_sampler->SampleGlossyFirstStage(eye_vertex.subspaceId, payload.seed, pmf_firstStage);
 
-                    int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, u, finalPath, originPath);
-                    float pdf = eye_vertex.pdf * retracing_pdf * CP.pdf;
 
-                    float3 contri = Tracer::contriCompute(pathBuffer, path_size);
-
-                    /* ------------------------------------------------------------------------------ */
-
-                    float3 res = (contri / pdf / pmf) / SP.singlePdf;
-                    // printf("%f %f\n", SP.singlePdf, light_subpath.inverPdfEst);
-                    // float3 res = (contri / pdf / pmf) * light_subpath.inverPdfEst;
-                    
-                    /* ------------------------------------------------------------------------------ */
-
-                    pixel_record.record = float3weight(res);
-                    float tmp = dropOutTracing_MISWeight(pathBuffer, path_size);
-                    //printf("%f\n", tmp);
-                    res *= tmp;
-
-                    if (!ISINVALIDVALUE(res))
-                    {
-                        //if (Tracer::params.caustic_path_only) res = make_float3(0, float3weight(res), float3weight(res));
-                        result += res / num_specular_conn;
+                    if (Tracer::params.sampler.glossy_subspace_num[light_subspaceId] == 0 || light_subspaceId == DOT_INVALID_SPECULARID) {
+                        light_subpath_index[i] = -1;
+                        light_subpath[i] = nullptr;
+                        continue; 
                     }
-                    else
+
+                    light_subpath_index[i] = LVC_sampler->SampleGlossySecondStageIndex(light_subspaceId, payload.seed, pmf_secondStage);
+                    light_subpath[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i]);
+
+                    final_pmf[i] = pmf_firstStage * pmf_secondStage;
+
+                    pixel_record.specularId = abs(LVC_sampler->getVertexByIndex(light_subpath_index[i]).get_specular_id());
+                } 
+
+                for (int i = 0; i < MMIS_N; ++i) {
+                    if (light_subpath_index[i] == -1) continue;
+                    if (
+                        (eye_vertex.depth + light_subpath[i]->depth + 2 <= MAX_PATH_LENGTH_FOR_MIS) &&
+                        (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath[i]->position)))
                     {
-                        pixel_record.record = 0.0;
+                        float pmf = Tracer::params.sampler.path_count * (1 - Tracer::params.dot_params.discard_ratio)
+                            * final_pmf[i] * caustic_connection_prob;
+
+                        if (light_subpath[i]->depth>0 && light_subpath[i]->depth < SHIFT_VALID_SIZE - 1) {
+                            BDPTVertex light_sub_new[SHIFT_VALID_SIZE];
+                            Shift::PathContainer originPath(const_cast<BDPTVertex*>(light_subpath[i]), -1, light_subpath[i]->depth + 1);
+                            Shift::PathContainer finalPath(light_sub_new, 1);
+
+                            //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info 
+                            u = Shift::get_imcomplete_subpath_info(originPath, SP, CP, WC);
+                            if (!Shift::valid_specular(CP, SP, u, WC)) continue;
+
+                            float retracing_pdf;
+                            //bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
+                            bool retrace_success = Shift::retracing_with_reference(
+                                payload.seed, finalPath, *light_subpath[i], CP, normalize(eye_vertex.position - light_subpath[i]->position), u, retracing_pdf, originPath);
+                            if (retrace_success == false) continue;
+
+                            /* This function put the eye-subpath and light-subpath in pathBuffer */
+                            int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, u, finalPath, originPath);
+
+                            float pdf = eye_vertex.pdf * retracing_pdf * CP.pdf;
+
+                            float3 contri = Tracer::contriCompute(pathBuffer, path_size);
+
+                            /* ------------------------------------------------------------------------------ */
+
+                            float3 res = (contri / pdf / pmf) / SP.singlePdf;
+                            // printf("%f %f\n", SP.singlePdf, light_subpath.inverPdfEst);
+                            // float3 res = (contri / pdf / pmf) * light_subpath[i]->inverPdfEst;
+
+                            /* ------------------------------------------------------------------------------ */
+
+                            pixel_record.record = float3weight(res);
+                            float tmp = dropOutTracing_MISWeight(pathBuffer, path_size);
+                            //printf("%f\n", tmp);
+                            res *= tmp;
+                            
+                            float samplePdf[MMIS_N];
+                            for (int j = 0; j < MMIS_N; ++j) {
+                                if (j == i) {
+                                    samplePdf[j] = SP.singlePdf;
+                                }
+                                else if (light_subpath[j] == nullptr) {
+                                    samplePdf[j] = 0;
+                                }
+                                else if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX) {
+                                    samplePdf[j] = 0;
+                                }
+                                else if (light_subpath[j]->depth <= 0) {
+                                    samplePdf[j] = 0;
+                                }
+                                else {
+                                    float retracing_pdf;
+                                    Shift::PathContainer originPath_i(const_cast<BDPTVertex*>(light_subpath[j]), -1, light_subpath[j]->depth + 1);
+                                    BDPTVertex SP_i, CP_i;
+                                    int u_i;
+                                    float3 WC_i;
+                                    u_i = Shift::get_imcomplete_subpath_info(originPath_i, SP_i, CP_i, WC_i);
+                                    if (CP_i.type != BDPTVertex::Type::DROPOUT_NOVERTEX) {
+                                        samplePdf[j] = 0;
+                                    }
+                                    else {
+                                        const BDPTVertex& lastVertex = LVC_sampler->getVertexByIndex(light_subpath_index[j] - 1);
+                                        samplePdf[j] = Shift::tracingPdf(lastVertex, SP,  normalize(lastVertex.lastPosition- lastVertex.position), true);
+                                    }
+                                }
+                            }
+                            
+                            float pdfSum = 0;
+                            for (int j = 0; j < MMIS_N; ++j) {
+                                //printf("i:%i  j:%i  pdf:%f\n", i, j, samplePdf[j]);
+                                pdfSum += samplePdf[j];
+                            }
+
+                            float cmisWeight = samplePdf[i] / pdfSum;
+                            //printf("%f\n", cmisWeight);
+
+                            res *= cmisWeight;
+
+
+                            if (!ISINVALIDVALUE(res)) {
+                                //if (Tracer::params.caustic_path_only) res = make_float3(0, float3weight(res), float3weight(res));
+                                result += res / num_specular_conn;
+                            }
+                            else {
+                                pixel_record.record = 0.0;
+                            }
+                        }
                     }
                 }
             }
@@ -933,9 +982,8 @@ extern "C" __global__ void __raygen__DropoutTracing()
             break;
         }
     }
-    //
-    // Update results 
-    ////   
+    
+    /* Update results */
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
     float3             accum_color = result;
 

@@ -127,6 +127,37 @@ struct BDPTVertex
     RT_FUNCTION __host__ bool is_specluar()const
     {
         return specular_record < 0;
+    } 
+    
+    RT_FUNCTION __host__ void copyTo(BDPTVertex& v)const
+    {
+        v.position = position;
+        v.normal = normal;
+        v.flux = flux;
+        v.color = color;
+        v.lastPosition = lastPosition;
+        v.RMIS_pointer_3 = RMIS_pointer_3;
+        v.shade_normal = shade_normal;
+        v.uv = uv;
+        v.RMIS_pointer = RMIS_pointer;
+        v.last_lum = last_lum;
+        v.lastNormalProjection = lastNormalProjection;
+        v.pdf = pdf;
+        v.singlePdf = singlePdf;
+        v.lastSinglePdf = lastSinglePdf;
+        v.inverPdfEst = inverPdfEst;
+        v.path_record = path_record;
+        v.specular_record = specular_record;
+        v.materialId = materialId;
+        v.subspaceId = subspaceId;
+        v.depth = depth;
+        v.lastZoneId = lastZoneId;
+        v.type = type;
+        v.isOrigin = isOrigin;
+        v.inBrdf = inBrdf;
+        v.lastBrdf = lastBrdf;
+        v.isBrdf = isBrdf;
+        v.isLastVertex_direction = isLastVertex_direction;
     }
 };
 

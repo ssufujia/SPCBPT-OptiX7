@@ -15,7 +15,8 @@ namespace dropOut_tracing
     const int record_buffer_width = 1;
     const int max_u = 3;
     const unsigned pixel_unit_size = 10;
-    const bool MIS_COMBINATION = true;
+
+    const bool MIS_COMBINATION = false;
     const bool debug_PT_ONLY = false;
     const bool PG_reciprocal_estimation_enable = false;
 
@@ -27,6 +28,7 @@ namespace dropOut_tracing
     //true  true  true  false false = LSDE  enable
     //true  false true  false true  = LDSDE enable
     //true  false false true  true  = L(A)*DSDE enable 
+
     const int max_bound = DOT_BOUND_LIMIT_LESS? 10000:100;
     const int max_loop = 1000;
     const float light_subpath_caustic_discard_ratio = DOT_MORE_PROXY_LIGHT_SUBPATH_NUM?0.5:0.95;
