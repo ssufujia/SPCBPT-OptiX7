@@ -3753,67 +3753,21 @@ namespace Shift
     // @return: float, reciprocal of the path PDF integral for given parameters
     RT_FUNCTION float reciprocal_estimation(unsigned& seed, BDPTVertex CP, BDPTVertex SP, float3 WC, int u, statistic_payload& statistic_prd)
     {
-        float B = 1;
-        int loop_limit = dropOut_tracing::max_loop;
-        B = statistic_prd.data.bound;
-        float max_B = 0;
-        //above code: information setup
-
-        float res = 1 / B;
-        res = 0;
+        int loop_limit = 100;
+        float res = 0;
+        
         BDPTVertex buffer[SHIFT_VALID_SIZE];
         PathContainer path(buffer, 1, 0);
-        splitingStack spliting_stack;
-        spliting_stack.push(1, 1); 
-        while (spliting_stack.empty() == false && loop_limit > 0)
-        {
-            int sign = spliting_stack.pop();
+
+        for (int i = 0; i < loop_limit; ++i) {
             bool sample_success = alternate_path_sample(seed, path, CP, SP, WC, u, statistic_prd);
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
-
-            if (p>0 && dropOut_tracing::PG_reciprocal_estimation_enable && !statistic_prd.pg_p->trainEnd) {
-                ////statistic collection
-                dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
-                float3 dir = normalize(path.get(0).position - SP.position);
-                float2 uv = dir2uv(dir);
-                dirction_record.data = uv.x;
-                dirction_record.data2 = uv.y;
-                DOT_pushRecordToBuffer(dirction_record, statistic_prd);
-                ////statistic collection end
-            }
-            
-            float factor = 1 - p / (B * q);
-    //        res += factor / B * sign;
-            res += 1 / B * sign;
-            //if (sample_success)printf("p %f q%f B%f u%d\n", p, q, B, path.size());
-            float RRS = abs(factor);
-            float rr_rate = RRS - int(RRS);
-            int next_sign = factor > 0 ? sign : sign * -1;
-            if (RR_TEST(seed, rr_rate))
-            {
-                spliting_stack.push(next_sign, int(RRS) + 1);
-            }
-            else
-            {
-                spliting_stack.push(next_sign, int(RRS));
-            }
-
-            loop_limit--;
+            if (sample_success && p>0 && q>0)
+                res +=  p / q;
             path.setSize(0);
-            ////statistic collection
-            max_B = max_B > abs(p / q) ? max_B : abs(p / q); 
         }
-
-
-        ////statistic collection
-        dropOut_tracing::statistic_record bound_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Bound);
-        bound_record.data = max_B;
-        DOT_pushRecordToBuffer(bound_record, statistic_prd);
-        ////statistic collection end
-
-
-        return res;
+        return loop_limit / res ;
     }
 
     //return u, vertex number of alternate path 

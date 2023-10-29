@@ -1368,11 +1368,6 @@ extern "C" __global__ void __raygen__lightTrace()
                         if (statistic_prd.data.bound > dropOut_tracing::max_bound&&statistic_prd.type!=dropOut_tracing::DropOutType::LS)
                             statistic_prd.data.bound = dropOut_tracing::max_bound;
 
-                        if (false&&statistic_prd.type == dropOut_tracing::pathLengthToDropOutType(1))
-                        { 
-                            statistic_prd.data.bound = Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
-                        }
-
                         if (statistic_prd.subspace_valid())
                         {
                             float pdf_inverse = 0;
