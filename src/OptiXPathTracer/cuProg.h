@@ -499,6 +499,15 @@ namespace Tracer {
 
             return LVC[jump_buffer[index]];
         }
+
+        RT_FUNCTION const int uniformSampleByPath(unsigned int& seed, const int* pathIndex)
+        {
+            int index = rnd(seed) * path_count;
+
+            return pathIndex[index];
+        }
+
+
         RT_FUNCTION int sampleFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
         {
             int begin_index = eye_subsapce * NUM_SUBSPACE;

@@ -122,7 +122,12 @@ struct LightTraceParams
     int                      M_per_core; 
     BDPTVertex*              ans;
     bool*                    validState;
+
+
+    int*                     pathCnt;
+    int*                     pathIndex;
     int                      launch_frame;
+
 
     __host__ int get_element_count()
     {

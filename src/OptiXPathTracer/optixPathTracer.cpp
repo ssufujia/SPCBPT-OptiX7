@@ -561,10 +561,17 @@ void lt_params_setup(const sutil::Scene& scene)
 
     BDPTVertex* LVC_ptr;
     bool* valid_ptr;
+    int* path_ptr;
+    
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&LVC_ptr),   sizeof(BDPTVertex) * lt_params.get_element_count()));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&valid_ptr), sizeof(bool)       * lt_params.get_element_count())); 
-    lt_params.ans = LVC_ptr;// BufferView<BDPTVertex>(LVC_ptr, lt_params.get_element_count());
-    lt_params.validState = valid_ptr;// BufferView<bool>(valid_ptr, lt_params.get_element_count());
+
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&path_ptr), sizeof(int) * lt_params.M));
+
+
+    lt_params.ans = LVC_ptr;                   // BufferView<BDPTVertex>(LVC_ptr, lt_params.get_element_count());
+    lt_params.validState = valid_ptr;       // BufferView<bool>(valid_ptr, lt_params.get_element_count());
+    lt_params.pathIndex = path_ptr;       
     //params.lt = lt_params; 
 }
 void estimation_setup(const string& path) {
@@ -1318,7 +1325,7 @@ void initCameraState(const sutil::Scene& scene)
 int main( int argc, char* argv[] )
 { 
 
-    params.caustic_path_only = 1;
+    //params.caustic_path_only = 1;
 
     //Cthrust;
     //PathTracerState state;
