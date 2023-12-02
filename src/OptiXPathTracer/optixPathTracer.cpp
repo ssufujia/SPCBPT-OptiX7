@@ -1437,6 +1437,8 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 #endif      
 
+        scenePath = string(SAMPLES_DIR) + string("/data/showcase/showcase.scene");
+
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
