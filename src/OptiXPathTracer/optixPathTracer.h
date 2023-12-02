@@ -77,6 +77,7 @@ const bool estimation_save = true;
 #include"PG_common.h"
 #include"dropOutTracing_common.h"
 #include "tester.h"
+#include <curand_kernel.h>
 
 struct Subspace
 {   
@@ -98,6 +99,7 @@ struct LightTraceParams
     int*                     lightIndex;
     float3*                  lightBuffer;
     int                      launch_frame;
+    curandState*             rand_state;
 
     __host__ int get_element_count()
     {

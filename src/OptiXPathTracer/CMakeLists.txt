@@ -50,7 +50,8 @@ OPTIX_add_sample_executable( optixPathTracer target_name
 
   cuProg.h
   raygen.cu
-
+  rand.cu
+  
   stb_image.h
   stb_image.cpp
   material_parameters.h

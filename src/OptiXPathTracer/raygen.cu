@@ -1194,18 +1194,18 @@ RT_FUNCTION void pushVertexToLVC(BDPTVertex& v, unsigned int& putId, int bufferB
 
 RT_FUNCTION int getPixelIndex(float3 dir, float3 U, float3 V, float3 W)
 {
-    dir = normalize(dir);
     if (dot(W, dir) <= 0)//invalid
         return -1;
     dir = dot(W,W) * dir / dot(W, dir);
-    float2 d = make_float2((double)dot(U, dir) / (double)dot(U, U), (double)dot(V, dir) / (double)dot(V, V));
+    float2 d = make_float2(dot(U, dir) / dot(U, U), dot(V, dir) / dot(V, V));
     d = (d +1.0) / 2.0;
 
     int id_x = (int)(d.x * static_cast<float>(Tracer::params.width));
     int id_y = (int)(d.y * static_cast<float>(Tracer::params.height));
     int index = id_x + id_y * Tracer::params.width;
-    if (index >= 0 && index < Tracer::params.width * Tracer::params.height)
-        return index;
+    if (0<=id_x && id_x<Tracer::params.width && 0<=id_y && id_y<Tracer::params.height) {
+		return index;
+	}
     return -1;// invalid
 }
 
@@ -1215,6 +1215,9 @@ RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, flo
 
     /* dir: eye--->v */
     int index = getPixelIndex(dir, U, V, W);
+    int x = index % Tracer::params.width;
+    int y = index / Tracer::params.width;
+
     if (index < 0 || !vis)
     {
         float3 res;
@@ -1266,7 +1269,8 @@ extern "C" __global__ void __raygen__lightTrace()
     const uint3  launch_dims = optixGetLaunchDimensions();
     const int    subframe_index = Tracer::params.lt.launch_frame;
     unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
-
+    curandState rn_seed = Tracer::params.lt.rand_state[launch_idx.y * launch_dims.x + launch_idx.x];
+    curand_init(seed, launch_idx.y * launch_dims.x + launch_idx.x, 0, &rn_seed);
     const float3 eye = Tracer::params.eye;
     const float3 U = Tracer::params.U;
     const float3 V = Tracer::params.V;
@@ -1294,21 +1298,21 @@ extern "C" __global__ void __raygen__lightTrace()
         payload.clear();
         int light_id = clamp(static_cast<int>(floorf(rnd(seed) * Tracer::params.lights.count)),
             int(0), int(Tracer::params.lights.count - 1));
-        const Light& light = Tracer::params.lights[light_id];
+        const Light& light = Tracer::params.lights[0];
         Tracer::lightSample light_sample;
-        light_sample(light, seed); 
-        light_sample.traceMode(seed);
+        light_sample(light, seed);
+        light_sample.traceMode(rn_seed,seed);
         float3 ray_direction = light_sample.trace_direction();
         float3 ray_origin = light_sample.position;
         init_lightSubPath_from_lightSample(light_sample, payload.path);
         /* 插入light trace贡献值 */
         bool vis = Tracer::visibilityTest(Tracer::params.handle, payload.path.currentVertex().position, eye);
-        pushVertexToLightImage(payload.path.currentVertex(), payload.path.currentVertex().position - eye, U, V, W, lightVertexCount, bufferBias, !vis);
+        pushVertexToLightImage(payload.path.currentVertex(), payload.path.currentVertex().position - eye, U, V, W, lightVertexCount, bufferBias, vis);
 
         /* lightVertexCount 在经过这个函数后会加 1 */
         pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias);
         CheckLightBufferState;
-
+        const int cut_the_depth = 0;
         /* 光子路追踪 */
         while (true)
         {
@@ -1333,7 +1337,10 @@ extern "C" __global__ void __raygen__lightTrace()
                 float e = curVertex.contri_float();
                 /* 插入light trace贡献值 */
                 bool vis = Tracer::visibilityTest(Tracer::params.handle, curVertex.position, eye);
-                pushVertexToLightImage(curVertex, curVertex.position - eye, U, V, W, lightVertexCount, bufferBias, !vis);
+                 pushVertexToLightImage(curVertex, curVertex.position - eye, U, V, W, lightVertexCount, bufferBias, vis);
+
+                
+                
 
                 /* lightVertexCount 在经过这个函数后会加 1 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias);
@@ -1399,13 +1406,6 @@ extern "C" __global__ void __raygen__lightTrace()
                         }
                         glossy_vertex.set_specular_id(statistic_prd.SP_label);
                     }
-                    else
-                    {
-                    }
-                }
-                else
-                {
-
                 }
             }
             ray_direction = payload.ray_direction;
@@ -1414,6 +1414,7 @@ extern "C" __global__ void __raygen__lightTrace()
                 break;
             payload.depth += 1;
         }
+
         lightPathCount++;
         if (lightPathCount >= lt_params.M_per_core)
             break;

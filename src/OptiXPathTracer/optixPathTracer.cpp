@@ -77,6 +77,8 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include"cjson/cJSON.cpp"
+#include "rand.cu"
+
 #define NUM_SUBSPACE params.subspace_info.num_subspace
 #define NUM_SUBSPACE_LIGHTSOURCE params.subspace_info.num_subspace_lightsource
 using namespace std;
@@ -465,8 +467,6 @@ void initLaunchParams(const sutil::Scene& scene) {
     params.no_subspace = NO_SUBSPACE;
 }
 
-
-
 void handleResize(sutil::CUDAOutputBuffer<uchar4>& output_buffer, MyParams& params)
 {
     if (!resize_dirty)
@@ -590,7 +590,7 @@ void env_params_setup(Scene& Src, const sutil::Scene& scene)
         params.sky.valid = false;
         return;
     }
-    printf("load and build sampling cmf from file %s\n", scene.getEnvFilePath());
+    //printf("load and build sampling cmf from file %s\n", scene.getEnvFilePath());
     HDRLoader hdr_env((string(SAMPLES_DIR) + string("/data/") + scene.getEnvFilePath()));
 
     params.sky.light_id = Src.env_light_id;
@@ -639,17 +639,19 @@ void lt_params_setup(const sutil::Scene& scene)
     float3* Light_image;
     int* pixel_id;
     float3* Light_buffer;
+    curandState* d_state;
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&LVC_ptr), sizeof(BDPTVertex) * lt_params.get_element_count()));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&valid_ptr), sizeof(bool) * lt_params.get_element_count()));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&Light_image), sizeof(float3) * params.width * params.height));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pixel_id), sizeof(int) * lt_params.get_element_count()));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&Light_buffer), sizeof(float3) * lt_params.get_element_count()));
-
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_state), sizeof(curandState) * lt_params.get_element_count()));
     lt_params.ans = LVC_ptr;// BufferView<BDPTVertex>(LVC_ptr, lt_params.get_element_count());
     lt_params.validState = valid_ptr;// BufferView<bool>(valid_ptr, lt_params.get_element_count());
     lt_params.lightImage = Light_image;
     lt_params.lightBuffer = Light_buffer;
     lt_params.lightIndex = pixel_id;
+    lt_params.rand_state = d_state;
     //params.lt = lt_params; 
 }
 void estimation_setup(const string& path) {
@@ -729,7 +731,9 @@ void setLightImage()
     cudaMemcpy(valid, params.lt.validState, params.lt.get_element_count() * sizeof(bool), cudaMemcpyDeviceToHost);
 
     memset(light_image, 0, params.width * params.height * sizeof(float3));
- 
+
+    int i, j;
+    static int2 count = make_int2(0, 0);
     for (int i = 0; i < params.lt.get_element_count(); i++)
     {
         if (!valid[i])
@@ -737,6 +741,17 @@ void setLightImage()
         int id = index[i];
         if (id > 0)
         {
+            int x = id % params.width;
+            int y = id / params.width;
+            //x在695-705，y在635-645,count.x++
+            //if (x >= 695 && x <= 705 && y >= 635 && y <= 645) {
+            //    count.x++;
+            //}
+				
+            ////x在695-705，y在645-655,count.y++
+            //if (x >= 695 && x <= 705 && y >= 645 && y <= 655) {
+            //    count.y++;
+            //}
             light_image[id] += light_buffer[i];
         }            
     }
@@ -744,6 +759,8 @@ void setLightImage()
     {
         light_image[i] /= params.lt.M;
     }
+
+    //cout<<"result is"<<count.x << " " << count.y << endl;
     cudaMemcpy(params.lt.lightImage, light_image, params.width * params.height * sizeof(float3), cudaMemcpyHostToDevice);
 
     delete[] valid;
@@ -751,6 +768,8 @@ void setLightImage()
     delete[] index;
     delete[] light_image;
 
+}
+void setRng() {
 }
 void launchLVCTrace(sutil::Scene& scene)
 {
@@ -760,7 +779,7 @@ void launchLVCTrace(sutil::Scene& scene)
     auto p_valid = thrust::device_pointer_cast(params.lt.validState);
     auto sampler = MyThrustOp::LVC_Process(p_v, p_valid, params.lt.get_element_count());
     setLightImage();
-
+    setRng();
     params.sampler = sampler;
     if (!params.skip_proxy_dropout_tracing)
     {
@@ -1521,7 +1540,7 @@ int main(int argc, char* argv[])
         Scene_shift(*myScene, OptiXScene);//场景几何处理
         LightSource_shift(*myScene, params, OptiXScene,params.subspace_info.num_subspace_lightsource);//光源信息处理
         OptiXScene.finalize();//创建optix context和加速结构
-        env_params_setup(*myScene, OptiXScene);//环境贴图设置
+        env_params_setup(*myScene, OptiXScene);//环境贴图设置 
         program_setup(OptiXScene);//加载device端的cuda程序，包括装配SBT等
 
 
@@ -1636,7 +1655,7 @@ int main(int argc, char* argv[])
                     }
                     else
                     {
-                        printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
+                        //printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
                     }
                     render_fps = 1.0 / (sum_render_time.count() - render_time_record);
                     render_time_record = sum_render_time.count();

@@ -39,8 +39,9 @@
 #include "decisionTree/classTree_device.h"
 #include "pathControl.h"
 #include <cuda/LocalShading.h>
+#include <curand_kernel.h>
 #define SCENE_EPSILON 1e-3f
-
+//#define rnd(x) curand_uniform(&x)
 
 #define ISINVALIDVALUE(ans) (ans.x>1000000.0f|| isnan(ans.x)||ans.y>1000000.0f|| isnan(ans.y)||ans.z>1000000.0f|| isnan(ans.z))
 #define VERTEX_MAT(v) (v.getMat(Tracer::params.materials))
@@ -197,6 +198,20 @@ RT_FUNCTION void cosine_sample_hemisphere(const float u1, const float u2, float3
 
     // Project up to hemisphere.
     p.z = sqrtf(fmaxf(0.0f, 1.0f - p.x * p.x - p.y * p.y));
+}
+
+RT_FUNCTION void uniform_sample_hemisphere(const float u1, const float u2, float3& p)
+{
+    // Compute azimuthal angle
+    float theta = 2.0f * M_PI * u1;
+
+    // Compute polar angle
+    float phi = acosf(1.0f - 2.0f * u2);
+
+    // Convert to Cartesian coordinates
+    p.x = sinf(phi) * cosf(theta);
+    p.y = sinf(phi) * sinf(theta);
+    p.z = cosf(phi);
 }
 
 RT_FUNCTION void sample_small_lobe_1(const float u1, const float u2, float alpha, float3& p)
@@ -811,7 +826,6 @@ namespace Tracer {
         };
         int subspaceId;
 
-
         RT_FUNCTION void ReverseSample(const Light& light, float2 uv_)
         {
             bindLight = &light;
@@ -855,6 +869,26 @@ namespace Tracer {
             {
                 float r1 = rnd(seed);
                 float r2 = rnd(seed);
+                float r3 = 1 - r1 - r2;
+                ReverseSample(light, make_float2(r1, r2));
+            }
+            else if (light.type == Light::Type::ENV)
+            {
+                uv = SKY.sample(seed);
+                direction = uv2dir(uv);
+                emission = SKY.color(direction);
+                subspaceId = SKY.getLabel(direction);
+                pdf = SKY.pdf(direction);
+                pdf /= params.lights.count;
+            }
+            bindLight = &light;
+        }
+        RT_FUNCTION void operator()(const Light& light, curandState rn_seed, unsigned int& seed)
+        {
+            if (light.type == Light::Type::QUAD)
+            {
+                float r1 = curand_uniform(&rn_seed);
+                float r2 = curand_uniform(&rn_seed);
                 float r3 = 1 - r1 - r2;
                 ReverseSample(light, make_float2(r1, r2));
             }
@@ -918,11 +952,30 @@ namespace Tracer {
             else
             {
                 float r1 = rnd(seed);
-                float r2 = rnd(seed); 
+                float r2 = rnd(seed);
                 Onb onb(bindLight->quad.normal);
                 cosine_sample_hemisphere(r1, r2, direction);
                 onb.inverse_transform(direction);
                 dir_pdf = abs(dot(direction, bindLight->quad.normal)) / M_PIf;
+                //dir_pdf=1.0f / (2.0f * M_PIf);
+            }
+        }
+        RT_FUNCTION void traceMode(curandState rn_seed,unsigned int& seed)
+        {
+            if (is_DIRECTION())
+            {
+                position = position_for_tracing(SKY.sample_projectPos(direction, seed));
+                dir_pos_pdf = SKY.projectPdf();
+            }
+            else
+            {
+                float r1 = curand_uniform(&rn_seed);
+                float r2 = curand_uniform(&rn_seed);
+                Onb onb(bindLight->quad.normal);
+                cosine_sample_hemisphere(r1, r2, direction);
+                onb.inverse_transform(direction);
+                dir_pdf = abs(dot(direction, bindLight->quad.normal)) / M_PIf;
+                //dir_pdf=1.0f / (2.0f * M_PIf);
             }
         }
     };
@@ -1186,9 +1239,9 @@ namespace Tracer
         float NDotV = dot(N, V);
         float gNDotV = dot(gN, V);
         float eta = 1 / mateta;        
-        if (mat.trans<0.1&& (gNDotL * gNDotV <= 0.0f || NDotL * NDotV <= 0))
+        if (mat.trans<0.1f&& (gNDotL * gNDotV <= 0.0f || NDotL * NDotV <= 0.f))
             return make_float3(0);// return Eval_Transmit(mat, normal, V, L); 
-        if (mat.trans > 0.9 && (gNDotL * gNDotV * NDotL * NDotV <= 0))return make_float3(0.0);
+        if (mat.trans > 0.9f && (gNDotL * gNDotV * NDotL * NDotV <= 0.f))return make_float3(0.0f);
         if (NDotL * NDotV <= 0)return Eval_Transmit(mat, normal, V, L);
         if (mat.metallic + mat.base_color.x + mat.base_color.y + mat.base_color.z <= 0)return make_float3(0);
         
