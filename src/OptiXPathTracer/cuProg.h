@@ -459,12 +459,12 @@ namespace Tracer {
         }
 
 
-        RT_FUNCTION const BDPTVertex& uniformSampleGlossy(unsigned int& seed, float& sample_pmf)
+        RT_FUNCTION int uniformSampleGlossy(unsigned int& seed, float& sample_pmf)
         {
             sample_pmf = 1.0 / glossy_count;
             int index = rnd(seed) * glossy_count;
 
-            return LVC[glossy_index[index]];
+            return glossy_index[index];
         }
 
         RT_FUNCTION const BDPTVertex& SampleGlossySecondStage(int subspaceId, unsigned int& seed, float& sample_pmf)
@@ -2819,6 +2819,61 @@ namespace Shift
         }
         return true;
     }
+
+    RT_FUNCTION bool retracing_general(unsigned& seed, PathContainer& path, const BDPTVertex& SP, const BDPTVertex& CP, float3 incident, float& pdf)
+    {
+        //printf("retracing CP.type %d    CP.depth %d     u %d\n", CP.type,CP.depth, u);
+        path.setSize(SHIFT_VALID_SIZE);
+        pdf = 1;
+        float3 in_dir = incident;
+        int cnt = 0;
+        bool success = 0;
+        while ( true ) {
+            if (cnt >= SHIFT_VALID_SIZE) break;
+            const BDPTVertex& currentVertex = ((cnt == 0) ? SP : path.get(cnt - 1));
+            MaterialData::Pbr mat = VERTEX_MAT(currentVertex);
+            float3 out_dir = Tracer::Sample(mat, currentVertex.normal, in_dir, seed);
+            bool success_hit;
+            path.get(cnt) = Tracer::FastTrace(currentVertex, out_dir, success_hit);
+            if (success_hit == false) break;
+
+            pdf *= tracingPdf(currentVertex, path.get(cnt), in_dir, true, true);
+
+            /* 打到光源 */
+            if (path.get(cnt).type == BDPTVertex::HIT_LIGHT_SOURCE) {
+                /* L(S)*S */
+                if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX) {
+                    int light_id = path.get(cnt).materialId;
+                    const Light& light = Tracer::params.lights[light_id];
+                    Tracer::lightSample light_sample;
+                    light_sample.ReverseSample(light, path.get(cnt).uv);
+                    init_vertex_from_lightSample(light_sample, path.get(cnt));
+                    success = 1;
+                }
+                break;
+            }
+            else if (!Shift::glossy(path.get(cnt))) {
+                /* 打到 diffuse */;
+                if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX) {
+                    success = 1;
+                }
+                break;
+            }
+            in_dir = -out_dir;
+            ++cnt;
+        }
+        if (!success) {
+            return false;
+        }
+        path.setSize(cnt + 1);
+        if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && !Tracer::visibilityTest(Tracer::params.handle, path.get(-1), CP))
+        {
+            return false;
+        }
+        return true;
+    }
+
+
     RT_FUNCTION bool retracing_with_reference(unsigned& seed, PathContainer& path, 
         const BDPTVertex& SP, const BDPTVertex& CP, float3 incident, int u, float& pdf, PathContainer& path_ref)
     {

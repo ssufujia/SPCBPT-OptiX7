@@ -632,11 +632,16 @@ extern "C" __global__ void __raygen__DropoutTracing()
     int light_subpath_index[MMIS_N];
     const BDPTVertex* light_subpath[MMIS_N];
     const BDPTVertex* strategies[MMIS_N];
+    float pmf[MMIS_N];
 
     int dbgCnt = 0;
     for (int i = 0; i < MMIS_N; ++i) {
-        light_subpath_index[i] = LVC_sampler->uniformSampleByPath(seed, Tracer::params.lt.pathIndex);
+        //light_subpath_index[i] = LVC_sampler->uniformSampleByPath(seed, Tracer::params.lt.pathIndex);
+
+        light_subpath_index[i] = LVC_sampler->uniformSampleGlossy(seed, pmf[i]);
+        pmf[i] *= Tracer::params.sampler.path_count;
         light_subpath[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i]);
+
         /* Get strategies */
         if (Shift::glossy(*light_subpath[i])) {
             strategies[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i] - 1);
@@ -661,6 +666,7 @@ extern "C" __global__ void __raygen__DropoutTracing()
             /* Sampled a non-glossy light subpath */
             light_subpath[i] = nullptr;
         }
+        //printf("%i \n", strategies[i]->depth);
     }
     //printf("%i \n", dbgCnt);
     
@@ -815,7 +821,6 @@ extern "C" __global__ void __raygen__DropoutTracing()
                 float3 res;
                 res = connectVertex_SPCBPT(eye_vertex, light_subpath) / pmf;
 
-
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                 bool caustic_flag = false;
                 if (!Tracer::params.spcbpt_pure && Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
@@ -887,7 +892,7 @@ extern "C" __global__ void __raygen__DropoutTracing()
                 /* Check light subpath depth */
                 if (!(light_subpath[i]->depth > 0 && light_subpath[i]->depth < SHIFT_VALID_SIZE - 1))  continue;
 
-                float pmf = 1; //(1 - Tracer::params.dot_params.discard_ratio) *caustic_connection_prob;
+                //float pmf = 1; //(1 - Tracer::params.dot_params.discard_ratio) *caustic_connection_prob;
 
                 BDPTVertex light_sub_new[SHIFT_VALID_SIZE];
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(light_subpath[i]), -1, light_subpath[i]->depth + 1);
@@ -899,20 +904,21 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
                 float retracing_pdf;
                 //bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
-                bool retrace_success = Shift::retracing_with_reference(
-                    payload.seed, finalPath, *light_subpath[i], CP, normalize(eye_vertex.position - light_subpath[i]->position), u, retracing_pdf, originPath);
+                //bool retrace_success = Shift::retracing_with_reference( payload.seed, finalPath, *light_subpath[i], CP, normalize(eye_vertex.position - light_subpath[i]->position), u, retracing_pdf, originPath);
+                bool retrace_success = retracing_general(payload.seed, finalPath, *light_subpath[i], CP, normalize(eye_vertex.position - light_subpath[i]->position), retracing_pdf);
+                
                 if (retrace_success == false) continue;
 
                 /* This function put the eye-subpath and light-subpath in pathBuffer */
                 int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, u, finalPath, originPath);
 
-                float pdf = eye_vertex.pdf * retracing_pdf * CP.pdf;
+                float pdf = eye_vertex.pdf * retracing_pdf; // *CP.pdf;
 
                 float3 contri = Tracer::contriCompute(pathBuffer, path_size);
 
                 /* ------------------------------------------------------------------------------ */
 
-                float3 res = (contri / pdf / pmf) / SP.singlePdf;
+                float3 res = (contri / pdf / pmf[i]) / SP.singlePdf;
                 // printf("%f %f\n", SP.singlePdf, light_subpath.inverPdfEst);
                 // float3 res = (contri / pdf / pmf) * light_subpath[i]->inverPdfEst;
 
@@ -935,6 +941,10 @@ extern "C" __global__ void __raygen__DropoutTracing()
                         printf("case 2\n");
                         samplePdf[j] = 0;
                     }
+                    //else if (strategies[j]->depth != u - 1) {
+                    //    //printf("case 3\n");
+                    //    samplePdf[j] = 0;
+                    //}
                     else {
                         const BDPTVertex& lastVertex = *strategies[j];
                         samplePdf[j] = Shift::tracingPdf(lastVertex, SP, normalize(lastVertex.lastPosition - lastVertex.position), true);
