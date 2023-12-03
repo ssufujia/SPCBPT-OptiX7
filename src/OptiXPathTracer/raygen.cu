@@ -629,8 +629,9 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
     /* MMIS Sampling */
     Tracer::SubspaceSampler_device* LVC_sampler = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler);
-    int light_subpath_index[MMIS_N];
-    const BDPTVertex* light_subpath[MMIS_N];
+
+    int lightSubpathIndex[MMIS_N];
+    const BDPTVertex* lightSubpath[MMIS_N];
     const BDPTVertex* strategies[MMIS_N];
     float pmf[MMIS_N];
 
@@ -638,45 +639,45 @@ extern "C" __global__ void __raygen__DropoutTracing()
     for (int i = 0; i < MMIS_N; ++i) {
         pmf[i] = 1;
 
-        light_subpath_index[i] = LVC_sampler->uniformSampleGlossy(seed, pmf[i]);
-        pmf[i] *= Tracer::params.sampler.path_count;
+        //light_subpath_index[i] = LVC_sampler->uniformSampleGlossy(seed, pmf[i]);
+        //pmf[i] *= Tracer::params.sampler.path_count;
 
-        //light_subpath_index[i] = LVC_sampler->uniformSampleByPath(seed, Tracer::params.lt.pathIndex);
-        light_subpath[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i]);
+        lightSubpathIndex[i] = LVC_sampler->uniformSampleByPath(seed, Tracer::params.lt.pathIndex);
+        lightSubpath[i] = &LVC_sampler->getVertexByIndex(lightSubpathIndex[i]);
 
         // printf("%f\n", light_subpath[i]->rrPdf);
         // pmf[i] *= light_subpath[i]->rrPdf > 0 ? light_subpath[i]->rrPdf : 1;
 
         /* Get strategies */
-        if (Shift::glossy(*light_subpath[i])) {
-            strategies[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i] - 1);
-            //if (light_subpath[i]->rrPdf < 0) light_subpath[i] = nullptr;
-            dbgCnt++;
-        }
-        else {
+        //if (Shift::glossy(*light_subpath[i])) {
+        //    strategies[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i] - 1);
+        //    //if (light_subpath[i]->rrPdf < 0) light_subpath[i] = nullptr;
+        //    dbgCnt++;
+        //}
+        //else {
             /*
             *  按路径采样经过测试应该没问题
             *  printf("%d %d \n", Tracer::params.lt.validState[light_subpath_index[i]+1], (light_subpath[i] + 1)->depth);
             */
-            int d = light_subpath[i]->depth;
+        int d = lightSubpath[i]->depth;
+        int s = lightSubpathIndex[i] - d;
 
-            int s = light_subpath_index[i] - d;
-            strategies[i] = &LVC_sampler->getVertexByIndex(s);
-            BDPTVertex* sp = nullptr;
-            for (int j = 1; j < d; ++j) {
-                if (!Shift::glossy(LVC_sampler->getVertexByIndex(s + j)))
-                    break;
-                else {
-                    //sp = const_cast<BDPTVertex*>(& LVC_sampler->getVertexByIndex(s + j));
-                    //light_subpath_index[i] = s + j;
-                    strategies[i] = &LVC_sampler->getVertexByIndex(s + j);
-                }
+        strategies[i] = &LVC_sampler->getVertexByIndex(s);
+        BDPTVertex* sp = nullptr;
+        for (int j = 1; j <= d; ++j) {
+            if (!Shift::glossy(LVC_sampler->getVertexByIndex(s + j)))
+                break;
+            else {
+                sp = const_cast<BDPTVertex*>(& LVC_sampler->getVertexByIndex(s + j));
+                lightSubpathIndex[i] = s + j;
+                strategies[i] = &LVC_sampler->getVertexByIndex(s + j - 1);
             }
-            /* Sampled a non-glossy light subpath */
-            light_subpath[i] = sp;
-
-            //printf("%i \n", strategies[i]->depth);
         }
+        /* Sampled a non-glossy light subpath */
+        lightSubpath[i] = sp;
+
+        //printf("%i \n", strategies[i]->depth);
+        //}
     }
     //printf("%i \n", dbgCnt);
     
@@ -706,7 +707,6 @@ extern "C" __global__ void __raygen__DropoutTracing()
     BDPTVertex CP;
     int u;
     float3 WC;
-
 
     /* Main loop for eye subpath tracing */
     while (true)
@@ -871,7 +871,6 @@ extern "C" __global__ void __raygen__DropoutTracing()
             if (!Shift::pathRecord_is_causticEyesubpath(payload.path_record, payload.depth)) break;
             if (Tracer::params.spcbpt_pure) break;
 
-
             /* Simple Connection -- For Test Purpose */
             /*for (int i = 0; i < MMIS_N; ++i) {
                 if (light_subpath[i] == nullptr) continue;
@@ -894,18 +893,18 @@ extern "C" __global__ void __raygen__DropoutTracing()
             /* Compute CMIS Contribution */
             for (int i = 0; i < MMIS_N; ++i) {
                 /* Sampled a non-glossy light subpath */
-                if (light_subpath[i] == nullptr) continue;
+                if (lightSubpath[i] == nullptr) continue;
                 /* Too long for MIS */
-                if (eye_vertex.depth + light_subpath[i]->depth + 2 > MAX_PATH_LENGTH_FOR_MIS) continue;
+                if (eye_vertex.depth + lightSubpath[i]->depth + 2 > MAX_PATH_LENGTH_FOR_MIS) continue;
                 /* Bad visibility */
-                if (!Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath[i]->position)) continue;
+                if (!Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, lightSubpath[i]->position)) continue;
                 /* Check light subpath depth */
-                if (!(light_subpath[i]->depth > 0 && light_subpath[i]->depth < SHIFT_VALID_SIZE - 1))  continue;
+                if (!(lightSubpath[i]->depth > 0 && lightSubpath[i]->depth < SHIFT_VALID_SIZE - 1)) {continue; };
 
                 //float pmf = 1; //(1 - Tracer::params.dot_params.discard_ratio) *caustic_connection_prob;
 
                 BDPTVertex light_sub_new[SHIFT_VALID_SIZE];
-                Shift::PathContainer originPath(const_cast<BDPTVertex*>(light_subpath[i]), -1, light_subpath[i]->depth + 1);
+                Shift::PathContainer originPath(const_cast<BDPTVertex*>(lightSubpath[i]), -1, lightSubpath[i]->depth + 1);
                 Shift::PathContainer finalPath(light_sub_new, 1);
 
                 //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info 
@@ -915,7 +914,7 @@ extern "C" __global__ void __raygen__DropoutTracing()
                 float retracing_pdf;
                 //bool retrace_success = Shift::retracing(payload.seed, finalPath, light_subpath, CP, normalize(eye_vertex.position - light_subpath.position), u, retracing_pdf);
                 //bool retrace_success = Shift::retracing_with_reference( payload.seed, finalPath, *light_subpath[i], CP, normalize(eye_vertex.position - light_subpath[i]->position), u, retracing_pdf, originPath);
-                bool retrace_success = retracing_general(payload.seed, finalPath, *light_subpath[i], CP, normalize(eye_vertex.position - light_subpath[i]->position), retracing_pdf);
+                bool retrace_success = retracing_general(payload.seed, finalPath, *lightSubpath[i], CP, normalize(eye_vertex.position - lightSubpath[i]->position), retracing_pdf);
                 
                 if (retrace_success == false) continue;
 
