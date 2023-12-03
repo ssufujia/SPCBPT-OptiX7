@@ -50,6 +50,9 @@ struct BDPTVertex
     float RMIS_pointer;
     float last_lum;
 
+    //
+    float rrPdf;
+
     //used for RMIS computing, dot(incident_direction, normal of the previous vertex)
     float lastNormalProjection;
 

@@ -1325,7 +1325,7 @@ void initCameraState(const sutil::Scene& scene)
 int main( int argc, char* argv[] )
 { 
 
-    //params.caustic_path_only = 1;
+    params.caustic_path_only = 1;
 
     //Cthrust;
     //PathTracerState state;

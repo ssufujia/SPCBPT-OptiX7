@@ -636,15 +636,21 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
     int dbgCnt = 0;
     for (int i = 0; i < MMIS_N; ++i) {
-        //light_subpath_index[i] = LVC_sampler->uniformSampleByPath(seed, Tracer::params.lt.pathIndex);
+        pmf[i] = 1;
 
         light_subpath_index[i] = LVC_sampler->uniformSampleGlossy(seed, pmf[i]);
         pmf[i] *= Tracer::params.sampler.path_count;
+
+        //light_subpath_index[i] = LVC_sampler->uniformSampleByPath(seed, Tracer::params.lt.pathIndex);
         light_subpath[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i]);
+
+        // printf("%f\n", light_subpath[i]->rrPdf);
+        // pmf[i] *= light_subpath[i]->rrPdf > 0 ? light_subpath[i]->rrPdf : 1;
 
         /* Get strategies */
         if (Shift::glossy(*light_subpath[i])) {
             strategies[i] = &LVC_sampler->getVertexByIndex(light_subpath_index[i] - 1);
+            //if (light_subpath[i]->rrPdf < 0) light_subpath[i] = nullptr;
             dbgCnt++;
         }
         else {
@@ -656,17 +662,21 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
             int s = light_subpath_index[i] - d;
             strategies[i] = &LVC_sampler->getVertexByIndex(s);
-
+            BDPTVertex* sp = nullptr;
             for (int j = 1; j < d; ++j) {
                 if (!Shift::glossy(LVC_sampler->getVertexByIndex(s + j)))
                     break;
-                else
+                else {
+                    //sp = const_cast<BDPTVertex*>(& LVC_sampler->getVertexByIndex(s + j));
+                    //light_subpath_index[i] = s + j;
                     strategies[i] = &LVC_sampler->getVertexByIndex(s + j);
+                }
             }
             /* Sampled a non-glossy light subpath */
-            light_subpath[i] = nullptr;
+            light_subpath[i] = sp;
+
+            //printf("%i \n", strategies[i]->depth);
         }
-        //printf("%i \n", strategies[i]->depth);
     }
     //printf("%i \n", dbgCnt);
     
@@ -918,7 +928,7 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
                 /* ------------------------------------------------------------------------------ */
 
-                float3 res = (contri / pdf / pmf[i]) / SP.singlePdf;
+                float3 res = (contri / pdf / pmf[i]);
                 // printf("%f %f\n", SP.singlePdf, light_subpath.inverPdfEst);
                 // float3 res = (contri / pdf / pmf) * light_subpath[i]->inverPdfEst;
 
@@ -957,10 +967,16 @@ extern "C" __global__ void __raygen__DropoutTracing()
                     pdfSum += samplePdf[j];
                 }
 
-                float cmisWeight = samplePdf[i] / pdfSum;
+                //float cmisWeight = samplePdf[i] / pdfSum;
+                
+                float cmisWeight = 1 / pdfSum;
+
                 //printf("%f\n", cmisWeight);
 
-                res *= cmisWeight;
+                float magicNumber = 1;
+                //float magicNumber = 2;
+
+                res *= cmisWeight * magicNumber;
 
                 if (!ISINVALIDVALUE(res)) {
                     //if (Tracer::params.caustic_path_only) res = make_float3(0, float3weight(res), float3weight(res));
@@ -1106,10 +1122,10 @@ extern "C" __global__ void __raygen__lightTrace()
                 &payload
             );
 
+            BDPTVertex& curVertex = payload.path.currentVertex();
             /* If we hit a surface */
             if (payload.path.size > begin_depth) 
             {
-                BDPTVertex& curVertex = payload.path.currentVertex();
 
                 /* Record path history */
                 payload.path_record = (payload.path_record) |
@@ -1187,6 +1203,9 @@ extern "C" __global__ void __raygen__lightTrace()
                         glossy_vertex.set_specular_id(statistic_prd.SP_label);
                     }
                 }
+            }
+            else {
+                curVertex.rrPdf = -114514;
             }
             ray_direction = payload.ray_direction;
             ray_origin = payload.origin;

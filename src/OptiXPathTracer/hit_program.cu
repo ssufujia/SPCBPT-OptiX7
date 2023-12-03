@@ -512,8 +512,10 @@ extern "C" __global__ void __closesthit__lightSubpath()
 
     float r = rnd(prd->seed);
     float rr_rate = Tracer::rrRate(currentPbr);
-    if (r > rr_rate)
+    if (r > rr_rate) {
         prd->done = true;
+        MidVertex.rrPdf = 1 - rr_rate;
+    }
     else
         NextVertex.singlePdf *= rr_rate;
     return;
