@@ -1,0 +1,130 @@
+cameraSetting
+{
+//	up      0.000000 1.000000 0.000000
+//	eye     -0.309680 1.189867 -7.197319
+//	lookat  0.000000 1.000000 0.000000 
+//    geo_normal 1
+
+		up      0.000000 1.000000 0.000000
+		eye     0.102131 0.077978 0.027743
+ 		lookat  -24.710585 0.078562 0.027675
+
+    fov 20
+}
+
+material WhiteDiffuse
+{
+	color 0.9 0.9 0.9
+	roughness 0.9
+	metallic 0.0
+}
+
+material GreyDiffuse
+{
+	color 0.7 0.7 0.7
+	roughness 0.9
+	metallic 0.0
+}
+
+material DarkDiffuse
+{
+	color 0.01 0.01 0.01
+	roughness 0.9
+	metallic 0.0
+}
+
+material ShortBox
+{
+	color 0.725 0.71 0.68
+	roughness 0.5
+	metallic 0.0
+
+}
+
+material TallBox
+{
+	color 0.725 0.71 0.68
+	roughness 0.5
+	metallic 0.0
+
+}
+
+
+material Glass
+{
+	color 1 1 1
+	roughness 0.0001
+	metallic 1.0
+	trans 1
+	eta 1.5
+}
+
+mesh
+{
+	file showcase/lightLens.obj
+	material Glass
+}
+
+mesh
+{
+	file showcase/showCase.obj
+	material Glass
+}
+
+//mesh
+//{
+//	file showcase/showCaseInner.obj
+//	material Glass
+//}
+
+mesh
+{
+	file showcase/lion.obj
+	material GreyDiffuse
+}
+
+mesh
+{
+	file showcase/lionBase.obj
+	material GreyDiffuse
+}
+
+mesh
+{
+	file showcase/lightMask.obj
+	material DarkDiffuse
+}
+
+mesh
+{
+	file showcase/lightBody.obj
+	material WhiteDiffuse
+}
+
+mesh
+{
+	file showcase/room.obj
+	material GreyDiffuse
+}
+
+
+light
+{
+
+	position   -38.362446 8.063398 0.138613
+	v2 -38.362446 8.063398 0.014343
+	v1 -38.266514 7.984406 0.138613
+  emission   10820 7640 2540
+  type 			 Quad
+}
+
+
+light
+{
+
+	position  -86.091888 35.863506 32.171036
+	v1 				-85.758606 -36.895252 32.171036
+	v2 				-86.091888 35.863506 -32.035660
+  emission   0.021 0.016 0.011
+  type 			 Quad
+}
