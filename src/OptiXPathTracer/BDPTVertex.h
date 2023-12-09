@@ -48,6 +48,8 @@ struct BDPTVertex
 
     //cache the RMIS weight for light sub-path tracing
     float RMIS_pointer;
+    //cache the RMIS weight for light_trace
+    float RMIS_pointer_lt;
     float last_lum;
 
     //used for RMIS computing, dot(incident_direction, normal of the previous vertex)

@@ -130,7 +130,7 @@ namespace rmis
     { 
         if (LastVertex.depth == 1)//no light tracing strategy
         {
-            return make_float3(0.0);
+            return make_float3(0);
         }
         float3 inver_dir = MidVertex.is_DIRECTION() ? -MidVertex.normal : normalize(MidVertex.position - LastVertex.position);
 
@@ -191,13 +191,20 @@ namespace rmis
         weight = tracing_weight_eye(MidVertex, LastVertex);
         last_single_pdf = LastVertex.singlePdf;
         flux_multiplier = getFluxMultiplier(LastVertex, normalize(MidVertex.position - LastVertex.position));
-
         MidVertex.RMIS_pointer_3 = ((LastVertex.RMIS_pointer_3 * LL_pdf * flux_multiplier) + weight) / last_single_pdf;
-
+        if (LastVertex.depth == 1)
+        {
+            MidVertex.RMIS_pointer_lt = LastVertex.RMIS_pointer_lt;
+        }
+        else
+        {
+            MidVertex.RMIS_pointer_lt = LastVertex.RMIS_pointer_lt * LL_pdf / last_single_pdf;
+        }
     }
     RT_FUNCTION void tracing_init_eye(BDPTVertex& MidVertex, BDPTVertex& LastVertex)//lastVertes is the camera
     {
         MidVertex.RMIS_pointer_3 = make_float3(0.0);
+        MidVertex.RMIS_pointer_lt = 1.0f;
     }
     //////////////////////////////////////////////////////////////////////////////////
     ////////////////////////eval mis weight///////////////////////////////////////////
@@ -212,6 +219,7 @@ namespace rmis
         float LL_pdf_A = getLL_pdf(lightVertex, eyeVertex, false);
         float3 flux_multiplier_0 = getFluxMultiplier(eyeVertex, -connect_dir);
         float3 weight_A = tracing_weight_eye(lightVertex, eyeVertex);
+
         float3 D_A_0 = ((eyeVertex.RMIS_pointer_3 * LL_pdf_A * flux_multiplier_0) + weight_A);
 
         float3 LA = normalize(lightVertex.lastPosition - lightVertex.position);
@@ -219,7 +227,7 @@ namespace rmis
         float3 flux_multiplier_1 = getFluxMultiplier(lightVertex, LA, connect_dir);
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
 
-
+       
         float weight = float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
 
         ////light side 
@@ -232,8 +240,15 @@ namespace rmis
         float pdf_B = getPdf(eyeVertex, lightVertex, LB, true);
         float D_B = D_B_0 * pdf_B / lightVertex.singlePdf;
 
+        ////light trace
+        float D_C;
+        if(eyeVertex.depth == 1)
+            D_C = eyeVertex.RMIS_pointer_lt * pdf_A;
+        else
+            D_C = eyeVertex.RMIS_pointer_lt * LL_pdf_A * pdf_A / eyeVertex.singlePdf;
+
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
-        return weight / (weight + D_A + D_B);
+        return weight / (weight + D_A + D_B + weight * D_C);
     }
 
     RT_FUNCTION float connection_direction_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
@@ -250,6 +265,12 @@ namespace rmis
         float flux_multiplier_1 = lightVertex.is_DIRECTION() ? 1.0 / Tracer::params.sky.projectPdf() : M_PIf;
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
 
+        ////light trace
+        float D_C;
+        if (eyeVertex.depth == 1)
+            D_C = eyeVertex.RMIS_pointer_lt * pdf_A;
+        else
+            D_C = eyeVertex.RMIS_pointer_lt * LL_pdf_A * pdf_A / eyeVertex.singlePdf;
 
         float weight = float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
 
@@ -262,7 +283,7 @@ namespace rmis
         float D_B = D_B_0 * pdf_B / lightVertex.singlePdf;
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
-        return weight / (weight + D_A + D_B);
+        return weight / (weight + D_A + D_B + weight * D_C);
     }
     RT_FUNCTION float connection_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
     { 
@@ -279,6 +300,12 @@ namespace rmis
         float flux_multiplier_1 = lightVertex.is_DIRECTION() ? 1.0 / Tracer::params.sky.projectPdf() : M_PIf;
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
 
+        ////light trace
+        float D_C;
+        if (eyeVertex.depth == 1)
+            D_C = eyeVertex.RMIS_pointer_lt * pdf_A;
+        else
+            D_C = eyeVertex.RMIS_pointer_lt * LL_pdf_A * pdf_A / eyeVertex.singlePdf;
 
         float weight = float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
 
@@ -291,7 +318,7 @@ namespace rmis
         float D_B = D_B_0 * pdf_B / lightVertex.singlePdf;
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB)); 
-        return weight / (weight + D_A + D_B);
+        return weight / (weight + D_A + D_B + weight * D_C);
     }
     RT_FUNCTION void construct_virtual_env_light(BDPTVertex& lightVertex, float3 flux, float pdf, float3 direction, int label)
     {
@@ -317,6 +344,12 @@ namespace rmis
         float flux_multiplier_1 = 1.0 / Tracer::params.sky.projectPdf();
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
 
+        ////light trace
+        float D_C;
+        if (eyeVertex.depth == 1)
+            D_C = eyeVertex.RMIS_pointer_lt * pdf_A;
+        else
+            D_C = eyeVertex.RMIS_pointer_lt * LL_pdf_A * pdf_A / eyeVertex.singlePdf;
 
         float weight = float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
          
@@ -330,7 +363,7 @@ namespace rmis
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
         //return  pdf_B;
-        return D_B / ((weight + D_A) / pdf_B * lightVertex.singlePdf + D_B);
+        return D_B / ((weight + D_A + weight * D_C) / pdf_B * lightVertex.singlePdf + D_B);
         //return weight / (weight + D_A + D_B);
 
     }
@@ -348,6 +381,14 @@ namespace rmis
         float pdf_A = getPdf_from_light_source(lightVertex, eyeVertex);
         float flux_multiplier_1 = M_PIf;
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
+        
+        ////light trace
+        float D_C;
+        if (eyeVertex.depth == 1)
+            D_C = eyeVertex.RMIS_pointer_lt * pdf_A;
+        else
+            D_C = eyeVertex.RMIS_pointer_lt * LL_pdf_A * pdf_A / eyeVertex.singlePdf;
+
         float weight = float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
          
         ////light side 
@@ -359,9 +400,31 @@ namespace rmis
         float ra = pdf_B / lightVertex.singlePdf;
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
-        return D_B / ((weight + D_A) / pdf_B * lightVertex.singlePdf + D_B);
+        return D_B / ((weight + D_A + weight * D_C) / pdf_B * lightVertex.singlePdf + D_B);
     }
+    RT_FUNCTION float eye_hit(BDPTVertex& eyeVertex, BDPTVertex& lightVertex, float eye_pdf)//hit camera
+    {
+        float D_C = 1.0;
 
+        float3 connect_vec = eyeVertex.position - lightVertex.position;
+        float3 connect_dir = normalize(connect_vec);
+        float3 flux = lightVertex.flux / lightVertex.pdf;
+        float weight = 1;// float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
+
+        ////light side 
+
+        float LL_pdf_B = getLL_pdf(eyeVertex, lightVertex, true);
+        float weight_B = tracing_weight_light(eyeVertex, lightVertex);
+        float D_B_0 = (lightVertex.RMIS_pointer * LL_pdf_B) + weight_B;
+
+        float3 LB = normalize(eyeVertex.lastPosition - eyeVertex.position);
+        float pdf_B = 1; //getPdf(eyeVertex, lightVertex, LB, true);
+        float D_B = D_B_0 * pdf_B / lightVertex.singlePdf;
+
+        //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
+        return D_C / (D_C + D_B / weight);
+            // D_C / ((weight + D_B) / LL_pdf_A * 1 + D_C);
+    }
 }
 #ifdef HIDDEN_NOT_USE 
 #endif // 0

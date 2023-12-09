@@ -35,7 +35,7 @@
 #define MIN_RR_RATE 0.3
 #define CONSERVATIVE_RATE 0.2
 #define CONNECTION_N 1
-#define MAX_PATH_LENGTH_FOR_MIS 8
+#define MAX_PATH_LENGTH_FOR_MIS 16
 #define LIMIT_PATH_TERMINATE true
 
 #define DIR_JUDGE 0 
@@ -44,7 +44,7 @@
 #define DOT_DEBUG_INFO_ENABLE false
 /* Path Guiding 开关 */
 static const bool PG_ENABLE = false;
-const bool SPCBPT_PURE = false;
+const bool SPCBPT_PURE = true;
 const bool FIX_ITERATION = false;
 const bool PG_SELF_TRAIN = true;
 const bool estimation_save = true;
@@ -58,8 +58,8 @@ const bool estimation_save = true;
 
 
 //#define SCENE_BEDROOM
-#define SCENE_BREAKFAST
-//#define SCENE_PROJECTOR
+//#define SCENE_BREAKFAST
+#define SCENE_PROJECTOR
 //#define SCENE_HALLWAY
 //#define SCENE_KITCHEN
 //#define SCENE_WATER

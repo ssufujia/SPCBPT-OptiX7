@@ -389,7 +389,6 @@ extern "C" __global__ void __raygen__SPCBPT()
         }
         payload.depth += 1;
 
-
         //if (payload.path.size == 2)
         //{
         //    BDPTVertex v = payload.path.currentVertex();
@@ -451,9 +450,12 @@ extern "C" __global__ void __raygen__SPCBPT()
     ////  
     //result = make_float3(rnd(first_hit_id), rnd(first_hit_id), rnd(first_hit_id));  
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
+
+    result += Tracer::params.lt.lightImage[image_index];// light_trace
+
     float3             accum_color = result;
 
-    result = Tracer::params.lt.lightImage[image_index];// light_trace
+    
 
     if (subframe_index > 0)
     {
@@ -1147,6 +1149,9 @@ extern "C" __global__ void __raygen__shift_combine()
     // Update results 
     ////   
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
+
+    //result += Tracer::params.lt.lightImage[image_index];// light_trace
+
     float3             accum_color = result;
 
     if (subframe_index > 0)
@@ -1205,16 +1210,20 @@ RT_FUNCTION int getPixelIndex(float3 dir, float3 U, float3 V, float3 W)
 
     int id_x = (int)(d.x * static_cast<float>(Tracer::params.width));
     int id_y = (int)(d.y * static_cast<float>(Tracer::params.height));
+    if (id_x < 0 || id_x >= Tracer::params.width || id_y < 0 || id_y >= Tracer::params.height)
+        return -1;// invalid
     int index = id_x + id_y * Tracer::params.width;
-    if (index >= 0 && index < Tracer::params.width * Tracer::params.height)
-        return index;
-    return -1;// invalid
+    return index;
+    //if (index >= 0 && index < Tracer::params.width * Tracer::params.height)
+    //    return index;
+    //return -1;// invalid
 }
 
-RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, float3 V, float3 W, unsigned int& putId, int bufferBias, bool vis)
+RT_FUNCTION void pushVertexToLightImage(BDPTVertex& light, BDPTVertex& eye, float3 U, float3 V, float3 W, unsigned int& putId, int bufferBias, bool vis)
 {
     const LightTraceParams& lt_params = Tracer::params.lt;
-    /* dir: eye--->v */
+    /* dir: eye--->light */
+    float3 dir = light.position - eye.position;
     int index = getPixelIndex(dir, U, V, W);
     if (index < 0 || !vis)
     {
@@ -1227,18 +1236,18 @@ RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, flo
         return;
     }
 
-    float G = abs(dot(v.normal, normalize(dir))) / dot(dir, dir);
+    float G = abs(dot(light.normal, normalize(dir))) / dot(dir, dir);
 
     float3 fv;
-    if (!v.isOrigin)
+    if (!light.isOrigin)
     {
-        MaterialData::Pbr mat_v = VERTEX_MAT(v);
-        float3 Lv = normalize(v.lastPosition - v.position);
-        fv = Tracer::Eval(mat_v, v.normal, -normalize(dir), Lv);
+        MaterialData::Pbr mat_v = VERTEX_MAT(light);
+        float3 Lv = normalize(light.lastPosition - light.position);
+        fv = Tracer::Eval(mat_v, light.normal, -normalize(dir), Lv);
     }
     else
     {
-        if (dot(v.normal, dir) > 0.0f)
+        if (dot(light.normal, dir) > 0.0f)
         {
             fv = make_float3(0.0f);
         }
@@ -1250,10 +1259,13 @@ RT_FUNCTION void pushVertexToLightImage(BDPTVertex& v, float3 dir, float3 U, flo
 
     dir = normalize(dir);
     dir = dot(W, W) * dir / dot(W, dir);
-    float factor = (Tracer::params.width / length(U) / 2) * (Tracer::params.height / length(V) / 2) * dot(dir, dir) / dot(normalize(dir), normalize(W));
+    float pixel_area = 1 / ((Tracer::params.width / length(U) / 2) * (Tracer::params.height / length(V) / 2));
+    float factor = 1 / pixel_area * dot(dir, dir) / dot(normalize(dir), normalize(W));
 
-    float3 res = v.flux / v.pdf * fv * G * factor;
-
+    float3 res = light.flux / light.pdf * fv * G * factor;
+     
+    if (!light.isOrigin)
+        res *= rmis::eye_hit(eye, light, 1 / pixel_area);;
     lt_params.lightBuffer[putId + bufferBias] = res;
     lt_params.lightIndex[putId + bufferBias] = index;
 }
@@ -1288,6 +1300,10 @@ extern "C" __global__ void __raygen__lightTrace()
         //lightVertexCount++;
     }
 
+    // bdptvertex for camera
+    BDPTVertex v_eye;
+    v_eye.position = Tracer::params.eye;
+
     while (true)
     {
         payload.clear();
@@ -1303,7 +1319,7 @@ extern "C" __global__ void __raygen__lightTrace()
         init_lightSubPath_from_lightSample(light_sample, payload.path);
         bool vis = Tracer::visibilityTest(Tracer::params.handle, payload.path.currentVertex().position, eye);
         /* 插入light trace贡献值 */
-        pushVertexToLightImage(payload.path.currentVertex(), payload.path.currentVertex().position - eye, U, V, W, lightVertexCount, bufferBias, vis);
+        pushVertexToLightImage(payload.path.currentVertex(), v_eye, U, V, W, lightVertexCount, bufferBias, vis);
         /* lightVertexCount 在经过这个函数后会加 1 */
         pushVertexToLVC(payload.path.currentVertex(), lightVertexCount, bufferBias); 
         CheckLightBufferState;
@@ -1334,7 +1350,7 @@ extern "C" __global__ void __raygen__lightTrace()
                     break;
                 bool vis = Tracer::visibilityTest(Tracer::params.handle, curVertex.position, eye);
                 /* 插入light trace贡献值 */
-                pushVertexToLightImage(curVertex, curVertex.position - eye, U, V, W, lightVertexCount, bufferBias, vis);
+                pushVertexToLightImage(curVertex, v_eye, U, V, W, lightVertexCount, bufferBias, vis);
                 /* lightVertexCount 在经过这个函数后会加 1 */
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
