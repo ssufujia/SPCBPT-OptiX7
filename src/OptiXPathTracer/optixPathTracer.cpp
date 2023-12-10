@@ -564,18 +564,21 @@ void lt_params_setup(const sutil::Scene& scene)
     float3* Light_image;
     int* pixel_id;
     float3* Light_buffer;
+    curandState* d_state;
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&LVC_ptr),   sizeof(BDPTVertex) * lt_params.get_element_count()));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&valid_ptr), sizeof(bool)       * lt_params.get_element_count())); 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&Light_image), sizeof(float3) * params.width * params.height));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&pixel_id), sizeof(int) * lt_params.get_element_count()));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&Light_buffer), sizeof(float3) * lt_params.get_element_count()));
-    
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_state), sizeof(curandState) * lt_params.get_element_count()));
+
     lt_params.ans = LVC_ptr;// BufferView<BDPTVertex>(LVC_ptr, lt_params.get_element_count());
     lt_params.validState = valid_ptr;// BufferView<bool>(valid_ptr, lt_params.get_element_count());
     lt_params.lightImage = Light_image;
     lt_params.lightBuffer = Light_buffer;
     lt_params.lightIndex = pixel_id;
+    lt_params.rand_state = d_state;
     //params.lt = lt_params; 
 }
 void setLightImage()

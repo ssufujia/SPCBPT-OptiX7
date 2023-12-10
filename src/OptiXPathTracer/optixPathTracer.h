@@ -106,6 +106,7 @@ const bool estimation_save = true;
 #include"decisionTree/classTree_common.h"
 #include"PG_common.h"
 #include"dropOutTracing_common.h"
+#include <curand_kernel.h>
 #include "tester.h"
 
 struct Subspace
@@ -128,6 +129,7 @@ struct LightTraceParams
     float3* lightImage;
     int* lightIndex;
     float3* lightBuffer;
+    curandState* rand_state;
 
     __host__ int get_element_count()
     {

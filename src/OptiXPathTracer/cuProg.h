@@ -38,6 +38,7 @@
 #include "BDPTVertex.h" 
 #include "decisionTree/classTree_device.h"
 #include "pathControl.h"
+#include <curand_kernel.h>
 #define SCENE_EPSILON 1e-3f
 
 
@@ -838,13 +839,33 @@ namespace Tracer {
                 pdf = SKY.pdf(direction);
                 pdf /= params.lights.count;
             }
-        }
+        }   
         RT_FUNCTION void operator()(const Light& light, unsigned int& seed)
         {
             if (light.type == Light::Type::QUAD)
             {
                 float r1 = rnd(seed);
                 float r2 = rnd(seed);
+                float r3 = 1 - r1 - r2;
+                ReverseSample(light, make_float2(r1, r2));
+            }
+            else if (light.type == Light::Type::ENV)
+            {
+                direction = SKY.sample(seed);
+                emission = SKY.color(direction);
+                subspaceId = SKY.getLabel(direction);
+                uv = dir2uv(direction);
+                pdf = SKY.pdf(direction);
+                pdf /= params.lights.count;
+            }
+            bindLight = &light;
+        }
+        RT_FUNCTION void operator()(const Light& light, curandState rn_seed, unsigned int& seed)
+        {
+            if (light.type == Light::Type::QUAD)
+            {
+                float r1 = curand_uniform(&rn_seed);
+                float r2 = curand_uniform(&rn_seed);
                 float r3 = 1 - r1 - r2;
                 ReverseSample(light, make_float2(r1, r2));
             }
@@ -892,6 +913,23 @@ namespace Tracer {
                 float r1 = rnd(seed);
                 float r2 = rnd(seed);
 
+                Onb onb(bindLight->quad.normal);
+                cosine_sample_hemisphere(r1, r2, direction);
+                onb.inverse_transform(direction);
+                dir_pdf = abs(dot(direction, bindLight->quad.normal)) / M_PIf;
+            }
+            else if (bindLight->type == Light::Type::ENV)
+            {
+                position = SKY.sample_projectPos(direction, seed);
+                dir_pos_pdf = SKY.projectPdf();
+            }
+        }
+        RT_FUNCTION void traceMode(curandState rn_seed, unsigned int& seed)
+        {
+            if (bindLight->type == Light::Type::QUAD)
+            {
+                float r1 = curand_uniform(&rn_seed);
+                float r2 = curand_uniform(&rn_seed);
                 Onb onb(bindLight->quad.normal);
                 cosine_sample_hemisphere(r1, r2, direction);
                 onb.inverse_transform(direction);

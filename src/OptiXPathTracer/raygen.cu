@@ -1276,6 +1276,8 @@ extern "C" __global__ void __raygen__lightTrace()
     const uint3  launch_dims = optixGetLaunchDimensions();
     const int    subframe_index = Tracer::params.lt.launch_frame;
     unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    curandState rn_seed = Tracer::params.lt.rand_state[launch_idx.y * launch_dims.x + launch_idx.x];
+    curand_init(seed, launch_idx.y * launch_dims.x + launch_idx.x, 0, &rn_seed);
 
     const float3 eye = Tracer::params.eye;
     const float3 U = Tracer::params.U;
@@ -1313,7 +1315,7 @@ extern "C" __global__ void __raygen__lightTrace()
         Tracer::lightSample light_sample; 
         light_sample(light, seed); 
 
-        light_sample.traceMode(seed);
+        light_sample.traceMode(rn_seed, seed);
         float3 ray_direction = light_sample.trace_direction();
         float3 ray_origin = light_sample.position; 
         init_lightSubPath_from_lightSample(light_sample, payload.path);
