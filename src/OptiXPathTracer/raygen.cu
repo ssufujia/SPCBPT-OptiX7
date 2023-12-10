@@ -1265,7 +1265,7 @@ RT_FUNCTION void pushVertexToLightImage(BDPTVertex& light, BDPTVertex& eye, floa
     float3 res = light.flux / light.pdf * fv * G * factor;
      
     if (!light.isOrigin)
-        res *= rmis::eye_hit(eye, light, 1 / pixel_area);;
+        res *= rmis::eye_hit(eye, light, 1 / pixel_area);
     lt_params.lightBuffer[putId + bufferBias] = res;
     lt_params.lightIndex[putId + bufferBias] = index;
 }

@@ -599,16 +599,17 @@ void setLightImage()
         if (!valid[i])
             continue;
         int id = index[i];
-        if (id > 0)
+        if (id >= 0)
         {
-            light_image[id] += light_buffer[i];
+            float intensity = light_buffer[i].x + light_buffer[i].y + light_buffer[i].z;
+            if(!isnan(intensity) && isfinite(intensity))
+                light_image[id] += light_buffer[i];
         }
     }
     for (int i = 0; i < params.width * params.height; i++)
         light_image[i] /= params.lt.M;
 
     cudaMemcpy(params.lt.lightImage, light_image, params.width * params.height * sizeof(float3), cudaMemcpyHostToDevice);
-
     delete[] valid;
     delete[] light_buffer;
     delete[] index;
@@ -1440,7 +1441,7 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 #endif      
 
-        scenePath = string(SAMPLES_DIR) + string("/data/showcase/showcase.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/showcase/showcase.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
@@ -1455,7 +1456,7 @@ int main( int argc, char* argv[] )
 
         // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/water/simple_n.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_mirror_emitter.scene");
@@ -1465,7 +1466,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
