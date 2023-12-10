@@ -16,8 +16,11 @@ namespace dropOut_tracing
     const int max_u = 3;
     const unsigned pixel_unit_size = 10;
 
-    const bool MIS_COMBINATION = false;
-    const bool debug_PT_ONLY = false;
+    const bool MIS_COMBINATION = true;
+    const bool DEBUG_PT_ONLY = false;
+    const bool DEBUG_SPC_ONLY = false;
+    const bool DEBUG_SMIS_ONLY = false;
+
     const bool PG_reciprocal_estimation_enable = false;
 
     const bool multi_bounce_disable = false; // if true, u must be 1

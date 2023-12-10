@@ -540,8 +540,7 @@ extern "C" __global__ void __closesthit__radiance()
     float3 result = make_float3(0.0f);
 
     float rr_rate = Tracer::rrRate(currentPbr);
-    prd->glossy_bounce = Shift::glossy(currentPbr) ? prd->glossy_bounce : false;
-
+    prd->glossy_bounce = Shift::glossy(currentPbr) ? true  : false;
 
     /*  prd->path_record 用二进制按LSB到MSB的顺序编码了当前路径，0 代表 D, 1 代表 S */
     /* 比如 path_record 为 0010，depth 为 4，说明当前路径为 D - D - S - D - E */

@@ -114,7 +114,7 @@ struct PayloadRadiance
         throughput = make_float3(1.0);
         depth = 0;
         done = false;
-        glossy_bounce = true;
+        glossy_bounce = false;
         path_record = 0;
     }
 };

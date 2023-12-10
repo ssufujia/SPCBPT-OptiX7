@@ -1763,7 +1763,7 @@ namespace Tracer
             eye_pdf[i] = eye_pdf[i - 1] * Tracer::Pdf(mat, lastVertex.normal, in_dir, out_dir, lastVertex.position, true)
                 / dot(diff,diff) * abs(dot(out_dir,midVertex.normal)) * rr_rate;
         }
-        for (int i = path_size - 2; i >= 2; i--)
+        for (int i = path_size - 2; i > 1; i--)
         {
             const BDPTVertex& midVertex = path[i];
             const BDPTVertex& lastVertex = path[i + 1];
@@ -1781,7 +1781,7 @@ namespace Tracer
                 light_contri[i] = light_contri[i + 1] * G * f;
             }
         }
-        for (int i = 2; i <= path_size - 2; i++)
+        for (int i = 2; i < path_size - 1; i++)
         {
             //if (Shift::glossy(path[i]) || Shift::glossy(path[i - 1]))
             //    continue;
@@ -3328,13 +3328,13 @@ namespace Shift
     }
     RT_FUNCTION bool valid_specular(BDPTVertex& CP, BDPTVertex& SP, int u, float3 WC)
     {
-        if (dropOut_tracing::CP_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX)return false;
-        if (dropOut_tracing::multi_bounce_disable && u != 1)return false;
-        if (dropOut_tracing::CP_lightsource_only && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth != 0)return false;
-        if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0)return false;
+        if (dropOut_tracing::CP_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX) return false;
+        if (dropOut_tracing::multi_bounce_disable && u != 1) return false;
+        if (dropOut_tracing::CP_lightsource_only && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth != 0) return false;
+        if (dropOut_tracing::CP_lightsource_disable && CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && CP.depth == 0) return false;
         if (dropOut_tracing::CP_require && CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX) return false;
-        if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP))return false;
-        if (u > dropOut_tracing::max_u)return false; 
+        if (CP.type != BDPTVertex::Type::DROPOUT_NOVERTEX && Shift::glossy(CP)) return false;
+        if (u > dropOut_tracing::max_u) return false; 
         return true;
     }
     RT_FUNCTION bool pathRecord_is_causticEyesubpath(long long record, int depth)

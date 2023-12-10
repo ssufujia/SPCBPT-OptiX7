@@ -132,7 +132,6 @@ RT_FUNCTION uchar4 get_error_heat(float4 ref, float3 current)
 
 extern "C" __global__ void __raygen__pinhole()
 {
-
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const float3 eye = Tracer::params.eye;
@@ -156,6 +155,7 @@ extern "C" __global__ void __raygen__pinhole()
 
     float3 ray_direction = normalize( d.x * U + d.y * V + W );
     float3 ray_origin    = eye;
+    bool glossy = false;
 
     /* Trace camera ray */
 
@@ -175,6 +175,7 @@ extern "C" __global__ void __raygen__pinhole()
         );
 
         payload.depth += 1;
+        if (payload.glossy_bounce) glossy = true;
 
         if (float3weight(payload.currentResult) > 0.0 && (payload.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
         {
@@ -187,8 +188,11 @@ extern "C" __global__ void __raygen__pinhole()
         if (payload.done || (payload.depth + 1 >= MAX_PATH_LENGTH_FOR_MIS && LIMIT_PATH_TERMINATE)) {
             break;
         }
-        
     }
+
+    /* This is a wrong implementation of the "caustic_path_only" condition */
+    //if (Tracer::params.caustic_path_only && !glossy)
+    //    payload.result = make_float3(0);
 
     /* Update results */
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
@@ -371,6 +375,11 @@ extern "C" __global__ void __raygen__SPCBPT()
         if (payload.path.hit_lightSource())
         {
             float3 res = lightStraghtHit(payload.path.currentVertex());
+            
+            /* This is a wrong implementation of the "caustic_path_only" condition */
+            //if (Tracer::params.caustic_path_only && !payload.path_record)
+            //    res = make_float3(0);
+
             if (payload.depth < MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE)
                 result += res;
             break;
@@ -380,7 +389,6 @@ extern "C" __global__ void __raygen__SPCBPT()
 
         for (int it = 0; it < CONNECTION_N; it++)
         {
-
             int light_id = 0;
             float pmf_firstStage = 1;
             if (Tracer::params.subspace_info.light_tree)
@@ -401,6 +409,11 @@ extern "C" __global__ void __raygen__SPCBPT()
                 //printf("debug info %f\n", float3weight(tmp_float3));
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 float3 res = connectVertex_SPCBPT(eye_subpath, light_subpath) / pmf;
+
+                /* This is a wrong implementation of the "caustic_path_only" condition */
+                //if (Tracer::params.caustic_path_only && !eye_subpath.path_record && !light_subpath.path_record)
+                ///    res = make_float3(0);
+
                 if (!ISINVALIDVALUE(res) &&
                     (eye_subpath.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
                 {
@@ -437,8 +450,7 @@ extern "C" __global__ void __raygen__SPCBPT()
     }
 }
 
-RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path, int path_size)
-{
+RT_FUNCTION float dropOutTracing_MISWeight_non_normalize_old(const BDPTVertex* path, int path_size, const BDPTVertex* strategies[], int MMIS_N) {
     int specular_index = -1;
     int surface_index = -1;
     int u = 1;
@@ -452,7 +464,7 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
     }
     if (specular_index == -1)
     {
-        printf("Error: non-caustic path is cast to the drop out tracing computation\n"); 
+        printf("Error: non-caustic path is cast to the drop out tracing computation\n");
         return 0;
     }
     for (int i = specular_index + 1; i < path_size - 1; i++)
@@ -466,12 +478,144 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
         {
             u += 1;
         }
-    } 
+    }
     DropOutTracing_params& dot_params = Tracer::params.dot_params;
     int specular_subspace = dot_params.get_specular_label(path[specular_index].position, path[specular_index].normal);
-    int surface_subspace = surface_index  == -1? DOT_EMPTY_SURFACEID: 
-        dot_params.get_surface_label(path[surface_index].position, path[surface_index].normal, 
-        normalize( path[surface_index+1].position - path[surface_index].position));
+    int surface_subspace = surface_index == -1 ? DOT_EMPTY_SURFACEID :
+        dot_params.get_surface_label(path[surface_index].position, path[surface_index].normal,
+            normalize(path[surface_index + 1].position - path[surface_index].position));
+
+    float pdf = 1;
+    int eye_subpath_end_index = surface_index == -1 ? path_size : surface_index;
+    int h_star = surface_index;
+
+    // Eye sub-path Pdf Computation
+    // Retracing pdf is also computed
+    {
+        for (int i = 1; i < eye_subpath_end_index; i++)
+        {
+            if (i == specular_index) continue;
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            float3 line = midPoint.position - lastPoint.position;
+            float3 lineDirection = normalize(line);
+            pdf *= 1.0f / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+        }
+        for (int i = 1; i < eye_subpath_end_index - 1; i++)
+        {
+            if (i == specular_index - 1) continue;
+            const BDPTVertex& midPoint = path[i];
+            const BDPTVertex& lastPoint = path[i - 1];
+            const BDPTVertex& nextPoint = path[i + 1];
+            float3 lastDirection = normalize(lastPoint.position - midPoint.position);
+            float3 nextDirection = normalize(nextPoint.position - midPoint.position);
+
+            MaterialData::Pbr mat = VERTEX_MAT(midPoint);
+            float rr_rate = i >= specular_index ? 1 : Tracer::rrRate(mat);
+            pdf *= i >= specular_index ?
+                Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate :
+                Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position, true) * rr_rate;
+        }
+    }
+    // Light sub-path Pdf Computation
+    {
+        int lightPathLength = path_size - eye_subpath_end_index;
+
+        if (lightPathLength > 0)
+        {
+            const BDPTVertex& light = path[path_size - 1];
+
+            pdf *= light.pdf;
+        }
+        if (lightPathLength > 1)
+        {
+            const BDPTVertex& light = path[path_size - 1];
+            const BDPTVertex& lastMidPoint = path[path_size - 2];
+            float3 lightLine = lastMidPoint.position - light.position;
+            float3 lightDirection = normalize(lightLine);
+            pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
+
+            for (int i = 1; i < lightPathLength; i++)
+            {
+                const BDPTVertex& midPoint = path[path_size - i - 1];
+                const BDPTVertex& lastPoint = path[path_size - i];
+                float3 line = midPoint.position - lastPoint.position;
+                float3 lineDirection = normalize(line);
+                pdf *= 1.0 / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
+            }
+
+            for (int i = 1; i < lightPathLength - 1; i++)
+            {
+                const BDPTVertex& midPoint = path[path_size - i - 1];
+                const BDPTVertex& lastPoint = path[path_size - i];
+                const BDPTVertex& nextPoint = path[path_size - i - 2];
+                float3 lastDirection = normalize(lastPoint.position - midPoint.position);
+                float3 nextDirection = normalize(nextPoint.position - midPoint.position);
+
+                MaterialData::Pbr mat = VERTEX_MAT(midPoint);
+                float rr_rate = Tracer::rrRate(mat);
+                pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
+            }
+        }
+    }
+    float dropOutTracingPdf = 0;
+    if (dot_params.statistics_iteration_count != 0)
+    {
+        dropOut_tracing::statistics_data_struct& dot_statistic_data =
+            dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace);
+        dropOutTracingPdf = 1.0 / dot_statistic_data.average;
+        if (DOT_LESS_MIS_WEIGHT)
+        {
+            float dropOutTracingPdf2 = dot_statistic_data.average / dot_statistic_data.variance;
+            dropOutTracingPdf = dropOutTracingPdf2 * 2 < dropOutTracingPdf ? dropOutTracingPdf / 2 : dropOutTracingPdf;
+        }
+    }
+
+    if (isinf(dropOutTracingPdf) || isnan(dropOutTracingPdf) || (dropOutTracingPdf < 0)) dropOutTracingPdf = 0.0;
+
+    //printf("%f %f %f\n", pdf, dropOutTracingPdf, dot_params.selection_ratio(dropOut_tracing::pathLengthToDropOutType(u), specular_index, surface_index));
+
+    labelUnit lu(path[specular_index - 1].position, path[specular_index - 1].normal, normalize(path[specular_index - 2].position - path[specular_index - 1].position), false);
+    int eye_subspace_id = lu.getLabel();
+    int specular_subspace_id = dot_params.get_specular_label(path[specular_index].position, path[specular_index].normal);
+    return pdf * dropOutTracingPdf * dot_params.selection_ratio(eye_subspace_id, specular_subspace_id);
+}
+
+RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path, int path_size, const BDPTVertex* strategies[], int MMIS_N) {
+    int specular_index = -1;
+    int surface_index = -1;
+    int u = 1;
+    for (int i = path_size - 2; i > 0; --i)
+    {
+        if (!Shift::glossy(path[i])) {
+            break;
+        }
+        /* Only detect LS & LSS */
+        /* i>0 so i-1 is safe here */
+        if (Shift::glossy(path[i]) && !Shift::glossy(path[i-1])) {
+            specular_index = i;
+            break;
+        }
+    }
+
+    if (specular_index == -1)
+	{
+		printf("Error: non-caustic path is cast to the drop out tracing computation\n");
+		return 0;
+	}
+
+    for (int i = specular_index + 1; i < path_size - 1; i++)
+    {
+        if (!Shift::glossy(path[i]))
+        {
+            surface_index = i + 1;
+            break;
+        }
+        else
+        {
+            u += 1;
+        }
+    } 
     
     float pdf = 1;
     int eye_subpath_end_index = surface_index == -1 ? path_size: surface_index;
@@ -505,79 +649,40 @@ RT_FUNCTION float dropOutTracing_MISWeight_non_normalize(const BDPTVertex* path,
                 Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position, true) * rr_rate;
         }
     }
-    // Light sub-path Pdf Computation
-    {
-        int lightPathLength = path_size - eye_subpath_end_index;
 
-        if (lightPathLength > 0)
-        {
-            const BDPTVertex& light = path[path_size - 1];
-
-            pdf *= light.pdf;
-        }
-        if (lightPathLength > 1)
-        {
-            const BDPTVertex& light = path[path_size - 1];
-            const BDPTVertex& lastMidPoint = path[path_size - 2];
-            float3 lightLine = lastMidPoint.position - light.position;
-            float3 lightDirection = normalize(lightLine);
-            pdf *= abs(dot(lightDirection, light.normal)) / M_PI;
-             
-            for (int i = 1; i < lightPathLength; i++)
-            {
-                const BDPTVertex& midPoint = path[path_size - i - 1];
-                const BDPTVertex& lastPoint = path[path_size - i];
-                float3 line = midPoint.position - lastPoint.position;
-                float3 lineDirection = normalize(line);
-                pdf *= 1.0 / dot(line, line) * abs(dot(midPoint.normal, lineDirection));
-            }
-
-            for (int i = 1; i < lightPathLength - 1; i++)
-            {
-                const BDPTVertex& midPoint = path[path_size - i - 1];
-                const BDPTVertex& lastPoint = path[path_size - i];
-                const BDPTVertex& nextPoint = path[path_size - i - 2];
-                float3 lastDirection = normalize(lastPoint.position - midPoint.position);
-                float3 nextDirection = normalize(nextPoint.position - midPoint.position);
-
-                MaterialData::Pbr mat = VERTEX_MAT(midPoint);
-                float rr_rate = Tracer::rrRate(mat);
-                pdf *= Tracer::Pdf(mat, midPoint.normal, lastDirection, nextDirection, midPoint.position) * rr_rate;
-            } 
-        }
-    }
     float dropOutTracingPdf = 0;
-    if (dot_params.statistics_iteration_count != 0)
-    {
-        dropOut_tracing::statistics_data_struct& dot_statistic_data =
-            dot_params.get_statistic_data(dropOut_tracing::pathLengthToDropOutType(u), specular_subspace, surface_subspace);
-        dropOutTracingPdf = 1.0 / dot_statistic_data.average;
-        if (DOT_LESS_MIS_WEIGHT)
-        {
-            float dropOutTracingPdf2 = dot_statistic_data.average / dot_statistic_data.variance;
-            dropOutTracingPdf = dropOutTracingPdf2 * 2 < dropOutTracingPdf ? dropOutTracingPdf / 2 : dropOutTracingPdf;
+
+    float samplePdf;
+    for (int i = 0; i < MMIS_N; ++i) {
+        if (strategies[i] == nullptr) {
+            printf("case 1\n");
+            samplePdf = 0;
         }
+        //else if (strategies[j]->depth != u - 1) {
+        //    //printf("case 3\n");
+        //    samplePdf[j] = 0;
+        //}
+        else {
+            const BDPTVertex& lastVertex = *strategies[i];
+            samplePdf = Shift::tracingPdf(lastVertex, path[specular_index], normalize(lastVertex.lastPosition - lastVertex.position), true);
+        }
+        dropOutTracingPdf += samplePdf;
     }
      
     if (isinf(dropOutTracingPdf) || isnan(dropOutTracingPdf) || (dropOutTracingPdf < 0)) dropOutTracingPdf = 0.0;
 
-    //printf("%f %f %f\n", pdf, dropOutTracingPdf, dot_params.selection_ratio(dropOut_tracing::pathLengthToDropOutType(u), specular_index, surface_index));
-
-    labelUnit lu(path[specular_index - 1].position, path[specular_index - 1].normal, normalize(path[specular_index - 2].position - path[specular_index - 1].position), false);
-    int eye_subspace_id = lu.getLabel();
-    int specular_subspace_id = dot_params.get_specular_label(path[specular_index].position, path[specular_index].normal);
-    return pdf * dropOutTracingPdf * dot_params.selection_ratio(eye_subspace_id, specular_subspace_id);
+    return pdf * dropOutTracingPdf;
 }
 
-RT_FUNCTION float dropOutTracing_MISWeight(const BDPTVertex* path, int path_size)
+RT_FUNCTION float dropOutTracing_MISWeight(const BDPTVertex* path, int path_size, const BDPTVertex* strategies[], int MMIS_N)
 {
-    if (dropOut_tracing::debug_PT_ONLY) return 0;
     if (!dropOut_tracing::MIS_COMBINATION) return 1;
 
     float SPCBPT_pdf = Tracer::SPCBPT_MIS_sum_compute(path, path_size);
     float other_pdf = SPCBPT_pdf;
-    float MIS_weight_not_normalize = dropOutTracing_MISWeight_non_normalize(path, path_size);
+    float MIS_weight_not_normalize = dropOutTracing_MISWeight_non_normalize(path, path_size, strategies, MMIS_N);
     float MIS_weight_denominator = other_pdf + MIS_weight_not_normalize; 
+
     return MIS_weight_not_normalize / MIS_weight_denominator; 
 } 
 
@@ -639,7 +744,7 @@ extern "C" __global__ void __raygen__DropoutTracing()
     for (int i = 0; i < MMIS_N; ++i) {
         pmf[i] = 1;
 
-        //light_subpath_index[i] = LVC_sampler->uniformSampleGlossy(seed, pmf[i]);
+        //lightSubpathIndex[i] = LVC_sampler->uniformSampleGlossy(seed, pmf[i]);
         //pmf[i] *= Tracer::params.sampler.path_count;
 
         lightSubpathIndex[i] = LVC_sampler->uniformSampleByPath(seed, Tracer::params.lt.pathIndex);
@@ -709,15 +814,14 @@ extern "C" __global__ void __raygen__DropoutTracing()
     float3 WC;
 
     /* Main loop for eye subpath tracing */
-    while (true)
-    {
+    while (true) {
         ray_direction = payload.ray_direction;
         ray_origin = payload.origin;
         if (payload.done || payload.depth > 50)
             break;
         int begin_depth = payload.path.size;
 
-        /* Trace a tay */
+        /* Trace a ray */
         Tracer::traceEyeSubPath(
             Tracer::params.handle, ray_origin, ray_direction,
             SCENE_EPSILON,  // tmin
@@ -745,49 +849,37 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
         /* Hit light source, treat as PT */
         float3 res = make_float3(0.0);
-        if (payload.path.hit_lightSource())
-        {
-            if (dropOut_tracing::debug_PT_ONLY)
-            {
-                Tracer::lightSample light_sample;
-                light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
+        if (payload.path.hit_lightSource()) {
 
-                BDPTVertex light_vertex;
-                init_vertex_from_lightSample(light_sample, light_vertex);
-                pathBuffer[buffer_size - 1] = light_vertex;
-                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
-                {
-                    float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
-                    float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
-                    res = contri / pdf * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
-                }
+            Tracer::lightSample light_sample;
+            light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
+            BDPTVertex light_vertex;
+            init_vertex_from_lightSample(light_sample, light_vertex);
+            pathBuffer[buffer_size - 1] = light_vertex;
+
+            /*if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
+            {
+                float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
+                float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
+                res = contri / pdf ;
+            }*/
+            
+            if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) &&
+                Shift::valid_specular(CP, SP, u, WC) && !Tracer::params.spcbpt_pure)
+            {
+                res = lightStraghtHit(payload.path.currentVertex()) * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size, strategies, MMIS_N));
             }
-            else
+            else if (!Tracer::params.caustic_path_only)
             {
-                Tracer::lightSample light_sample;
-                light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
-
-                BDPTVertex light_vertex;
-                init_vertex_from_lightSample(light_sample, light_vertex);
-                pathBuffer[buffer_size - 1] = light_vertex;
-
-                if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC) && !Tracer::params.spcbpt_pure)
-                {
-                    //float pdf = Tracer::pdfCompute(pathBuffer, buffer_size, buffer_size);
-                    //float3 contri = Tracer::contriCompute(pathBuffer, buffer_size);
-                    //res = contri / pdf * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
-                    res = lightStraghtHit(payload.path.currentVertex()) * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size));
-                    //if (Tracer::params.caustic_path_only) res = make_float3(float3weight(res), 0, float3weight(res));
-                }
-                else if (!Tracer::params.caustic_path_only)
-                {
-                    res = lightStraghtHit(payload.path.currentVertex());
-                }
+                res = lightStraghtHit(payload.path.currentVertex());
             }
-            if (ISINVALIDVALUE(res))
-            {
+            
+            if (dropOut_tracing::DEBUG_SPC_ONLY || dropOut_tracing::DEBUG_SMIS_ONLY)
                 res = make_float3(0.0f);
-            }
+
+            if (ISINVALIDVALUE(res))
+                res = make_float3(0.0f);
+
             result += res;
             break;
         }
@@ -799,7 +891,7 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
         for (int it = 0; it < CONNECTION_N; it++)
         {
-            if (dropOut_tracing::debug_PT_ONLY) continue;
+            if (dropOut_tracing::DEBUG_PT_ONLY || dropOut_tracing::DEBUG_SMIS_ONLY) break;
             /* 暂时取消LSDE这样的光路筛选方式，改用dropoutTracing_common.h里根据四参数的形式来决定是否连接的方式，仅要求视子路为diffuse */
 
             dropOut_tracing::pixelRecord& pixel_record =
@@ -841,7 +933,9 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
                     if (Shift::getCausticPathInfo(pathBuffer, path_size, SP, CP, u, WC) && Shift::valid_specular(CP, SP, u, WC))
                     {
-                        res *= (1 - dropOutTracing_MISWeight(pathBuffer, path_size));
+                        float tmp = dropOutTracing_MISWeight(pathBuffer, path_size, strategies, MMIS_N);
+                        //printf("%f\n", tmp);
+                        res *= 1 - tmp;
                         caustic_flag = true;
                     }
                 }
@@ -864,10 +958,11 @@ extern "C" __global__ void __raygen__DropoutTracing()
             }
         }
 
-
         const int num_specular_conn =  dropOut_tracing::specular_connection_N;
         for (int it = 0; it < num_specular_conn; it++)
         {
+            if (dropOut_tracing::DEBUG_PT_ONLY)   break;
+            if (dropOut_tracing::DEBUG_SPC_ONLY) break;
             if (!Shift::pathRecord_is_causticEyesubpath(payload.path_record, payload.depth)) break;
             if (Tracer::params.spcbpt_pure) break;
 
@@ -933,7 +1028,7 @@ extern "C" __global__ void __raygen__DropoutTracing()
 
                 /* ------------------------------------------------------------------------------ */
 
-                float tmp = dropOutTracing_MISWeight(pathBuffer, path_size);
+                float tmp = dropOutTracing_MISWeight(pathBuffer, path_size, strategies, MMIS_N);
                 //printf("%f\n", tmp);
                 res *= tmp;
 
@@ -1139,69 +1234,6 @@ extern "C" __global__ void __raygen__lightTrace()
                 pushVertexToLVC(curVertex, lightVertexCount, bufferBias); 
                 CheckLightBufferState;
                  
-                /* If we hit a glossy surface */
-                if (!Tracer::params.spcbpt_pure && Shift::glossy(curVertex) && curVertex.depth < SHIFT_VALID_SIZE)
-                {
-                    BDPTVertex& glossy_vertex = Tracer::params.lt.ans[lightVertexCount + bufferBias - 1];
-                    Shift::PathContainer light_subpath(&(glossy_vertex), -1, curVertex.depth + 1);
-                     
-                    // @param CP: BDPTVertex, control point
-                    // @param SP: BDPTVertex, specular point
-                    // @param WC: float3, control direction
-                    // @param u: integer, step size
-                    // @param statistic_prd: statistic_payload, interface for using statistic information
-                    BDPTVertex CP,SP; 
-                    float3 WC;
-                    int u;
-                    //if CP=NO Vertex, CP.pdf = 1 is set at get_imcomplete_subpath_info
-                    u = Shift::get_imcomplete_subpath_info(light_subpath, SP, CP, WC); 
-
-                    if (Shift::valid_specular(CP, SP, u, WC) && dropOut_tracing::debug_PT_ONLY == false)
-                    {
-                        statistic_payload statistic_prd;
-                        statistic_prd.build(curVertex, CP, WC, u);
-                        statistic_prd.putId = &DOT_record_count;
-                        statistic_prd.bufferBias = DOT_buffer_bias;
-                        float3 tempV;
-                        if (statistic_prd.data.valid == false)
-                            statistic_prd.data.bound = 1;
-                        if (statistic_prd.data.bound > dropOut_tracing::max_bound&&statistic_prd.type!=dropOut_tracing::DropOutType::LS)
-                            statistic_prd.data.bound = dropOut_tracing::max_bound;
-
-                        if (false&&statistic_prd.type == dropOut_tracing::pathLengthToDropOutType(1))
-                        { 
-                            statistic_prd.data.bound = Shift::getClosestGeometry_upperBound(Tracer::params.lights[0], SP.position, SP.normal, tempV);
-                        }
-
-                        if (statistic_prd.subspace_valid())
-                        {
-                            float pdf_inverse = 0;
-                            glossy_vertex.inverPdfEst = 0;
-                            
-                            /*
-                            for (int it = 0; it < dropOut_tracing::reciprocal_iteration; it++)
-                            {
-                                float t = 1.0 / (1 + it);
-                                float recip = Shift::reciprocal_estimation(payload.seed, CP, SP, WC, u, statistic_prd);
-                                pdf_inverse = pdf_inverse * (1 - t) + recip * t;
-                            }                                                        
-                            if (isnan(pdf_inverse) || isinf(pdf_inverse) || pdf_inverse < 0)glossy_vertex.inverPdfEst = 0;
-                            else glossy_vertex.inverPdfEst = pdf_inverse;
-                            */
-
-                            /* Average Record Create */
-                            DOT_record dot_record = statistic_prd.generate_record(DOT_usage::Average);
-                            dot_record = pdf_inverse;
-                            DOT_pushRecordToBuffer(dot_record, DOT_record_count, DOT_buffer_bias);
-                            /* Average Record Finish */
-                        }
-                        else
-                        {
-                            glossy_vertex.inverPdfEst = 0;
-                        } 
-                        glossy_vertex.set_specular_id(statistic_prd.SP_label);
-                    }
-                }
             }
             else {
                 curVertex.rrPdf = -114514;
