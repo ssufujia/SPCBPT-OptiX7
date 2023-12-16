@@ -1744,12 +1744,17 @@ namespace Tracer
     }
     RT_FUNCTION float SPCBPT_MIS_sum_compute(const BDPTVertex* path, int path_size)
     {
+
+        if (path_size > MAX_PATH_LENGTH_FOR_MIS)
+			return 0;
+
         float eye_pdf[MAX_PATH_LENGTH_FOR_MIS];
         float3 light_contri[MAX_PATH_LENGTH_FOR_MIS];
         light_contri[path_size - 1] = path[path_size - 1].flux;
         eye_pdf[0] = 1;
         eye_pdf[1] = path[1].pdf;
         float pdf_sum = 0;
+
         for (int i = 2; i < path_size; i++)
         {
             const BDPTVertex& midVertex = path[i];
@@ -1763,24 +1768,30 @@ namespace Tracer
             eye_pdf[i] = eye_pdf[i - 1] * Tracer::Pdf(mat, lastVertex.normal, in_dir, out_dir, lastVertex.position, true)
                 / dot(diff,diff) * abs(dot(out_dir,midVertex.normal)) * rr_rate;
         }
-        for (int i = path_size - 2; i > 1; i--)
+
+
+        for (int i = path_size - 2; i > 0; i--)
         {
             const BDPTVertex& midVertex = path[i];
             const BDPTVertex& lastVertex = path[i + 1];
-            float3 LL_pos = path[i + 2].position;
-              
+            
             float3 diff = midVertex.position - lastVertex.position;
-            float3 in_dir = normalize(LL_pos - lastVertex.position);
             float3 out_dir = normalize(diff);
             float G = abs(dot(out_dir, midVertex.normal)) * abs(dot(out_dir, lastVertex.normal)) / dot(diff, diff);
-            if (i == path_size - 2)light_contri[i] = light_contri[i + 1] * G * M_1_PI;
-            else
-            {
+            if (i == path_size - 2) {
+                light_contri[i] = light_contri[i + 1] * G * M_1_PI;
+            }
+            else {
+                /* i <= path_size -3 */
+                float3 LL_pos = path[i + 2].position;
+                float3 in_dir = normalize(LL_pos - lastVertex.position);
                 MaterialData::Pbr mat = VERTEX_MAT(lastVertex);
                 float3 f = Tracer::Eval(mat, lastVertex.normal, in_dir, out_dir);
                 light_contri[i] = light_contri[i + 1] * G * f;
             }
         }
+        
+
         for (int i = 2; i < path_size - 1; i++)
         {
             //if (Shift::glossy(path[i]) || Shift::glossy(path[i - 1]))
@@ -1788,15 +1799,16 @@ namespace Tracer
             labelUnit eye_label_unit(path[i].position, path[i].normal, normalize(path[i - 1].position - path[i].position), false);
             int eye_label = eye_label_unit.getLabel(); 
 
-            labelUnit light_label_unit(path[i + 1].position, path[i + 1].normal, normalize(path[i + 2].position - path[i + 1].position), false);
-            int light_label = i == path_size - 2 ? path[path_size - 1].subspaceId : light_label_unit.getLabel();
+            /* If light vertex in on light source, incident is not needed */
+            float3 incident = path[i + 1].position;
+            if (i < path_size - 2)
+                incident = path[i + 2].position - path[i + 1].position;
+
+            labelUnit light_label_unit(path[i + 1].position, path[i + 1].normal, normalize(incident), false);
+            int light_label = ( i == path_size - 2 ? path[path_size - 1].subspaceId : light_label_unit.getLabel() );
+            
             pdf_sum += eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1]));
-            //if (eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1])) < 0)
-            //{
-            //    printf("zero minus%d %d %f %f %f \n", i, path_size - i - 1, eye_pdf[i] * connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1])),
-            //        eye_pdf[i], connectRate_SOL(eye_label, light_label, float3weight(light_contri[i + 1]))
-            //    );
-            //}
+
         }
         pdf_sum += eye_pdf[path_size - 1];
         return pdf_sum;

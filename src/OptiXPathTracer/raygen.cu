@@ -867,7 +867,9 @@ extern "C" __global__ void __raygen__DropoutTracing()
             if (Shift::getCausticPathInfo(pathBuffer, buffer_size, SP, CP, u, WC) &&
                 Shift::valid_specular(CP, SP, u, WC) && !Tracer::params.spcbpt_pure)
             {
-                res = lightStraghtHit(payload.path.currentVertex()) * (1 - dropOutTracing_MISWeight(pathBuffer, buffer_size, strategies, MMIS_N));
+                float tmp = dropOutTracing_MISWeight(pathBuffer, buffer_size, strategies, MMIS_N);
+                //printf("%f\n", 1-tmp);
+                res = lightStraghtHit(payload.path.currentVertex()) * (1 - tmp);
             }
             else if (!Tracer::params.caustic_path_only)
             {
