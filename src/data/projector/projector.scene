@@ -1,0 +1,49 @@
+
+cameraSetting
+{
+	up      0.000000 1.000000 0.000000
+	eye     1.888024 0.870315 2.298156
+	lookat  1.883880 0.855320 2.199373
+    geo_normal 1
+    fov 65
+} 
+
+material White
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+}
+material Water
+{
+   color 1 1 1
+   trans 1
+   
+   eta 1.3
+   roughness 0.001
+ 
+}
+
+mesh
+{
+    file projector\geometry\wall.obj
+    material White
+}
+
+mesh
+{
+    file projector\geometry\lens.obj
+    material Water
+}
+
+ 
+
+light
+{
+	position 1.504467 0.841246 1.620410
+	v2 1.504467 0.776432 1.620410
+	v1 1.627073 0.841246 1.620410
+	emission 80000 80000 80000   
+	albedoTex projector/textures/SIGGRAPH-Asia-2023.png
+	type Quad
+}
+ 

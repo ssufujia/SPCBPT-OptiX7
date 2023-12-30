@@ -4,6 +4,7 @@
 #include"stb_image.h"
 #include<direct.h>
 #include<map>
+
 sutil::Aabb get_aabb(std::vector<float3> v)
 {
 
@@ -29,9 +30,9 @@ sutil::Aabb get_aabb(std::vector<float> v)
 } 
 static std::map<int, int> materialID_remap;
 static std::map<int, int> lightsourceID_remap;
+static std::map<int, int> sampler_remap;
 void Material_shift(Scene& Src, sutil::Scene& Dst)
 {
-    std::map<int, int> sampler_remap;
     for (int i = 0; i < Src.texture_map.size(); i++)
     {
 
@@ -43,7 +44,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
 
         if (!pixels)
         {
-            std::cout << "error image loading" << std::endl;
+            std::cout << "error image loading" << name<< std::endl;
         }
         auto data_p = reinterpret_cast<uint32_t*>(pixels);
 
@@ -72,20 +73,37 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         mtl.pbr.base_color = make_float4(p.color,1.0);
         mtl.pbr.metallic = p.metallic;
         mtl.pbr.roughness = p.roughness;
-        mtl.pbr.brdf = p.brdf;
+        mtl.pbr.trans = p.trans;
+        mtl.pbr.eta = p.eta;
+        mtl.pbr.brdf = p.brdf; 
         if (p.albedoID != 0)
         {
-            mtl.pbr.base_color_tex.tex = sampler_remap[p.albedoID];
-            mtl.pbr.base_color_tex.texcoord = 0; 
+            if (mtl.pbr.brdf == false)
+            { 
+                mtl.pbr.base_color_tex.tex = sampler_remap[p.albedoID];
+                mtl.pbr.base_color_tex.texcoord = 0;
 
-            float2 offset = { 0, 0 };
-            float  rotation = 0;
-            float2 scale = { 1, 1 };
-            mtl.pbr.base_color_tex.texcoord_offset = offset;
-            mtl.pbr.base_color_tex.texcoord_scale = scale;
-            mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+                float2 offset = { 0, 0 };
+                float  rotation = 0;
+                float2 scale = { 1, 1 };
+                mtl.pbr.base_color_tex.texcoord_offset = offset;
+                mtl.pbr.base_color_tex.texcoord_scale = scale;
+                mtl.pbr.base_color_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+            }
+            else
+            { 
+                mtl.normal_tex.tex = sampler_remap[p.albedoID];
+                mtl.normal_tex.texcoord = 0;
 
+                float2 offset = { 0, 0 };
+                float  rotation = 0;
+                float2 scale = { 1, 1 };
+                mtl.normal_tex.texcoord_offset = offset;
+                mtl.normal_tex.texcoord_scale = scale;
+                mtl.normal_tex.texcoord_rotation = make_float2((float)sinf(rotation), (float)cosf(rotation));
+            }
         }
+        
         materialID_remap[i] = Dst.MaterialsSize();
         Dst.addMaterial(mtl);
     }
@@ -116,7 +134,7 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
         Light light;
         if (SL.lightType == LightType::DIRECTION)
         {
-            Dst.addDirectionalLight(light.directional.direction, light.directional.intensity);
+            Dst.addDirectionalLight(SL.direction, SL.emission);
             continue;
             light.type = Light::Type::DIRECTIONAL;
             light.directional.intensity = SL.emission;
@@ -136,8 +154,10 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
         {
             continue;
         }
-//        light.type = SL.lightType == LightType::DIRECTION? Light::Type::DIRECTIONAL
+//        light.type = SL.lightType == LightType::DIRECTION? Light::Type::DIRECTIONAL 
+        printf("light source albedo tex load %d %d\n", i, sampler_remap[SL.albedoID]);
         light.id = lights.size();
+        light.albedoID = sampler_remap[SL.albedoID];
         light.ssBase = ssBase;
         light.divLevel = SL.divLevel;
         ssBase += SL.divLevel * SL.divLevel;
@@ -147,6 +167,7 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
     {
         Light light;
         light.type = Light::Type::ENV;
+        light.id = lights.size();
         lights.push_back(light);
 
     }
@@ -228,9 +249,12 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
                 a.texcoords[i].push_back(BV);
 
             }
-            //a.normals.push_back(HostToDeviceBuffer(
-            //    reinterpret_cast<float3*>(c_mesh.normals.data()),
-            //    num_points,3)); 
+            /* ********************************** */
+            if(!Src.use_geometry_normal)
+                a.normals.push_back(HostToDeviceBuffer(
+                reinterpret_cast<float3*>(c_mesh.normals.data()),
+                num_points,3));
+            /* ********************************** */
             a.normals.push_back(BufferView<float3>());
             a.material_idx.push_back(materialID_remap[k]);
             a.object_aabb = get_aabb(c_mesh.positions);
@@ -271,13 +295,18 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         Dst.addMesh(mesh_ptr);
         sutil::Scene::MeshGroup& a = *mesh_ptr;
 
-        int num_points = 6;
-        int num_faces = 2;
+        int num_points = 12;
+        int num_faces = 4;
         std::vector<float3> positions;
         positions.push_back(light.quad.corner);
         positions.push_back(light.quad.u);
         positions.push_back(light.quad.v);
         positions.push_back(light.quad.u + light.quad.v - light.quad.corner);
+
+        positions.push_back(light.quad.corner - light.quad.normal * 1e-3f);
+        positions.push_back(light.quad.v - light.quad.normal * 1e-3f);
+        positions.push_back(light.quad.u - light.quad.normal * 1e-3f);
+        positions.push_back(light.quad.u + light.quad.v - light.quad.corner - light.quad.normal * 1e-3f);
         std::vector<unsigned> indices;
         indices.push_back(0);
         indices.push_back(1);
@@ -286,10 +315,21 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         indices.push_back(3);
         indices.push_back(2); 
 
+        indices.push_back(4);
+        indices.push_back(5);
+        indices.push_back(7);
+        indices.push_back(4);
+        indices.push_back(7);
+        indices.push_back(6);
+
         std::vector<Vec2f> texcoords; 
         texcoords.push_back(make_Vec2f(0, 0));
         texcoords.push_back(make_Vec2f(1, 0));
         texcoords.push_back(make_Vec2f(0, 1));
+        texcoords.push_back(make_Vec2f(1, 1));
+        texcoords.push_back(make_Vec2f(0, 0));
+        texcoords.push_back(make_Vec2f(0, 1));
+        texcoords.push_back(make_Vec2f(1, 0));
         texcoords.push_back(make_Vec2f(1, 1));
 
 
@@ -314,6 +354,7 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
         //    num_points,3)); 
         a.normals.push_back(BufferView<float3>());
         a.material_idx.push_back(lightsourceID_remap[i]);
+        //a.material_idx.push_back(materialID_remap[0]);
         a.object_aabb = get_aabb(positions);
 
 

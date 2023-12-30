@@ -193,21 +193,32 @@ namespace MyThrustOp
         BDPTVertex* v;
         int* subspaceId;
         float* weight;
-        __device__ __host__ LVCSubspaceInfoCopy(BDPTVertex* v, int* subspaceId, float* weight) :v(v), subspaceId(subspaceId), weight(weight)
+        bool glossy_subspace;
+        __device__ __host__ LVCSubspaceInfoCopy(BDPTVertex* v, int* subspaceId, float* weight, bool glossy_subspace) :
+            v(v), subspaceId(subspaceId), weight(weight), glossy_subspace(glossy_subspace)
         {
 
         }
         __device__ __host__ void operator()(int i)
         { 
-            subspaceId[i] = v[i].subspaceId;
-            float res = float3weight(v[i].flux) / v[i].pdf;
-            res = isinf(res) ? 0 : res;
-            //weight[i] = 1;
-            weight[i] =  isnan(res) ? 0 : res;
+            if (glossy_subspace)
+            {
+                subspaceId[i] = abs(v[i].specular_record);
+                weight[i] = 1;
+            }
+            else
+            {
 
-            //if (weight[i] > 10000)
-            //    weight[i] = 10000;
-          //  printf("vinfo %d %d %f\n", i, v[i].depth, weight[i] / v[i].pdf);
+                subspaceId[i] = v[i].subspaceId;
+                float res = float3weight(v[i].flux) / v[i].pdf;
+                res = isinf(res) ? 0 : res;
+                //weight[i] = 1;
+                weight[i] = isnan(res) ? 0 : res;
+
+                //if (weight[i] > 10000)
+                //    weight[i] = 10000;
+              //  printf("vinfo %d %d %f\n", i, v[i].depth, weight[i] / v[i].pdf);
+            }
         } 
     };
     struct is_path_begin
@@ -238,19 +249,77 @@ namespace MyThrustOp
             return a;
         }
     };
+
+    struct glossy_index_check
+    {
+        BDPTVertex* v;
+        bool* validState;
+        BufferView<MaterialData::Pbr> mats;
+        glossy_index_check(BDPTVertex* v, bool* validState, BufferView<MaterialData::Pbr> mats) :
+            v(v), validState(validState), mats(mats)
+        {
+        }
+        __device__ __host__ bool operator()(int i)
+        {
+            if (validState[i] && v[i].depth >= 1)
+            {
+                //return v[i].specular_record.id < 0;
+                //if (v[i].specular_record.id < 0)return true;
+                //else return false;
+                for (int k = 0; k < v[i].depth; k++)
+                {
+                    const MaterialData::Pbr& mat = mats[v[i - k].materialId];
+                    if (max(mat.metallic, mat.trans) < 0.9 || mat.roughness > 0.4)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                //printf("specular check %d\n", v[i].specular_record.id);
+                return true;
+            }
+            return false;
+        }
+    };
+
+    struct glossy_filter_check
+    {
+        BDPTVertex* v;
+        bool* validState; 
+        bool glossy_valid;
+        glossy_filter_check(BDPTVertex* v, bool* validState, bool glossy_valid) :
+            v(v), validState(validState), glossy_valid(glossy_valid)
+        {
+        }
+        __device__ __host__ bool operator()(int i)
+        {  
+            if (validState[i] == false)return false; 
+            return (glossy_valid && v[i].specular_record < 0) || (!glossy_valid && v[i].specular_record >= 0);
+        }
+    };
+
+
     SubspaceSampler LVC_Process(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange)
     {
         SubspaceSampler sampler;
         thrust_dev_bool d_validState(validState, validState + countRange);
-        thrust_host_bool h_validState = d_validState; 
-        //thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);
+        thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);
         static thrust_dev_int d_Vsubspace_info(countRange);
         static thrust_host_int h_Vsubspace_info(countRange);
         static thrust_dev_float d_weight(countRange);
         static thrust_host_float h_weight(countRange);
-        
-        int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>()); 
-          
+         
+        //thrust_host_bool h_validState = d_validState;
+        //thrust_dev_bool d_validState_glossy(countRange);
+        //thrust::transform(thrust::make_counting_iterator(0),
+        //    thrust::make_counting_iterator(0) + countRange,
+        //    d_validState_glossy.begin(),
+        //    glossy_filter_check(thrust::raw_pointer_cast(vertices), thrust::raw_pointer_cast(validState), false));
+
+        thrust_host_bool h_validState = d_validState; 
+        int valid_count = thrust::count_if(d_validState.begin(), d_validState.begin() + countRange, identical_transform<bool>());
+        //printf("non-glossy valid count %d-%d\n", valid_count,
+        //    thrust::count_if(d_validState_glossy.begin(), d_validState_glossy.begin() + countRange, identical_transform<bool>()));
         //copy necessary info
         thrust::for_each(
             thrust::make_counting_iterator(0),
@@ -258,12 +327,11 @@ namespace MyThrustOp
             LVCSubspaceInfoCopy(
                 thrust::raw_pointer_cast(vertices),
                 thrust::raw_pointer_cast(d_Vsubspace_info.data()),
-                thrust::raw_pointer_cast(d_weight.data())
+                thrust::raw_pointer_cast(d_weight.data()),false
             ));
         h_Vsubspace_info = d_Vsubspace_info;
-        h_weight = d_weight;
+        h_weight = d_weight; 
          
-
         thrust_host_int num_subspace_vertex(NUM_SUBSPACE);
         thrust_host_float Q_subspace_vertex(NUM_SUBSPACE);
         std::vector<std::vector<int>> sparse_jump_vector(NUM_SUBSPACE);
@@ -272,8 +340,10 @@ namespace MyThrustOp
 
         for (int i = 0; i < countRange; i++)
         {
-            if (!h_validState[i] )
-                continue;
+            if (!h_validState[i])
+                continue; 
+
+            //valid_count++;
             int subspace = h_Vsubspace_info[i];
             num_subspace_vertex[subspace] += 1;
             Q_subspace_vertex[subspace] += h_weight[i]; 
@@ -284,6 +354,7 @@ namespace MyThrustOp
                 sparse_pmf_vector[subspace][sparse_pmf_vector[subspace].size() - 1] += sparse_pmf_vector[subspace][sparse_pmf_vector[subspace].size() - 2];
             }
         }
+         
         static thrust_dev_float ans_cmf;
         static thrust_dev_int ans_jump;
         static thrust::device_vector<Subspace> ans_subspace(NUM_SUBSPACE);
@@ -319,17 +390,121 @@ namespace MyThrustOp
         //printf("sampler count %d %d\n", ans_cmf.size(), h_cmf.size());
         ans_jump = h_jump;
         ans_subspace = h_subspace;
-
+         
         sampler.vertex_count = valid_count;
         sampler.path_count = thrust::count_if(
             thrust::make_counting_iterator(0), thrust::make_counting_iterator(0) + countRange,
             is_path_begin(thrust::raw_pointer_cast(vertices), thrust::raw_pointer_cast(validState)));
+        //sampler.path_count = 100000;
+        // printf("path count %d\n", sampler.path_count);
         sampler.jump_buffer = thrust::raw_pointer_cast(ans_jump.data());
         sampler.cmfs = thrust::raw_pointer_cast(ans_cmf.data());
         sampler.subspace = thrust::raw_pointer_cast(ans_subspace.data());
         sampler.LVC = thrust::raw_pointer_cast(vertices); 
         return sampler;
     }
+
+    thrust_dev_float glossy_subspace_Q(dropOut_tracing::default_specularSubSpaceNumber, 0);;
+    SubspaceSampler LVC_Process_glossyOnly(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange, BufferView<MaterialData::Pbr> mats)
+    {
+        SubspaceSampler sampler;
+        thrust_dev_bool d_validState(validState, validState + countRange);
+        thrust_host_bool h_validState = d_validState;
+        //thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);   
+
+        thrust_dev_bool d_valid_glossy(countRange);
+        thrust::transform(thrust::make_counting_iterator(0),
+            thrust::make_counting_iterator(0) + countRange,
+            d_valid_glossy.begin(),
+            glossy_index_check(thrust::raw_pointer_cast(vertices), thrust::raw_pointer_cast(validState), mats));
+        thrust_host_bool h_valid_glossy = d_valid_glossy;
+
+
+        static thrust_dev_int d_Vsubspace_info(countRange);
+        static thrust_host_int h_Vsubspace_info(countRange);
+        static thrust_dev_float d_weight(countRange); 
+        //int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>());
+        //copy necessary info------subspace info 
+        {
+            thrust::for_each(
+            thrust::make_counting_iterator(0),
+            thrust::make_counting_iterator(0) + countRange,
+            LVCSubspaceInfoCopy(
+                thrust::raw_pointer_cast(vertices),
+                thrust::raw_pointer_cast(d_Vsubspace_info.data()),
+                thrust::raw_pointer_cast(d_weight.data()),true
+            ));
+            h_Vsubspace_info = d_Vsubspace_info;
+        }
+
+        thrust_host_int h_indexes;
+        for (int i = 0; i < countRange; i++)
+        {
+            if (!h_valid_glossy[i])
+                continue;
+            if (h_Vsubspace_info[i] == DOT_INVALID_SPECULARID)continue;
+            
+            h_indexes.push_back(i);
+        }
+        thrust_host_int h_subspace_vertex_count(dropOut_tracing::default_specularSubSpaceNumber);
+        thrust::fill(h_subspace_vertex_count.begin(), h_subspace_vertex_count.end(), 0);
+        for (int i = 0; i < h_indexes.size(); i++)
+        {
+            int index = h_indexes[i];
+            h_subspace_vertex_count[h_Vsubspace_info[index]] += 1;
+        }
+        thrust_host_int h_indexes_rearrange(h_indexes.size());
+        thrust_host_int h_vertex_bias;
+        {
+            thrust_host_int h_subspace_vertex_count_bias(dropOut_tracing::default_specularSubSpaceNumber);
+            thrust::exclusive_scan(h_subspace_vertex_count.begin(), h_subspace_vertex_count.end(), h_subspace_vertex_count_bias.begin());
+            h_vertex_bias = h_subspace_vertex_count_bias;
+            for (int i = 0; i < h_indexes.size(); i++)
+            {
+                int index_o = h_indexes[i];
+                int subspace =  h_Vsubspace_info[index_o];
+                int index_n = h_subspace_vertex_count_bias[subspace];
+                h_indexes_rearrange[index_n] = index_o;
+                h_subspace_vertex_count_bias[subspace]++;
+            }
+        }
+        for (int i = 0; i < dropOut_tracing::default_specularSubSpaceNumber; i++)
+        {
+            if(DOT_DEBUG_INFO_ENABLE)
+                printf("get %d vertex at specular subspace %d\n", h_subspace_vertex_count[i], i);
+        }
+        static thrust_dev_int d_indexes;
+        d_indexes = h_indexes_rearrange;
+        // printf("glossy vertices number %d\n", h_indexes_rearrange.size());
+        sampler.glossy_count = h_indexes_rearrange.size();
+        sampler.glossy_index = thrust::raw_pointer_cast(d_indexes.data());
+
+        static thrust_dev_int d_glossy_subspace_bias;
+        static thrust_dev_int d_glossy_subsapce_number_vertex;
+        d_glossy_subspace_bias = h_vertex_bias;
+        d_glossy_subsapce_number_vertex = h_subspace_vertex_count;
+        sampler.glossy_subspace_num = thrust::raw_pointer_cast(d_glossy_subsapce_number_vertex.data());
+        sampler.glossy_subspace_bias = thrust::raw_pointer_cast(d_glossy_subspace_bias.data());
+
+        static int launch_count = 0;
+        thrust_host_float h_glossy_Q = glossy_subspace_Q;
+        float t = 1.0 / (launch_count + 1);
+        for (int i = 0; i < dropOut_tracing::default_specularSubSpaceNumber; i++)
+        {            
+            h_glossy_Q[i] = h_glossy_Q[i] * (1 - t) + t * float(h_subspace_vertex_count[i]);
+        }
+        glossy_subspace_Q = h_glossy_Q;
+        launch_count++;
+
+        return sampler;
+    }
+
+    float* DOT_get_Q()
+    {
+        return thrust::raw_pointer_cast(glossy_subspace_Q.data());
+    }
+
+
     static thrust_host_float h_Q_vec(NUM_SUBSPACE);
     static thrust_dev_float Q_vec;
     void Q_zero_handle(thrust::device_ptr<float>& Q)
@@ -384,7 +559,7 @@ namespace MyThrustOp
             LVCSubspaceInfoCopy(
                 thrust::raw_pointer_cast(vertices),
                 thrust::raw_pointer_cast(d_Vsubspace_info.data()),
-                thrust::raw_pointer_cast(d_weight.data())
+                thrust::raw_pointer_cast(d_weight.data()), false
             ));
         h_Vsubspace_info = d_Vsubspace_info;
         h_weight = d_weight; 
@@ -454,6 +629,20 @@ namespace MyThrustOp
     static int acc_num_nodes = 0;
     static int acc_num_samples = 0;
     thrust::device_vector<int> sample_bias_flag;
+    void clear_training_set()
+    {
+        acc_num_nodes = 0;
+        acc_num_samples = 0;
+        neat_conns.resize(0);
+        neat_paths.resize(0);
+    }
+    thrust::device_vector<float4> d_reference_img_buffer;
+    float4* reference_h2d(thrust::host_vector<float4> h_ref)
+    {  
+        d_reference_img_buffer = h_ref;
+        return thrust::raw_pointer_cast(d_reference_img_buffer.data());
+    }
+
     int valid_sample_gather(thrust::device_ptr<preTracePath> raw_paths, int maxPathSize, 
         thrust::device_ptr<preTraceConnection> raw_conns,int maxConns)
     {
@@ -486,11 +675,49 @@ namespace MyThrustOp
 
         acc_num_nodes += node_count;
         acc_num_samples += sample_count;
-        printf("pretrace get %d/%d paths and %d conns\n", sample_count, acc_num_samples,acc_num_nodes);
+        //printf("pretrace get %d/%d paths and %d conns\n", sample_count, acc_num_samples,acc_num_nodes);
 
          
         return sample_count; 
+    } 
+
+    std::vector<classTree::divide_weight> getCausticCentroidCandidate(bool eye_side, int max_size)
+    {
+        thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
+        thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+        std::vector<classTree::divide_weight> ans;
+        float weights = 0;
+
+        int sizeLimit = max_size == 0 ? h_neat_paths.size() : (h_neat_paths.size() > max_size ? max_size : h_neat_paths.size());
+        for (int i = 0; i < sizeLimit; i++)
+        {
+            if (h_neat_paths[i].is_caustic == false)continue;
+            int j = h_neat_paths[i].begin_ind + h_neat_paths[i].caustic_id;
+
+             
+            classTree::divide_weight t;
+            if (eye_side)
+            {
+                t.dir = h_neat_conns[j].A_dir();
+                t.normal = h_neat_conns[j].A_normal();
+                t.position = h_neat_conns[j].A_position;
+                t.weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+            }
+            else if (h_neat_conns[j].light_source == false)
+            {
+                t.dir = h_neat_conns[j].B_dir();
+                t.normal = h_neat_conns[j].B_normal();
+                t.position = h_neat_conns[j].B_position;
+                t.weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+            }
+
+            ans.push_back(t);
+                 
+        }
+        printf("get %d caustic subpaths\n",ans.size());
+        return ans;
     }
+
     std::vector<classTree::divide_weight> get_weighted_point_for_tree_building(bool eye_side, int max_size)
     {
         thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
@@ -551,6 +778,124 @@ namespace MyThrustOp
         d_v = h_v;
         return thrust::raw_pointer_cast(d_v.data());
     }
+
+
+    thrust::device_vector<classTree::tree_node> dropout_tracing_specular_tree;
+    classTree::tree_node* DOT_specular_tree_to_device(classTree::tree_node* a, int size)
+    {
+        thrust::host_vector<classTree::tree_node> h_v(a, a + size);
+        thrust::device_vector<classTree::tree_node>& d_v = dropout_tracing_specular_tree;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+     
+    thrust::device_vector<classTree::tree_node> dropout_tracing_surface_tree;
+    classTree::tree_node* DOT_surface_tree_to_device(classTree::tree_node* a, int size)
+    {
+        thrust::host_vector<classTree::tree_node> h_v(a, a + size);
+        thrust::device_vector<classTree::tree_node>& d_v = dropout_tracing_surface_tree;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+
+    thrust::device_vector<dropOut_tracing::PGParams> DOT_PG_data;
+    dropOut_tracing::PGParams* DOT_PG_data_to_device(thrust::host_vector<dropOut_tracing::PGParams> h_v)
+    { 
+        thrust::device_vector<dropOut_tracing::PGParams>& d_v = DOT_PG_data;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+    thrust::host_vector<dropOut_tracing::PGParams> DOT_PG_data_to_host()
+    {
+        thrust::host_vector<dropOut_tracing::PGParams> h_v;
+        h_v = DOT_PG_data;
+        return h_v;
+    }
+
+
+    thrust::device_vector<dropOut_tracing::statistics_data_struct> DOT_statistics_data;
+    dropOut_tracing::statistics_data_struct* DOT_statistics_data_to_device(dropOut_tracing::statistics_data_struct* a, int size)
+    {
+        thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v(a, a + size);
+        thrust::device_vector<dropOut_tracing::statistics_data_struct>& d_v = DOT_statistics_data;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+
+    dropOut_tracing::statistics_data_struct* DOT_statistics_data_to_device(thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v)
+    { 
+        thrust::device_vector<dropOut_tracing::statistics_data_struct>& d_v = DOT_statistics_data;
+        d_v = h_v;
+        return thrust::raw_pointer_cast(d_v.data());
+    }
+
+    thrust::host_vector<dropOut_tracing::statistics_data_struct> DOT_statistics_data_to_host()
+    {
+        thrust::device_vector<dropOut_tracing::statistics_data_struct>& d_v = DOT_statistics_data;
+        thrust::host_vector<dropOut_tracing::statistics_data_struct> h_v = d_v;
+        return h_v;
+    }
+     
+    thrust::device_vector<dropOut_tracing::statistic_record> DOT_statistics_record_buffer;
+    dropOut_tracing::statistic_record* DOT_get_statistic_record_buffer(int size)
+    {
+        if (size > 0)
+        {
+            dropOut_tracing::statistic_record temp(DOT_type::LS, 0, 0, DOT_usage::Average);
+            temp = 0;
+            temp.valid = false;
+            DOT_statistics_record_buffer.resize(size);
+            thrust::fill(DOT_statistics_record_buffer.begin(), DOT_statistics_record_buffer.end(), temp);
+        }
+        return thrust::raw_pointer_cast(DOT_statistics_record_buffer.data());
+    }
+
+    thrust::host_vector<dropOut_tracing::statistic_record> DOT_get_host_statistic_record_buffer(bool valid_only)
+    {
+        thrust::host_vector<dropOut_tracing::statistic_record> h_v;
+        thrust::host_vector<dropOut_tracing::statistic_record> h_v_filter;
+        h_v = DOT_statistics_record_buffer; 
+
+        dropOut_tracing::statistic_record temp(DOT_type::LS, 0, 0, DOT_usage::Average);
+        temp = 0;
+        temp.valid = false; 
+        thrust::fill(DOT_statistics_record_buffer.begin(), DOT_statistics_record_buffer.end(), temp);
+
+        if (valid_only)
+        {
+            for (int i = 0; i < h_v.size(); i++)
+            {
+                if (valid_op<dropOut_tracing::statistic_record>()(h_v[i]))
+                {
+                    h_v_filter.push_back(h_v[i]);
+                }
+            } 
+        } 
+        else
+        {
+            h_v_filter = h_v;
+        }
+        return h_v_filter;
+    }
+
+
+
+    thrust::host_vector<uchar4> copy_to_host(uchar4* data, int size)
+    {
+        thrust::device_vector<uchar4> d_vec(data, data + size);
+        thrust::host_vector<uchar4> h_vec = d_vec;
+        return h_vec;
+    }
+
+    thrust::host_vector<float4> copy_to_host(float4* data, int size)
+    {
+        thrust::device_vector<float4> d_vec(data, data + size);
+        thrust::host_vector<float4> h_vec = d_vec;
+        return h_vec;
+    }
+    
+
+
     struct tree_label_op
     {
         classTree::tree_node* eye_tree;
@@ -622,18 +967,193 @@ namespace MyThrustOp
         neat_paths = h_samples;
     }
     static thrust_dev_float Gamma_vec;
+    static thrust_dev_float Gamma_vec_caustic;
     static thrust_host_float h_Gamma(NUM_SUBSPACE* NUM_SUBSPACE);
 
-    void preprocess_getGamma(thrust::device_ptr<float>& Gamma)
+    void get_caustic_frac(thrust::device_ptr<float>& frac)
+    {
+        thrust_host_float h_frac(NUM_SUBSPACE);
+        static thrust_dev_float d_frac;
+        thrust::fill(h_frac.begin(), h_frac.end(), 0);
+
+        thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
+        thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+
+        thrust_host_float non_normalized_sum(NUM_SUBSPACE);
+        thrust_host_float non_normalized_caustic(NUM_SUBSPACE);
+        thrust::fill(non_normalized_caustic.begin(), non_normalized_caustic.end(), 0);
+        thrust::fill(non_normalized_sum.begin(), non_normalized_sum.end(), 0);
+
+        for (int i = 0; i < h_neat_paths.size(); i++)
+        {
+            float weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+
+            for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
+            { 
+                int eye_id = h_neat_conns[j].label_A;
+                int light_id = h_neat_conns[j].label_B; 
+
+                float weight2 = min(weight, 10.0);
+                if (h_neat_paths[i].is_caustic && j - h_neat_paths[i].begin_ind == h_neat_paths[i].caustic_id)
+                { 
+                    non_normalized_caustic[eye_id] += weight2;
+                }
+                non_normalized_sum[eye_id] += weight2;
+            }
+        }
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            h_frac[i] = non_normalized_caustic[i] / non_normalized_sum[i];
+        }
+        d_frac = h_frac;
+        frac = d_frac.data();
+    }
+
+    path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size)
+    {
+        thrust::host_vector<path_guiding::quad_tree_node> h_vec(a, a + size);
+        static thrust::device_vector<path_guiding::quad_tree_node> d_vec;
+        d_vec = h_vec;
+        return thrust::raw_pointer_cast(d_vec.data());
+    }
+
+    path_guiding::Spatio_tree_node* spatio_tree_to_device(path_guiding::Spatio_tree_node* a, int size)
+    {
+        thrust::host_vector<path_guiding::Spatio_tree_node> h_vec(a, a + size);
+        static thrust::device_vector<path_guiding::Spatio_tree_node> d_vec;
+        d_vec = h_vec;
+        return thrust::raw_pointer_cast(d_vec.data());
+    }
+
+    std::vector<path_guiding::PG_training_mat> get_data_for_path_guiding(int num_datas, bool UPT_ONLY)
     {
         thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
         thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+        std::vector<path_guiding::PG_training_mat> ans;
+        int slice_range = num_datas == -1 ? h_neat_conns.size() : (num_datas < h_neat_conns.size() ? num_datas : h_neat_conns.size());
+        for (int i = 0; i < acc_num_samples; i++)
+        { 
+            for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
+            { 
+                path_guiding::PG_training_mat mat;
+                if(!UPT_ONLY)
+                    mat.lum = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;
+                else
+                   mat.lum = h_neat_conns[j].get_PG_weight();
+                if (mat.lum > 100000)mat.lum = 100000;
+                if (isnan(mat.lum) || isinf(mat.lum))continue;
+                mat.position = h_neat_conns[j].A_position;
+                mat.uv = dir2uv(normalize(h_neat_conns[j].B_position - h_neat_conns[j].A_position));
+                mat.valid = true;
+                ans.push_back(mat);
+                if (ans.size() >= slice_range)return ans;
+                //break;
+            }
+        }
+        return ans;
+    } 
+
+    thrust::device_vector<dropOut_tracing::pixelRecord> DOT_pixelRecords;
+    dropOut_tracing::pixelRecord* DOT_set_pixelRecords_size(int size)
+    {
+        DOT_pixelRecords.resize(size);
+        dropOut_tracing::pixelRecord t;
+        t.record = 0; 
+        t.is_valid = false;
+        thrust::fill(DOT_pixelRecords.begin(), DOT_pixelRecords.end(), t);
+        return thrust::raw_pointer_cast(DOT_pixelRecords.data());
+    }
+
+    thrust::host_vector<dropOut_tracing::pixelRecord> DOT_get_pixelRecords()
+    {
+        thrust::host_vector<dropOut_tracing::pixelRecord> host_records(DOT_pixelRecords);
+
+        // Set all records in DOT_pixelRecords to 0
+        dropOut_tracing::pixelRecord t;
+        t.record = 0;
+        t.is_valid = false;
+        thrust::fill(DOT_pixelRecords.begin(), DOT_pixelRecords.end(), t);
+        return host_records;
+
+
+        ////filter code
+        //// Use thrust::copy_if to copy only elements with record > 0 to a new device vector
+        //thrust::device_vector<dropOut_tracing::pixelRecord> filtered_records(DOT_pixelRecords.size());
+        //auto new_end = thrust::copy_if(DOT_pixelRecords.begin(), DOT_pixelRecords.end(), 
+        //    filtered_records.begin(), [](const dropOut_tracing::pixelRecord& pr) { return abs(pr.record) > 0; });
+
+        //// Resize the new vector to the number of elements copied
+        //filtered_records.resize(thrust::distance(filtered_records.begin(), new_end));
+        //thrust::host_vector<dropOut_tracing::pixelRecord> host_filtered_records(filtered_records);
+        //return host_filtered_records;
+    }
+
+    float* DOT_causticFrac_to_device(thrust::host_vector<float> DOT_h_frac)
+    {
+        static thrust_dev_float d_frac;
+        d_frac = DOT_h_frac;
+        return thrust::raw_pointer_cast(d_frac.data());
+    }
+
+    float* DOT_causticCMFGamma_to_device(thrust::host_vector<float> DOT_h_GAMMA)
+    { 
+        thrust_host_float p = DOT_h_GAMMA;
+        static thrust_dev_float d_cmf_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE);
+        d_cmf_gamma = DOT_h_GAMMA;
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
+            { 
+                p[i * dropOut_tracing::default_specularSubSpaceNumber + j] = p[i * dropOut_tracing::default_specularSubSpaceNumber + j];
+            }
+        }
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            for (int j = 0; j < dropOut_tracing::default_specularSubSpaceNumber; j++)
+            {
+                int index = i * dropOut_tracing::default_specularSubSpaceNumber + j;
+                if (j != 0)
+                {
+                    p[index] += p[index - 1];
+                }
+            }
+            p[(i + 1) * dropOut_tracing::default_specularSubSpaceNumber - 1] = 1;
+        }
+
+        d_cmf_gamma = p;
+        return thrust::raw_pointer_cast(d_cmf_gamma.data());
+    }
+
+    void preprocess_getGamma(thrust::device_ptr<float>& Gamma, bool caustic_case)
+    {
+        thrust_dev_float& d_gamma = caustic_case ? Gamma_vec_caustic : Gamma_vec;
+        thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
+        thrust::host_vector<preTraceConnection> h_neat_conns = neat_conns;
+        int caustic_filter_count = 0;
         for (int i = 0; i < NUM_SUBSPACE * NUM_SUBSPACE; i++) h_Gamma[i] = 0;
         for (int i = 0; i < h_neat_paths.size(); i++)
         {
+            //in the case of caustic Gamma, ignore the ordinary path
+            //but in the case of normal Gamma, most of the connections of caustic path are valid still.
+            if (caustic_case != h_neat_paths[i].is_caustic)
+            {
+                caustic_filter_count++;
+                if(caustic_case) continue;
+                
+            } 
+
             float weight = float3weight(h_neat_paths[i].contri) / h_neat_paths[i].sample_pdf;  
             for (int j = h_neat_paths[i].begin_ind; j < h_neat_paths[i].end_ind; j++)
             {
+                if (caustic_case)
+                {
+                    if (j - h_neat_paths[i].begin_ind != h_neat_paths[i].caustic_id)
+                    {
+                        continue;
+                    }
+                }
+
+
                 int eye_id = h_neat_conns[j].label_A;
                 int light_id = h_neat_conns[j].label_B; 
                 int GammaId = eye_id * NUM_SUBSPACE + light_id; 
@@ -644,6 +1164,16 @@ namespace MyThrustOp
                 h_Gamma[GammaId] += weight2;
             }
         }
+        
+        if (caustic_case == false)
+        {
+            printf("%d / %d paths are caustic paths and deleted from the training of ordinaryGamma.\n", caustic_filter_count, h_neat_paths.size()); 
+        }
+        else
+        {
+            printf("%d / %d paths are ordinary paths and deleted from the training of causticGamma.\n", caustic_filter_count, h_neat_paths.size());
+        }
+
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
             float weightS = 0;
@@ -662,8 +1192,8 @@ namespace MyThrustOp
                 }
             } 
         }
-        Gamma_vec = h_Gamma;
-        Gamma = Gamma_vec.data();
+        d_gamma = h_Gamma;
+        Gamma = d_gamma.data();
     }
 
     //optimization
@@ -3407,6 +3937,8 @@ namespace MyThrustOp
     {
         thrust_host_float p(Gamma, Gamma + NUM_SUBSPACE * NUM_SUBSPACE);
         static thrust_dev_float d_CMFGamma;
+        static thrust_dev_float d_CMFGamma_caustic;
+        thrust_dev_float& d_cmf_gamma = d_CMFGamma;
 
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
@@ -3428,7 +3960,8 @@ namespace MyThrustOp
             }
             p[(i + 1) * NUM_SUBSPACE - 1] = 1;
         }
-        d_CMFGamma = p;
-        return d_CMFGamma.data();
+        
+        d_cmf_gamma = p;
+        return d_cmf_gamma.data();
     }
 }

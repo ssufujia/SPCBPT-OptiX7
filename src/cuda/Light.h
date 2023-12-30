@@ -82,6 +82,7 @@ struct Light
     int id;
     int divLevel;
     int ssBase;
+    cudaTextureObject_t albedoID;
     union
     {
         Point   point;

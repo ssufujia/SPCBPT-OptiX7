@@ -17,6 +17,7 @@ namespace rmis
     {
         MaterialData::Pbr mat = Tracer::params.materials[Vertex.materialId];
         mat.base_color = make_float4(Vertex.color, 1.0);
+        mat.shade_normal = Vertex.get_shade_normal();
         return mat;
 }
     RT_FUNCTION void tracing_init_light(BDPTVertex& MidVertex, BDPTVertex& LastVertex)//assumption:lastVertex is the light source
@@ -27,6 +28,7 @@ namespace rmis
 
     RT_FUNCTION float getRR(const BDPTVertex& vertex)
     {
+        return Tracer::rrRate(vertex.color);
         float rr_rate = fmaxf(vertex.color);
 
 
@@ -61,11 +63,7 @@ namespace rmis
         //if ((LastVertex.inBrdf) != (LastVertex.lastBrdf || LastVertex.isBrdf))
         //{
         //    printf("get error %d %d %d %d\n",LastVertex.depth,LastVertex.inBrdf,LastVertex.isBrdf,LastVertex.lastBrdf);
-        //}
-        if (LastVertex.lastBrdf || LastVertex.isBrdf)
-        {
-            return 0.0;
-        }
+        //} 
         float3 inver_dir = normalize(MidVertex.position - LastVertex.position);
 
         int eye_label = LastVertex.subspaceId;//GetLabel(LastVertex.position,inver_dir)
@@ -102,7 +100,7 @@ namespace rmis
     RT_FUNCTION float3 getFluxMultiplier(const BDPTVertex& vertex, float3 in_dir, float3 out_dir)
     {
         MaterialData::Pbr mat = getMat(vertex);
-        float3 flux_ratio = Tracer::Eval(mat, vertex.normal, in_dir, out_dir) / (mat.brdf ? abs(dot(vertex.normal, out_dir)) : 1.0f);
+        float3 flux_ratio = Tracer::Eval(mat, vertex.normal, in_dir, out_dir) ;
         float pdf_ratio = Tracer::Pdf(mat, vertex.normal, in_dir, out_dir, vertex.position, false);
         float rr = getRR(vertex);
         float cos_theta = abs(dot(vertex.normal, out_dir));
@@ -129,11 +127,7 @@ namespace rmis
     //lastBrdf
 
     RT_FUNCTION float3 tracing_weight_eye(const BDPTVertex& MidVertex, const BDPTVertex& LastVertex)
-    {
-        if (LastVertex.lastBrdf || LastVertex.isBrdf)
-        {
-            return make_float3(0.0);
-        }
+    { 
         if (LastVertex.depth == 1)//no light tracing strategy
         {
             return make_float3(0.0);
@@ -210,11 +204,7 @@ namespace rmis
     //////////////////////////////////////////////////////////////////////////////////
 
     RT_FUNCTION float general_connection(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)
-    {
-        if (eyeVertex.isBrdf || lightVertex.isBrdf)
-        {
-            return 0.0;
-        }
+    { 
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
         float3 flux = lightVertex.flux / lightVertex.pdf;
@@ -247,11 +237,7 @@ namespace rmis
     }
 
     RT_FUNCTION float connection_direction_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
-    {
-        if (eyeVertex.isBrdf || lightVertex.isBrdf)
-        {
-            return 0.0;
-        }
+    { 
         float3 connect_dir = lightVertex.normal;
         float3 flux = lightVertex.flux / lightVertex.pdf;
 
@@ -279,11 +265,7 @@ namespace rmis
         return weight / (weight + D_A + D_B);
     }
     RT_FUNCTION float connection_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
-    {
-        if (eyeVertex.isBrdf || lightVertex.isBrdf)
-        {
-            return 0.0;
-        }
+    { 
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
         float3 flux = lightVertex.flux / lightVertex.pdf;
@@ -313,7 +295,7 @@ namespace rmis
     }
     RT_FUNCTION void construct_virtual_env_light(BDPTVertex& lightVertex, float3 flux, float pdf, float3 direction, int label)
     {
-        lightVertex.type = DIRECTION;
+        lightVertex.type = BDPTVertex::Type::DIRECTION;
         lightVertex.flux = flux;
         lightVertex.pdf = pdf;
         lightVertex.singlePdf = pdf;
@@ -337,11 +319,7 @@ namespace rmis
 
 
         float weight = float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
-
-        if (eyeVertex.isBrdf || lightVertex.isBrdf)
-        {
-            weight = 0.0;
-        }
+         
         ////light side 
 
         float D_B = lightVertex.RMIS_pointer;// = lightVertex.d;
@@ -371,11 +349,7 @@ namespace rmis
         float flux_multiplier_1 = M_PIf;
         float D_A = float3sum(D_A_0 * pdf_A * flux_multiplier_1 * flux / eyeVertex.singlePdf);
         float weight = float3sum(connectRate_SOL(eyeVertex.subspaceId, lightVertex.subspaceId, flux));
-
-        if (eyeVertex.isBrdf || lightVertex.isBrdf)
-        {
-            weight = 0.0;
-        }
+         
         ////light side 
 
         float D_B = lightVertex.RMIS_pointer;// = lightVertex.d;

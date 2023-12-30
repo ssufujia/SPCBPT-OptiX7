@@ -1,0 +1,210 @@
+cameraSetting
+{	
+up      0.000000 0.000000 1.000000
+eye     173.000000 379.999939 460.500000
+lookat  470.000000 -500.000000 15.000000
+    fov 20
+}
+
+
+
+
+
+material acrylic_glass
+{
+	color 0.99 0.99 0.99
+	roughness 0.01
+	metallic 1.0
+	trans 1
+	eta 1.5
+}
+
+mesh
+{
+	file artware/lionbase.obj
+	material acrylic_glass
+}
+
+mesh
+{
+	file artware/lion.obj
+	material acrylic_glass
+}
+
+material tripod1
+{
+	color 0.325 0.408 0.376
+	roughness 0.1
+	metallic 1.0
+	trans 0.5
+	eta 1.5
+}
+
+mesh
+{
+	file artware/tripod1.obj
+	material tripod1
+}
+
+material tripod2
+{
+	# Cu
+	color 0.83 0.43 0.25
+	roughness 0.1
+	metallic 1.0
+}
+
+mesh
+{
+	file artware/tripod2.obj
+	material tripod2
+}
+
+material Ag
+{
+	color 0.99 0.99 0.99
+	roughness 0.001
+	metallic 1.0
+}
+
+mesh
+{
+	file artware/mirror.obj
+	material Ag
+}
+
+material TableWood
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    albedoTex artware/textures/wood5.jpg
+}
+
+mesh
+{
+	file artware/frame.obj
+	material TableWood
+}
+
+material shell
+{
+    color 0.1 0.4 0.9
+    roughness 0.2
+}
+
+mesh
+{
+	file artware/shell.obj
+	material shell
+}
+
+material Al
+{
+	color 0.99 0.99 0.99
+	roughness 0.1
+	metallic 1.0
+}
+
+mesh
+{
+	file artware/reflector.obj
+	material Al
+}
+
+mesh
+{
+	file artware/base.obj
+	material Al
+}
+
+mesh
+{
+	file artware/bulb.obj
+	material acrylic_glass
+}
+
+mesh
+{
+	file artware/lens.obj
+	material acrylic_glass
+}
+
+material floor
+{
+	color 0.98 0.98 0.92
+	roughness 0.5
+}
+
+mesh
+{
+	file artware/floor.obj
+	material floor
+}
+
+material wall1
+{
+	color 0.9 0.9 0.2
+	roughness 0.5
+}
+
+mesh
+{
+	file artware/wall1.obj
+	material wall1
+}
+
+material wall2
+{
+	color 0.9 0.9 0.9
+	roughness 0.5
+}
+
+mesh
+{
+	file artware/wall2.obj
+	material wall2
+}
+
+
+light
+{
+	position 81.5436 59.7274 0.5863
+	v1 331.5435 59.7275 0.5863
+	v2 81.5436 59.7274 250.5863
+	emission 2 2 2
+    type Quad
+	divLevel 2
+}
+
+#light
+#{
+#	position 241.887207 -375.348419 26.327789
+#	v1 241.887207 -375.348419 15.327789
+#	v2 241.887207 -385.348419 26.327789
+#	emission 500 500 500
+#    type Quad
+#	divLevel 1
+#}
+#
+#light
+#{
+#	position 240.887207 -375.348419 26.327789
+#	v1 240.887207 -385.348419 26.327789
+#	v1 240.887207 -375.348419 15.327789
+#	emission 500 500 500
+#    type Quad
+#	divLevel 1
+#}
+
+
+light
+{
+	position 224.879700 -379.843750 19.618750
+	v1 224.879700 -379.843750 16.746222
+	v2 224.673721 -382.943878 19.618750
+	emission 50000 50000 45000
+	type Quad
+	divLevel 1
+}
+
+

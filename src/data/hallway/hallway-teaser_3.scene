@@ -1,0 +1,256 @@
+
+cameraSetting
+{
+    eye -0.7139 0.7149 2.053
+    lookat -0.711997 0.714202 2.04321
+     #eye -1.898601 0.380686 1.165715
+     #lookat -1.805272 0.413208 1.180947
+
+    #eye 2.653059 0.733602 1.036655
+    #lookat 2.555092 0.751108 1.026866
+    fov 40
+}
+material DefaultOBJ
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+material white
+{
+   color 0.73 0.73 0.73
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+
+}
+material copper
+{
+   color 0.9 0.7 0.5
+   roughness 0.5
+   metallic 1.0
+   specular 0.5
+
+}
+material bumpmetal
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 1.0
+   specular 0.5
+
+}
+material table_leg
+{
+   color 0.65 0.65 0.47
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+}
+material door_frame
+{
+   color 0.3 0.2 0.1
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+
+}
+material picture_frame
+{
+   color 0.2 0.1 0.05
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+
+}
+material picture_image
+{
+   color 0.73 0.73 0.73
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex door/textures/pic.jpg
+}
+material marble
+{
+   color 0.73 0.73 0.73
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex door/textures/marble.jpg
+}
+material checker
+{
+   color 0.73 0.73 0.73
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex door/textures/checker.png
+}
+material wood1
+{
+   color 0.73 0.73 0.73
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex door/textures/72cf.jpg
+}
+material wood2
+{
+   color 0.73 0.73 0.73
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   albedoTex door/textures/72rdf.jpg
+}
+material glass
+{
+   color 0.73 0.73 0.73
+   roughness 0.5
+   metallic 0.0
+   specular 0.5
+   brdf 1
+}
+
+mesh
+{
+    file door\geometry\door_refine.obj
+    material wood1
+}
+
+mesh
+{
+    file door\geometry\door_frame_left.obj
+    material door_frame
+}
+
+mesh
+{
+    file door\geometry\door_frame_right.obj
+    material door_frame
+}
+
+mesh
+{
+    file door\geometry\door_frame_top.obj
+    material door_frame
+}
+
+mesh
+{
+    file door\geometry\door_hinge1.obj
+    material copper
+}
+
+mesh
+{
+    file door\geometry\door_hinge2.obj
+    material copper
+
+}
+
+mesh
+{
+    file door\geometry\door_hinge3.obj
+    material copper
+
+}
+
+mesh
+{
+    file door\geometry\door_knob_refine.obj
+    material copper
+}
+
+mesh
+{
+    file door\geometry\floor.obj
+    material checker
+}
+
+mesh
+{
+    file door\geometry\floor01.obj
+    material white
+}
+
+
+mesh
+{
+    file door\geometry\picture_frame.obj
+    material picture_frame
+}
+
+mesh
+{
+    file door\geometry\picture_image.obj
+    material picture_image
+}
+
+mesh
+{
+    file door\geometry\table.obj
+    material wood2
+}
+
+mesh
+{
+    file door\geometry\table_leg1.obj
+    material table_leg
+}
+
+mesh
+{
+    file door\geometry\table_leg2.obj
+    material table_leg
+}
+
+mesh
+{
+    file door\geometry\table_leg3.obj
+    material table_leg
+}
+
+mesh
+{
+    file door\geometry\table_leg4.obj
+    material table_leg
+}
+
+mesh
+{
+    file door\geometry\teapot1.obj
+    material bumpmetal
+}
+
+mesh
+{
+    file door\geometry\teapot2.obj
+    material marble
+}
+
+mesh
+{
+    file door\geometry\teapot3.obj
+    material glass
+}
+
+mesh
+{
+    file door\geometry\walls.obj
+    material white
+}
+
+light
+{
+    position 0.343580 1.365704 -3.217831
+    v2  -1.172282 1.365704 -3.217831
+    v1 0.343580 0.765705 -3.217831
+    divLevel 10
+    #emission 420 452 554
+    emission 1420 1552 1642
+    type Quad
+}
+
+ 

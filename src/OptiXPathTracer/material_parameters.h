@@ -27,6 +27,10 @@ struct MaterialParameter
 		sheenTint = 0.5f;
 		clearcoat = 0.0f;
 		clearcoatGloss = 1.0f;
+
+		eta = 1.5;
+		trans = 0;
+
 		brdf = DISNEY;
 		albedoID = RT_TEXTURE_ID_NULL;
 	}
@@ -44,6 +48,8 @@ struct MaterialParameter
 	float sheenTint;
 	float clearcoat;
 	float clearcoatGloss;
+	float eta;
+	float trans;
 	BrdfType brdf;
 };
 

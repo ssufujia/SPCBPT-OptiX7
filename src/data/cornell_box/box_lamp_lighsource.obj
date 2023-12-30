@@ -1,0 +1,13 @@
+# Blender v2.90.1 OBJ File: ''
+# www.blender.org
+mtllib box_lamp_lighsource.mtl
+o light_source.001_cbox_largebox.012
+v 4.076816 1.122309 2.763060
+v 2.940208 1.122309 3.115552
+v 3.292700 1.122310 4.266550
+v 4.429308 1.122309 3.906862
+vn -0.0000 -1.0000 0.0000
+usemtl Default_OBJ.003
+s 1
+f 1//1 3//1 2//1
+f 1//1 4//1 3//1

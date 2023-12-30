@@ -1,0 +1,12 @@
+# Blender v3.4.1 OBJ File: 'bathroom.blend'
+# www.blender.org
+mtllib _unnamed_27.mtl
+o _unnamed_27
+v -20.142971 -2.455099 52.899998
+v 18.967228 -2.455099 52.899998
+v -20.142971 36.655098 52.900005
+v 18.967228 36.655098 52.900005
+vn 0.0000 -0.0000 1.0000
+usemtl _unnamed_28
+s off
+f 1//1 2//1 4//1 3//1

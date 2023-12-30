@@ -1460,10 +1460,23 @@ void Scene::createProgramGroups()
         OptixProgramGroupDesc SPCBPT_groups_desc[progTypeNum] = {};
         SPCBPT_groups_desc[rayGenProg].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
         SPCBPT_groups_desc[rayGenProg].raygen.module = m_ptx_module;
-        SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__SPCBPT";
+//        SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__shift_combine";
+//        SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__SPCBPT_no_rmis";
+        if (SPCBPT_PURE)
+        {
+            SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__SPCBPT";
+        }
+        else
+        {
+            SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__shift_combine";
+        }
+        SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+        SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].raygen.module = m_ptx_module;
+        SPCBPT_groups_desc[SPCBPT_SPECIAL_rayGen].raygen.entryFunctionName = "__raygen__SPCBPT";
+//        SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__glossy_shift_only";
         SPCBPT_groups_desc[missProg].kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
         SPCBPT_groups_desc[missProg].miss.module = m_ptx_module;
-        SPCBPT_groups_desc[missProg].miss.entryFunctionName = "__miss__BDPTVertex";
+        SPCBPT_groups_desc[missProg].miss.entryFunctionName = "__miss__env__BDPTVertex";
 
         SPCBPT_groups_desc[lightHitProg].kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
         SPCBPT_groups_desc[lightHitProg].hitgroup.moduleCH = m_ptx_module_hit;
@@ -1489,7 +1502,34 @@ void Scene::createProgramGroups()
         ));
 
     }
-    
+
+    {
+        OptixProgramGroupDesc eye_subpath_simple[progTypeNum] = {};
+
+        eye_subpath_simple[lightHitProg].kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+        eye_subpath_simple[lightHitProg].hitgroup.moduleCH = m_ptx_module_hit;
+        eye_subpath_simple[lightHitProg].hitgroup.entryFunctionNameCH = "__closesthit__eyeSubpath_LightSource_simple";
+        eye_subpath_simple[lightHitProg].hitgroup.moduleAH = nullptr;
+        eye_subpath_simple[lightHitProg].hitgroup.entryFunctionNameAH = nullptr;
+
+        eye_subpath_simple[normalHitProg].kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+        eye_subpath_simple[normalHitProg].hitgroup.moduleCH = m_ptx_module_hit;
+        eye_subpath_simple[normalHitProg].hitgroup.entryFunctionNameCH = "__closesthit__eyeSubpath_simple";
+        eye_subpath_simple[normalHitProg].hitgroup.moduleAH = nullptr;
+        eye_subpath_simple[normalHitProg].hitgroup.entryFunctionNameAH = nullptr;
+
+
+        OPTIX_CHECK_LOG(optixProgramGroupCreate(
+            m_context,
+            eye_subpath_simple,
+            progTypeNum,                             // num program groups
+            &program_group_options,
+            log,
+            &sizeof_log,
+            m_eye_subpath_group_simple
+        ));
+
+    }
     //
     // Miss
     //
@@ -1608,7 +1648,9 @@ void Scene::createPipeline()
         m_SPCBPT_eye_subpath_group[missProg],
         m_SPCBPT_eye_subpath_group[lightHitProg],
         m_SPCBPT_eye_subpath_group[normalHitProg],
-        
+        m_eye_subpath_group_simple[lightHitProg],
+        m_eye_subpath_group_simple[normalHitProg],
+
         m_radiance_miss_group,
         m_occlusion_miss_group,
         m_radiance_hit_group,
@@ -1641,18 +1683,23 @@ void Scene::createPipeline()
 //"pt"
 void Scene::switchRaygen(std::string raygenName)
 {
-
     OptixProgramGroup* raygen_group = nullptr;
     OptixProgramGroup* miss_groups[RayType::RAY_TYPE_COUNT] = {};
     OptixProgramGroup* hit_groups[RayHitType::RAYHIT_TYPE_COUNT][RayType::RAY_TYPE_COUNT] = {};
+    {
+
+        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION] =
+            hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_hit_group;
+        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_EYESUBPATH_SIMPLE] = &m_eye_subpath_group_simple[programType::normalHitProg];
+        hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_EYESUBPATH_SIMPLE] = &m_eye_subpath_group_simple[programType::lightHitProg];
+        miss_groups[RayType::RAY_TYPE_EYESUBPATH_SIMPLE] = &m_SPCBPT_eye_subpath_group[programType::missProg];
+    }
     if (raygenName == std::string("light trace"))
     {
         raygen_group = &m_light_trace_ray_group[rayGenProg];
         miss_groups[RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_miss_group;
         miss_groups[RayType::RAY_TYPE_LIGHTSUBPATH] = &m_light_trace_ray_group[programType::missProg];
 
-        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION] =
-            hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_hit_group;
         hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_LIGHTSUBPATH] = &m_light_trace_ray_group[programType::normalHitProg];
         hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_LIGHTSUBPATH] = &m_light_trace_ray_group[programType::lightHitProg];
     }
@@ -1661,9 +1708,7 @@ void Scene::switchRaygen(std::string raygenName)
         raygen_group = &m_raygen_prog_group;
         miss_groups[RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_miss_group;
         miss_groups[RayType::RAY_TYPE_RADIANCE] = &m_radiance_miss_group;
-
-        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION] =
-            hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_hit_group;
+         
         hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_LIGHTSUBPATH] = &m_radiance_hit_group;
         hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_LIGHTSUBPATH] = &m_lightsource_hit_group;
     }
@@ -1672,9 +1717,18 @@ void Scene::switchRaygen(std::string raygenName)
         raygen_group = &m_SPCBPT_eye_subpath_group[rayGenProg];
         miss_groups[RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_miss_group;
         miss_groups[RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::missProg];
+         
+        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::normalHitProg];
+        hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::lightHitProg]; 
+    }
 
-        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION] =
-            hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_hit_group;
+    else if (raygenName == std::string("SPCBPT_eye_ForcePure"))
+    {
+        raygen_group = &m_SPCBPT_eye_subpath_group[SPCBPT_SPECIAL_rayGen];
+        //raygen_group = &m_SPCBPT_eye_subpath_group[rayGenProg];
+        miss_groups[RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_miss_group;
+        miss_groups[RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::missProg];
+
         hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::normalHitProg];
         hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::lightHitProg];
     }
@@ -1683,9 +1737,7 @@ void Scene::switchRaygen(std::string raygenName)
         raygen_group = &m_raygen_prog_pretrace;
         miss_groups[RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_miss_group;
         miss_groups[RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::missProg];
-
-        hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION] =
-            hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_OCCLUSION] = &m_occlusion_hit_group;
+         
         hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::normalHitProg];
         hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_EYESUBPATH] = &m_SPCBPT_eye_subpath_group[programType::lightHitProg];
     }
@@ -1722,59 +1774,65 @@ void Scene::switchRaygen(std::string raygenName)
         ));
     }
 
-    {
-
+    { 
         std::vector<HitGroupRecord> hitgroup_records;
         for (const auto instance : m_instances)
         {
             const auto mesh = m_meshes[instance->mesh_idx];
             for (size_t i = 0; i < mesh->material_idx.size(); ++i)
             {
-                /// <summary>
-                /// radiance ray
-                /// </summary>
                 HitGroupRecord rec = {};
                 const int32_t mat_idx = mesh->material_idx[i];
                 {
-                    if (mat_idx >= 0 && (length(m_materials[mat_idx].emissive_factor) > 0))
+                    for (int j = 0; j < RayType::RAY_TYPE_COUNT; j++)
                     {
-                        //OPTIX_CHECK(optixSbtRecordPackHeader(m_lightsource_hit_group, &rec));
-                        OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][RayType::RAY_TYPE_RADIANCE], &rec));
-                    }
-                    else
-                    {
-                        //OPTIX_CHECK(optixSbtRecordPackHeader(m_radiance_hit_group, &rec));
-                        OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_RADIANCE], &rec));
-                    }
-                    rec.data.geometry_data.type = GeometryData::TRIANGLE_MESH;
-                    rec.data.geometry_data.triangle_mesh.positions = mesh->positions[i];
-                    rec.data.geometry_data.triangle_mesh.normals = mesh->normals[i];
-                    for (size_t j = 0; j < GeometryData::num_textcoords; ++j)
-                        rec.data.geometry_data.triangle_mesh.texcoords[j] = mesh->texcoords[j][i];
-                    rec.data.geometry_data.triangle_mesh.colors = mesh->colors[i];
-                    rec.data.geometry_data.triangle_mesh.indices = mesh->indices[i];
+                        if (j == RayType::RAY_TYPE_OCCLUSION)
+                        { 
+                            /// <summary>
+                            /// occlusion ray
+                            /// </summary> 
+                            //                    OPTIX_CHECK(optixSbtRecordPackHeader(m_occlusion_hit_group, &rec));
+                            OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION], &rec));
+                            hitgroup_records.push_back(rec); 
+                        }
+                        else
+                        {
+                            /// <summary>
+                            /// radiance ray or other types
+                            /// </summary>
+                            if (mat_idx >= 0 && (length(m_materials[mat_idx].emissive_factor) > 0))
+                            {
+                                //OPTIX_CHECK(optixSbtRecordPackHeader(m_lightsource_hit_group, &rec));
+                                OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][j], &rec));
+                            }
+                            else
+                            {
+                                //OPTIX_CHECK(optixSbtRecordPackHeader(m_radiance_hit_group, &rec));
+                                OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][j], &rec));
+                            }
+                            rec.data.geometry_data.type = GeometryData::TRIANGLE_MESH;
+                            rec.data.geometry_data.triangle_mesh.positions = mesh->positions[i];
+                            rec.data.geometry_data.triangle_mesh.normals = mesh->normals[i];
+                            for (size_t j = 0; j < GeometryData::num_textcoords; ++j)
+                                rec.data.geometry_data.triangle_mesh.texcoords[j] = mesh->texcoords[j][i];
+                            rec.data.geometry_data.triangle_mesh.colors = mesh->colors[i];
+                            rec.data.geometry_data.triangle_mesh.indices = mesh->indices[i];
 
-                    if (mat_idx >= 0)
-                        rec.data.material_data = m_materials[mat_idx];
-                    else
-                        rec.data.material_data = MaterialData();
-                    rec.data.material_data.id = mat_idx;
-                    hitgroup_records.push_back(rec);
+                            if (mat_idx >= 0)
+                                rec.data.material_data = m_materials[mat_idx];
+                            else
+                                rec.data.material_data = MaterialData();
+                            rec.data.material_data.id = mat_idx;
+                            hitgroup_records.push_back(rec);
+                        }
+                    }
                 }
-                /// <summary>
-                /// occlusion ray
-                /// </summary>
-                {
-//                    OPTIX_CHECK(optixSbtRecordPackHeader(m_occlusion_hit_group, &rec));
-                    OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_NORMAL][RayType::RAY_TYPE_OCCLUSION], &rec));
-                    hitgroup_records.push_back(rec);
-                }
-
+                 
 
 
             }
         }
-
+        //printf("SBT size %d\n",hitgroup_records.size());
         const size_t hitgroup_record_size = sizeof(HitGroupRecord);
         CUDA_CHECK(cudaMemcpy(
             reinterpret_cast<void*>(m_sbt.hitgroupRecordBase),
@@ -1826,6 +1884,7 @@ void Scene::createSBT()
         m_sbt.missRecordCount     = RayType::RAY_TYPE_COUNT;
     }
 
+
     {
         std::vector<HitGroupRecord> hitgroup_records;
         for( const auto instance : m_instances )
@@ -1869,7 +1928,12 @@ void Scene::createSBT()
                     OPTIX_CHECK(optixSbtRecordPackHeader(m_occlusion_hit_group, &rec));
                     hitgroup_records.push_back(rec);
                 }
-
+                 
+                for (int j = 2; j < RayType::RAY_TYPE_COUNT; j++)
+                { 
+                    OPTIX_CHECK(optixSbtRecordPackHeader(m_occlusion_hit_group, &rec));
+                    hitgroup_records.push_back(rec);
+                } 
 
             }
         }
@@ -1885,7 +1949,7 @@ void Scene::createSBT()
                     hitgroup_record_size*hitgroup_records.size(),
                     cudaMemcpyHostToDevice
                     ) );
-
+        printf("hit group count %d\n",hitgroup_records.size());
         m_sbt.hitgroupRecordStrideInBytes = static_cast<unsigned int>( hitgroup_record_size );
         m_sbt.hitgroupRecordCount         = static_cast<unsigned int>( hitgroup_records.size() );
     }

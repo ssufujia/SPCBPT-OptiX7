@@ -52,7 +52,7 @@ namespace sutil
 
     enum programType
     {
-        rayGenProg, missProg, lightHitProg, normalHitProg, progTypeNum
+        rayGenProg, missProg, lightHitProg, normalHitProg, SPCBPT_SPECIAL_rayGen, progTypeNum
     };
 
 class Scene
@@ -179,6 +179,7 @@ private:
 
     OptixProgramGroup                    m_light_trace_ray_group[progTypeNum] = {};
     OptixProgramGroup                    m_SPCBPT_eye_subpath_group[progTypeNum] = {};
+    OptixProgramGroup                    m_eye_subpath_group_simple[progTypeNum] = {};
     //0 for raygen, 1 for normal closest_hit, 2 for light source closest hit, 3 for miss
 
     OptixTraversableHandle               m_ias_handle               = 0;

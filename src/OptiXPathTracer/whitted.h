@@ -81,6 +81,15 @@ struct LaunchParams
     BufferView<MaterialData::Pbr> materials;
     float3                   miss_color;
     OptixTraversableHandle   handle;
+
+    bool eye_subspace_visualize;
+    bool light_subspace_visualize;
+    bool caustic_path_only;
+    bool specular_subspace_visualize;
+    bool caustic_prob_visualize;
+    bool PG_grid_visualize;
+    bool error_heat_visual;
+    bool spcbpt_pure;
 };
 
 struct PayloadRadiance
@@ -97,13 +106,16 @@ struct PayloadRadiance
     int    depth;
     unsigned int seed;
     bool done;
+    bool glossy_bounce;
+    long long path_record;
     RT_FUNCTION PayloadRadiance()
     {
         result = make_float3(0); 
         throughput = make_float3(1.0);
         depth = 0;
         done = false;
-
+        glossy_bounce = true;
+        path_record = 0;
     }
 };
 

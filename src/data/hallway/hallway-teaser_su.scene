@@ -1,0 +1,382 @@
+
+cameraSetting
+{
+    eye 1.888024 0.870315 2.298156
+	lookat 1.852158 0.851879 2.206647
+    
+    geo_normal 1
+    fov 45
+}
+material Artwork
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.002236067900745542
+   metallic 0.004999999888241291
+   albedoTex hallway/textures/AbstractArt03.jpg
+}
+
+material Black
+{
+   color 0.057802021503448486 0.057802021503448486 0.057802021503448486
+   roughness 1.0
+   metallic 0.0
+}
+
+material BlackBird
+{
+   color 0.027210019528865814 0.027210019528865814 0.027210019528865814
+   roughness 0.06085805892944336
+   metallic 1.0
+}
+
+material BlackRubber.001
+{
+   color 0.042027655988931656 0.042027655988931656 0.042027655988931656
+   roughness 0.024375344950278155
+   metallic 0.06302520632743835
+}
+
+material BrushedAluminium
+{
+   color 0.4109392762184143 0.4109392762184143 0.4109392762184143
+   roughness 0.18441145716874274
+   metallic 0.0
+   albedoTex hallway/textures/aluminum_texture1642.jpg
+}
+
+material BrushedStainlessSteel
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+}
+
+material Chair-Plastic
+{
+   color 0.6382717490196228 0.6280412077903748 0.41653257608413696
+   roughness 0.08967653062135028
+   metallic 0.28358209133148193
+}
+
+material Chocofur_shaders_free_04
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+   albedoTex hallway/textures/Chocofur_shaders_free_04_diff.jpg
+}
+
+material Chrome
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0
+   metallic 1.0
+}
+
+material Chrome.001
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0
+   metallic 1.0
+}
+
+material Chrome.002
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0
+   metallic 1.0
+}
+
+material Emission
+{
+   color 0.8 0.8 0.8
+   roughness 0.5
+   metallic 0.0
+}
+
+material Glass
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.0
+   metallic 0.11344538629055023
+ 
+}
+material Black_s
+{
+   color 0.00 0.00 0.00
+   roughness 1.0
+   metallic 0
+ 
+}
+
+material Paint-RedMatt
+{
+   color 0.5458894968032837 0.634649395942688 0.634649395942688
+   roughness 0.5
+   metallic 0.0
+}
+
+material Paint-WhiteGloss
+{
+   color 0.8999999761581421 0.8999999761581421 0.8999999761581421
+   roughness 0.049647193402051926
+   metallic 0.125
+}
+
+material Paint-WhiteGloss.002
+{
+   color 0.8999999761581421 0.8999999761581421 0.8999999761581421
+   roughness 0.03201078325574436
+   metallic 0
+}
+
+material Paint-WhiteMatt
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+}
+
+material PVC
+{
+   color 1.0 1.0 1.0
+   roughness 0.5
+   metallic 0.0
+}
+
+material Wallpape
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.5
+   metallic 0.0
+   albedoTex hallway/textures/HippyTrippyWallpaper.jpg 
+}
+
+material WhitePlastic
+{
+   color 0.8500000238418579 0.8500000238418579 0.8500000238418579
+   roughness 0.0331798146002793
+   metallic 0.12616822123527527
+}
+
+material Wood
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.047439713384299864
+   metallic 0.0
+   albedoTex hallway/textures/QUARTERSAWNTEAK.jpg
+}
+
+material WoodFloor
+{
+   color 0.800000011920929 0.800000011920929 0.800000011920929
+   roughness 0.06430973717942834
+   metallic 0.0
+   albedoTex hallway/textures/seamless-textures-PARQUET-WOOD-FLOORING-#29b.jpg
+}
+
+material Water
+{
+   color 1.0 1.0 1.0
+   roughness 0.01
+   metallic 1.0
+   trans 1
+   eta 0.6
+   albedoTex hallway/textures/wallpaper2.jpg
+}
+
+
+mesh
+{
+    file hallway\geometry\Walls.obj
+    material BrushedStainlessSteel
+}
+
+mesh
+{
+    file hallway\geometry\Walls.001_fix.obj
+    material Wallpape
+}
+
+mesh
+{
+    file hallway\geometry\Walls.002_fix.obj
+    material Paint-WhiteGloss
+}
+
+mesh
+{
+    file hallway\geometry\Walls.003_fix.obj
+    material Paint-RedMatt
+}
+
+mesh
+{
+    file hallway\geometry\Walls.004.obj
+    material Paint-WhiteGloss.002
+}
+
+mesh
+{
+    file hallway\geometry\Walls.005.obj
+    material PVC
+}
+
+#mesh
+#{
+#    file hallway\geometry\Walls.006_fix.obj
+#    material Emission
+#
+#}
+
+mesh
+{
+    file hallway\geometry\Walls.007.obj
+    material WhitePlastic
+}
+
+mesh
+{
+    file hallway\geometry\Walls.008.obj
+    material Chair-Plastic
+}
+
+mesh
+{
+    file hallway\geometry\Walls.009.obj
+    material Chrome.002
+}
+
+mesh
+{
+    file hallway\geometry\Walls.010.obj
+    material BlackRubber.001
+}
+
+mesh
+{
+    file hallway\geometry\Walls.011_m.obj
+    material Chrome
+}
+
+mesh
+{
+    file hallway\geometry\Walls.012_m.obj
+    material Emission
+}
+
+mesh
+{
+    file hallway\geometry\Walls.013.obj
+    material BrushedAluminium
+}
+
+mesh
+{
+    file hallway\geometry\Walls.014.obj
+    material Black
+}
+
+mesh
+{
+    file hallway\geometry\Walls.015.obj
+    material Paint-WhiteMatt
+}
+
+mesh
+{
+    file hallway\geometry\Walls.016.obj
+    material WoodFloor
+}
+
+mesh
+{
+    file hallway\geometry\Walls.017.obj
+    material Chrome.001
+}
+
+ 
+
+mesh
+{
+    file hallway\geometry\Walls.019.obj
+    material Chocofur_shaders_free_04
+}
+
+mesh
+{
+    file hallway\geometry\Walls.020.obj
+    material Wood
+}
+
+mesh
+{
+    file hallway\geometry\Walls.021.obj
+    material Artwork
+}
+material Lens
+{
+	color 1 1 1
+	roughness 0.001
+	metallic 1.0
+	trans 1
+	eta 0.9
+      brdf 1
+      albedoTex hallway/textures/pool_normal.png
+}
+
+mesh
+{
+    file hallway\geometry\specular_lens.obj
+    material Lens
+}
+
+mesh
+{
+    file hallway\geometry\lightSurround.obj
+    material Black_s
+}
+
+
+#light
+#{
+    #position 0.359477 1.884173 0.863725
+    #v1 0.340389 1.832212 0.863725
+    #v2 0.359472 1.884175 0.808370
+   # divLevel 1
+  #  emission 20000 8000 6000
+ #   type Quad
+#}
+
+ 
+light
+{
+    position 0.395060 1.814159 0.832418
+    v1 0.386358 1.807475 0.832418
+    v2 0.395060 1.814160 0.821445
+    divLevel 1
+    emission 200000 120000 80000
+    type Quad
+}
+
+light
+{
+    position 1.592080 1.720880 -3.366179
+    v1 2.192080 1.720880 -3.366179
+    v2 1.592080 1.720880 -3.966179
+    divLevel 1
+    emission 70 40 30
+    type Quad
+}
+
+light
+{
+    position -0.203254 2.778168 1.078781
+    v1 -0.203254 1.495130 1.078781
+    v2 -0.203254 2.778168 0.278781
+    divLevel 1
+    emission 10.2 9.52 6.42
+    type Quad
+}
+
+
