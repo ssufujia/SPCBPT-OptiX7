@@ -1134,6 +1134,10 @@ extern "C" __global__ void __raygen__shift_combine()
             break;
         }
     }
+
+    //env map
+    result += payload.result;
+
     //
     // Update results 
     ////   

@@ -2732,7 +2732,7 @@ namespace Shift
                     bool success_hit;
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || NOT_HIT_LIGHT(np)
+                    if (success_hit == false || NOT_HIT_LIGHT(np))
                         continue;
                     Light light = Tracer::params.lights[np.materialId];
                     Tracer::lightSample light_sample;
