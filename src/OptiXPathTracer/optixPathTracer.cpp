@@ -1425,13 +1425,15 @@ int main( int argc, char* argv[] )
         
         //scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool2.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
+        scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_env.scene"); 
         // scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
+        printf("load light, num: %d\n", myScene->lights.size());
+
         myScene->getMeshData(0);
         //cout << scenePath << std::endl;
         

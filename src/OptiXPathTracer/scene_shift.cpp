@@ -169,7 +169,6 @@ void LightSource_shift(Scene& Src, MyParams& params, sutil::Scene& Dst)
         light.type = Light::Type::ENV;
         light.id = lights.size();
         lights.push_back(light);
-
     }
     params.lights = HostToDeviceBuffer(lights.data(), lights.size());
 }

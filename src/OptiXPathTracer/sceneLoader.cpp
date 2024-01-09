@@ -207,10 +207,10 @@ Scene* LoadScene(const char* filename)
 				texture_ids[tex_name] = tex_id;
 				scene->texture_map[tex_id - 1] = tex_name;
 				light.albedoID = tex_id;
+				printf("find light tex %s\n", tex_name);
 			}
 			scene->lights.push_back(light);
 		}
-
 		//--------------------------------------------
 		// Properties
 

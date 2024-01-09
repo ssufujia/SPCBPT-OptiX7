@@ -2146,6 +2146,7 @@ RT_FUNCTION void init_EyeSubpath(BDPTPath& p, float3 origin, float3 direction)
 /* 把光采样信息装到一个bdpt顶点中 */
 RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample, BDPTVertex& v)
 {
+
     v.position = light_sample.position;
     v.normal = light_sample.normal();
     v.flux = light_sample.emission;
@@ -2165,6 +2166,10 @@ RT_FUNCTION void init_vertex_from_lightSample(Tracer::lightSample& light_sample,
     else if (light_sample.bindLight->type == Light::Type::ENV)
     {
         v.type = BDPTVertex::Type::ENV;
+    }
+    else
+    {
+        //printf("error: no such light,id: %d, type: %d\n", light_sample.bindLight->id, light_sample.bindLight->type);
     }
     //其他光源的状况待补充
 }
@@ -2566,9 +2571,13 @@ namespace Shift
     }
     RT_FUNCTION float GeometryTerm(const BDPTVertex& a, const BDPTVertex& b)
     {
-        if (a.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::ENV || a.type == BDPTVertex::Type::ENV_MISS || b.type == BDPTVertex::Type::ENV_MISS)
+            // printf("vertex type: %d, vertex normal: %f, %f, %f\n", a.type, a.normal.x, a.normal.y, a.normal.z);
+        //printf("vertex type: %d, vertex normal: %f, %f, %f\n", b.type, b.normal.x, b.normal.y, b.normal.z);
+
+        if (a.type == BDPTVertex::Type::ENV_MISS || a.type == BDPTVertex::Type::ENV || a.type ==  BDPTVertex::Type::DIRECTION ||
+            b.type == BDPTVertex::Type::ENV_MISS || b.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::DIRECTION)
         {
-            printf("Geometry Term call in Env light but we haven't implement it");
+            return abs(dot(a.normal , b.normal));
         }
         float3 diff = a.position - b.position;
         float3 dir = normalize(diff);

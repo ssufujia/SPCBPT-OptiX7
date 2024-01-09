@@ -245,7 +245,10 @@ RT_FUNCTION void init_lightSubPath_from_lightSample(Tracer::lightSample& light_s
     {
         p.nextVertex().singlePdf = light_sample.dir_pos_pdf;
     }
-
+    else
+    {
+        printf("???error light type\n");
+    }
     init_vertex_from_lightSample(light_sample, v);
      //ÆäËû¹âÔ´µÄ×´¿ö´ý²¹³ä
 }
@@ -900,7 +903,6 @@ extern "C" __global__ void __raygen__shift_combine()
             {
                 Tracer::lightSample light_sample;
                 light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
-
                 BDPTVertex light_vertex;
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
@@ -915,7 +917,6 @@ extern "C" __global__ void __raygen__shift_combine()
             {
                 Tracer::lightSample light_sample;
                 light_sample.ReverseSample(Tracer::params.lights[payload.path.currentVertex().materialId], payload.path.currentVertex().uv);
-
                 BDPTVertex light_vertex;
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 pathBuffer[buffer_size - 1] = light_vertex;
@@ -1380,6 +1381,8 @@ extern "C" __global__ void __miss__env__BDPTVertex()
 
     MidVertex.type = BDPTVertex::Type::ENV_MISS;
     MidVertex.uv = dir2uv(prd->ray_direction); 
+    MidVertex.materialId = SKY.light_id;
+
     Tracer::lightSample light_sample;
     light_sample.ReverseSample(Tracer::params.lights[SKY.light_id], MidVertex.uv);
 
@@ -1577,7 +1580,6 @@ extern "C" __global__ void __raygen__TrainData()
                 Tracer::lightSample light_sample;
                 int light_id = payload.path.currentVertex().materialId;
                 light_sample.ReverseSample(Tracer::params.lights[light_id], payload.path.currentVertex().uv);
-
                 BDPTVertex light_vertex;
                 init_vertex_from_lightSample(light_sample, light_vertex);
                 PreTrace_buildPathInfo(buffer + buffer_size - 1, TrainData::nVertex_device(light_vertex ,false), currentPath, currentConn, buffer_size);
@@ -1661,7 +1663,7 @@ RT_FUNCTION bool eye_step(Tracer::PayloadBDPTVertex& prd)
         return false;
     }
     
-#define ISLIGHTSOURCE(a) (a.type == BDPTVertex::Type::HIT_LIGHT_SOURCE||a.type == BDPTVertex::Type::ENV_MISS)
+#define ISLIGHTSOURCE(a) (a.type == BDPTVertex::Type::HIT_LIGHT_SOURCE || a.type == BDPTVertex::Type::ENV_MISS)
 #define ISVALIDVERTEX(a) (fmaxf(a.flux / a.pdf)>= 0.00000001f)
     if (ISLIGHTSOURCE(prd.path.currentVertex()))
     {

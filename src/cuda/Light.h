@@ -77,6 +77,10 @@ struct Light
         float3 intensity;
     };
 
+    struct Env
+    {
+
+    };
 
     Type  type;
     int id;
@@ -89,5 +93,6 @@ struct Light
         Ambient ambient;
         QUAD quad;
         Directional directional;
+        Env env;
     };
 };
