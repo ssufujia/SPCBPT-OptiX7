@@ -1111,6 +1111,9 @@ extern "C" __global__ void __raygen__DropoutTracing()
         }
     }
     
+    /* env map */
+    result += payload.result;
+
     /* Update results */
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
     float3             accum_color = result;
@@ -1292,6 +1295,7 @@ extern "C" __global__ void __miss__env__BDPTVertex()
 
     MidVertex.type = BDPTVertex::Type::ENV_MISS;
     MidVertex.uv = dir2uv(prd->ray_direction); 
+    MidVertex.materialId = SKY.light_id;
     Tracer::lightSample light_sample;
     light_sample.ReverseSample(Tracer::params.lights[SKY.light_id], MidVertex.uv);
 

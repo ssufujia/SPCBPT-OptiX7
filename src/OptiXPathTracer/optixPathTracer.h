@@ -59,11 +59,11 @@ const bool estimation_save = true;
 
 
 //#define SCENE_BEDROOM
-//#define SCENE_BREAKFAST
+#define SCENE_BREAKFAST
 //#define SCENE_PROJECTOR
 //#define SCENE_HALLWAY
 //#define SCENE_KITCHEN
-#define SCENE_WATER
+//#define SCENE_WATER
 
 
 #ifdef SCENE_BEDROOM 
