@@ -1466,7 +1466,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
         //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
-        scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
+        //scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
 
         auto myScene = LoadScene(scenePath.c_str()); 
         
