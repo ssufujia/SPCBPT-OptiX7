@@ -1396,7 +1396,7 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
 #endif   
 #ifdef SCENE_HALLWAY
-        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_final.scene");
 #endif   
 #ifdef SCENE_WATER
         scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
