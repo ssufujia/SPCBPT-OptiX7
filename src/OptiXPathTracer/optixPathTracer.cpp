@@ -1387,10 +1387,10 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 #ifdef SCENE_PROJECTOR 
-        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project_final.scene");
 #endif 
 #ifdef SCENE_KITCHEN
-        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_final.scene");
 #endif 
 #ifdef SCENE_BEDROOM
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");

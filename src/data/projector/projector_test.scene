@@ -1,0 +1,77 @@
+cameraSetting
+{
+    up      0.000000 1.000000 0.000000
+eye     -41.150520 2.751472 16.576244
+lookat  -41.312443 2.883542 19.091158
+
+    fov 45
+}
+
+material Water
+{
+   color 1 1 1
+   trans 1
+#   eta 1.42
+    eta 1.42
+   roughness 0.001
+}
+
+mesh
+{
+    file glassroom\projector\lens.obj
+    material Water
+}
+
+material BoxBlack
+{
+   color 0 0 0
+   roughness 1.0
+}
+
+mesh
+{
+    file glassroom\projector\box.obj
+    material BoxBlack
+}
+
+
+material material_scene/livingroom_wall_left.obj 
+{
+    color 1 1 1
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    #albedoTex glassroom/scene/texture/3d66model2019-B005-97-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_left_refine.obj
+    material  material_scene/livingroom_wall_left.obj
+}
+
+
+
+#projector 
+light
+{
+ 	position -42.414833 4.336473 14.641813
+	v1 -42.414833 4.280985       14.641813
+	v2 -42.304020 4.336473       14.641813
+    divLevel 1
+    emission 100300 100000 130000
+	albedoTex glassroom/projector/caster.png
+    type Quad
+}
+ 
+
+light
+{
+	position -28.021770 2.056868    14.640813
+	v1 -26.021770 2.056868          14.640813
+	v2 -28.021770 4.056868          14.640813
+    divLevel 3
+    emission 48.5 56.5  80
+    type Quad
+}
