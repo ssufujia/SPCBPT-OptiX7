@@ -43,6 +43,8 @@
 
 #define ISINVALIDVALUE(ans) (ans.x>100000.0f|| isnan(ans.x)||ans.y>100000.0f|| isnan(ans.y)||ans.z>100000.0f|| isnan(ans.z))
 #define VERTEX_MAT(v) (v.getMat(Tracer::params.materials))
+
+#define HIT_LIGHT(v) (v.type == BDPTVertex::HIT_LIGHT_SOURCE || v.type == BDPTVertex::ENV_MISS)
 struct labelUnit
 {
     float3 position;
@@ -2601,7 +2603,7 @@ namespace Shift
     {
         if (a.type == BDPTVertex::Type::ENV || b.type == BDPTVertex::Type::ENV || a.type == BDPTVertex::Type::ENV_MISS || b.type == BDPTVertex::Type::ENV_MISS)
         {
-            printf("Geometry Term call in Env light but we haven't implement it");
+            return abs(dot(a.normal, b.normal));
         }
         float3 diff = a.position - b.position;
         float3 dir = normalize(diff);
@@ -2754,7 +2756,12 @@ namespace Shift
             }
             return skip_visibility ? pdf : pdf * Tracer::visibilityTest(Tracer::params.handle, a, b);
         }
-        else if (a.type == BDPTVertex::Type::QUAD) {
+        else if (a.type == BDPTVertex::Type::QUAD) 
+        {
+            return tracingPdf(a, b);
+        }
+        else if (a.type == BDPTVertex::Type::ENV)
+        {
             return tracingPdf(a, b);
         }
         else {
@@ -2800,7 +2807,7 @@ namespace Shift
             {
                 return false;
             }
-            if (path.get(i).type == BDPTVertex::HIT_LIGHT_SOURCE)
+            if (HIT_LIGHT(path.get(i)))
             {
                 if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX && i == u - 1)
                 {
@@ -2852,7 +2859,7 @@ namespace Shift
             pdf *= tracingPdf(currentVertex, path.get(cnt), in_dir, true, true);
 
             /* 打到光源 */
-            if (path.get(cnt).type == BDPTVertex::HIT_LIGHT_SOURCE) {
+            if (HIT_LIGHT(path.get(cnt))) {
                 /* L(S)*S */
                 if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX) {
                     int light_id = path.get(cnt).materialId;
@@ -2919,7 +2926,7 @@ namespace Shift
             {
                 return false;
             }
-            if (path.get(i).type == BDPTVertex::HIT_LIGHT_SOURCE)
+            if (HIT_LIGHT(path.get(i)))
             {
                 if (CP.type == BDPTVertex::Type::DROPOUT_NOVERTEX && i == u - 1)
                 {
@@ -3034,7 +3041,7 @@ namespace Shift
                 {
                     DOT_INVALIDATE_ALTERNATE_PATH(path); return false;
                 }
-                if (path.get(i).type == BDPTVertex::HIT_LIGHT_SOURCE)
+                if (HIT_LIGHT(path.get(i)))
                 {
                     if (statistic_prd.NO_CP() && i == u - 1)
                     {
