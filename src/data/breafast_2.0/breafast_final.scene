@@ -6,7 +6,7 @@ cameraSetting
     eye     -0.624943 -6.584619 1.134983
     lookat  -0.623726 -5.587055 1.204728
 	geo_normal 1
-	env_file envmap/night.hdr
+	env_file envmap/sky_fire.hdr
 }
 light
 {	

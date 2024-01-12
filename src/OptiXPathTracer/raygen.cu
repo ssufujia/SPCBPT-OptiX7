@@ -1350,7 +1350,7 @@ extern "C" __global__ void __miss__constant_radiance()
     Tracer::PayloadRadiance* prd = Tracer::getPRD();
     prd->done = true;
     prd->currentResult = make_float3(0);
-    if (prd->depth == 0&&SKY.valid)
+    if (SKY.valid)
     {
         prd->result = prd->throughput* SKY.color(prd->ray_direction); 
     }
