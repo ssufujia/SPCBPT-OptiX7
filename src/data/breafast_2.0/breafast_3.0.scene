@@ -58,7 +58,7 @@ material  breakfast_room:Ceramic_001
 }
 material  breakfast_room:Chrome
 {
-    color 0.00 0.00 0.00
+    color 0.10 0.10 0.10
     roughness 0.1
 }
 material  breakfast_room:Floor_Tiles
@@ -90,6 +90,11 @@ material  breakfast_room:Material_005
 material  breakfast_room:Paint___Black_Satin
 {
     color 0.00 0.00 0.00
+    roughness 0.8
+}
+material  breakfast_room:Paint___Gray_Satin
+{
+    color 0.20 0.20 0.20
     roughness 0.8
 }
 material  breakfast_room:Paint___White_Gloss
@@ -142,7 +147,7 @@ mesh
 mesh
 {
     file breafast_2.0\geometry\breakfast_room.003.obj
-    material breakfast_room:Paint___Black_Satin
+    material breakfast_room:Paint___Gray_Satin
 }
 
 mesh
