@@ -621,7 +621,7 @@ void estimation_setup(const string& path) {
     switch (render_alg_id)
     {
     case 0:algo += "pt"; break;
-    case 1:algo += "dropout"; break;
+    case 1:algo += "lighttrace"; break;
     case 2:algo += "spcbpt"; break;
     default:algo += "error"; break;
     }
@@ -1422,7 +1422,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 #ifdef SCENE_PROJECTOR 
-        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project_final.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project3.scene");
 #endif 
 #ifdef SCENE_KITCHEN
