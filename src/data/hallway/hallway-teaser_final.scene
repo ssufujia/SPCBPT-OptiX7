@@ -26,10 +26,27 @@ material Black
 
 material BlackBird
 {
-   color 0.027210019528865814 0.027210019528865814 0.027210019528865814
+# 212,175,55
+   color 0.8210019528865814 0.6210019528865814 0.2210019528865814
    roughness 0.06085805892944336
    metallic 1.0
 }
+
+material GoldDiffuse
+{
+# 212,175,55
+   color 0.310019528865814 0.210019528865814 0.0510019528865814
+   roughness 0.566085805892944336
+   metallic 0
+}
+
+
+#material BlackBird
+#{
+#   color 0.027210019528865814 0.027210019528865814 0.027210019528865814
+#   roughness 0.06085805892944336
+#   metallic 1.0
+#}
 
 material BlackRubber.001
 {
@@ -353,11 +370,31 @@ material Outsider
 
 
  
+#mesh
+#{
+#    file hallway\geometry\lens.obj
+#    material Lens
+#}
+
 mesh
 {
-    file hallway\geometry\lens.obj
+    file hallway\geometry\newLight\outer.obj
+    material Outsider
+}
+
+mesh
+{
+    file hallway\geometry\newLight\inner.obj
+    material Black_s
+}
+
+mesh
+{
+    file hallway\geometry\newLight\light_lens.obj
     material Lens
 }
+
+
 mesh
 {
     file hallway\geometry\lens2.obj
@@ -376,20 +413,40 @@ mesh
     material Black_s
 }
 
+#mesh
+#{
+#    file hallway\geometry\Walls.018.obj
+#    material BlackBird
+#}
+
 mesh
 {
-    file hallway\geometry\Walls.018.obj
+    file hallway\geometry\bird_upper.obj
+    material BlackBird
+}
+
+mesh
+{
+    file hallway\geometry\bird_mid.obj
+    material BlackBird
+}
+
+mesh
+{
+    file hallway\geometry\bird_lower.obj
     material BlackBird
 }
 
  
-
- 
 light
 {
-	position 1.410092 1.268527 0.025598
-	v1 1.460913 1.268527 0.025590
-	v2 1.410092 1.319348 0.025590
+	#position 1.410092 1.268527 0.025598
+	#v1 1.460913 1.268527 0.025590
+	#v2 1.410092 1.319348 0.025590
+
+    position 1.410092 1.457483 0.018088
+	v1       1.460913 1.457484 0.018080
+	v2       1.410092 1.507458 0.027321
 
     divLevel 1
     emission 12000 8000 5000

@@ -1402,7 +1402,7 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
 #endif 
 #ifdef SCENE_BREAKFAST
-        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_final.scene");
 #endif      
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
