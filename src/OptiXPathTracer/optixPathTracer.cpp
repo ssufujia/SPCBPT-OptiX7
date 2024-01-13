@@ -102,7 +102,7 @@ int32_t mouse_button = -1;
 int32_t samples_per_launch = 1; 
 
 std::vector< std::string> render_alg = { std::string("pt"), std::string("SPCBPT_eye"), std::string("SPCBPT_eye_ForcePure") };
-int render_alg_id = 0;
+int render_alg_id = 1;
 bool one_frame_render_only = false;
 float render_fps = 60;
 //------------------------------------------------------------------------------
