@@ -6,7 +6,6 @@ cameraSetting
     
     geo_normal 1
     fov 45
-    env_file hallway/textures/sky_fire.hdr
 }
 material Artwork
 {
@@ -405,8 +404,8 @@ light
 light
 {
     position -0.332912 1.595486 -0.225968
-    v1 -0.332912 0.022192 -0.225968
-    v2 -0.332912 1.595486 -1.799262
+	v1 -0.332912 0.022192 -0.225968
+	v2 -0.332912 1.595486 -1.799262
     divLevel 1
     emission 3 2 1.5
     type Quad
@@ -430,14 +429,14 @@ light
     type Quad
 }
 
-# light
-# {
-#    position -0.203254 2.778168 1.078781
-#    v1 -0.203254 1.495130 1.078781
-#    v2 -0.203254 2.778168 0.278781
-#    divLevel 1
-#    emission 10.2 9.52 6.42
-#    type Quad
-#}
+light
+{
+    position -0.203254 2.778168 1.078781
+    v1 -0.203254 1.495130 1.078781
+    v2 -0.203254 2.778168 0.278781
+    divLevel 1
+    emission 10.2 9.52 6.42
+    type Quad
+}
 
 
