@@ -1150,7 +1150,7 @@ extern "C" __global__ void __raygen__shift_combine()
     ////   
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
 
-    //result += Tracer::params.lt.lightImage[image_index];// light_trace
+    result += Tracer::params.lt.lightImage[image_index];// light_trace
 
     float3             accum_color = result;
 

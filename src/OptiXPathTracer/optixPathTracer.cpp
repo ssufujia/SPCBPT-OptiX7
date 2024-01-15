@@ -1438,7 +1438,7 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
 #endif 
 #ifdef SCENE_BREAKFAST
-        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_final.scene");
 #endif      
 
         //scenePath = string(SAMPLES_DIR) + string("/data/showcase/showcase.scene");
@@ -1595,6 +1595,12 @@ int main( int argc, char* argv[] )
                     render_time_record = sum_render_time.count();
                     render_frame_record = params.subframe_index;
 
+                    if (sum_render_time.count() > 300)
+                    {
+                        //img_save(sum_render_time.count(), params.subframe_index);
+                        break;
+                    }
+        
                     ++params.subframe_index;
                 } while (!glfwWindowShouldClose(window));
                 CUDA_SYNC_CHECK();
