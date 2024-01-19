@@ -185,7 +185,44 @@ static void windowIconifyCallback( GLFWwindow* window, int32_t iconified )
     minimized = ( iconified > 0 );
 }
 
+void saveScreenShots(int render_frame, string scene_name, string algorithm_name = "dropout")
+{
+    if (render_frame % SCREENSHOT_INTERVAL == 0)
+    {
+        std::cout << "save screenshot. render frame: " << render_frame << std::endl;
 
+        string path1 = "screenshots";
+        string path2 = "screenshots/" + scene_name;
+        string path3 = "screenshots/" + scene_name + "/" + algorithm_name;
+        // string full_path = "screenshots/" + scene_name + "/" + algorithm_name;
+        if (_access_s(path1.c_str(), 0) != 0) {
+            _mkdir(path1.c_str());
+        }
+        if (_access_s(path2.c_str(), 0) != 0) {
+            _mkdir(path2.c_str());
+        }
+        if (_access_s(path3.c_str(), 0) != 0) {
+            _mkdir(path3.c_str());
+        }
+
+        sutil::ImageBuffer outputbuffer;
+
+        auto host_buffer = MyThrustOp::copy_to_host(params.frame_buffer, params.height * params.width);
+        outputbuffer.data = host_buffer.data();
+        outputbuffer.width = params.width;
+        outputbuffer.height = params.height;
+        outputbuffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
+
+        // 将时间格式化为字符串
+        std::stringstream ss;
+        ss << "./" << path3 << "/" << render_frame;
+
+        // 获取格式化后的文件名
+        std::string filename = ss.str();
+
+        sutil::saveImage((filename + ".png").c_str(), outputbuffer, true);
+    }
+}
 void img_save(double render_time=-1,int frame=0)
 {
     sutil::ImageBuffer outputbuffer;
@@ -1509,13 +1546,13 @@ int main( int argc, char* argv[] )
         //if( outfile.empty() )
         if(true) {
             GLFWwindow* window = sutil::initUI( "optixPathTracer", width, height );
-            glfwSetMouseButtonCallback( window, mouseButtonCallback );
+           /* glfwSetMouseButtonCallback(window, mouseButtonCallback);
             glfwSetCursorPosCallback( window, cursorPosCallback );
             glfwSetWindowSizeCallback( window, windowSizeCallback );
             glfwSetWindowIconifyCallback( window, windowIconifyCallback );
             glfwSetKeyCallback( window, keyCallback );
             glfwSetScrollCallback( window, scrollCallback );
-            glfwSetWindowUserPointer( window, &params );
+            glfwSetWindowUserPointer( window, &params );*/
 
             //
             // Render loop
@@ -1569,7 +1606,7 @@ int main( int argc, char* argv[] )
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
                     glfwSwapBuffers(window);
 
-                    //estimation::es.estimation_mode = false;
+                    estimation::es.estimation_mode = false;
                     if (estimation::es.estimation_mode == true) {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
@@ -1592,14 +1629,17 @@ int main( int argc, char* argv[] )
                         printf("frame %d time %f\n", params.subframe_index, sum_render_time.count());
 
                     }
+
+                    if (SCREENSHOT_ENABLE)
+                        saveScreenShots(render_frame_record, "breakfast", "spcbpt+lighttrace");
+                    if (sum_render_time.count() > 60)
+                    {
+                        break;
+                    }
                     render_time_record = sum_render_time.count();
                     render_frame_record = params.subframe_index;
 
-                    if (sum_render_time.count() > 300)
-                    {
-                        //img_save(sum_render_time.count(), params.subframe_index);
-                        break;
-                    }
+
         
                     ++params.subframe_index;
                 } while (!glfwWindowShouldClose(window));

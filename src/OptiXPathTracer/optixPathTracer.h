@@ -56,6 +56,9 @@ const bool estimation_save = true;
 #define SPCBPT_TERMINATE_EARLY false
 #define DOT_BOUND_LIMIT_LESS false
 
+/* 截图控制 */
+const bool SCREENSHOT_ENABLE = true;
+const int SCREENSHOT_INTERVAL = 1;
 
 //#define SCENE_BEDROOM
 #define SCENE_BREAKFAST
