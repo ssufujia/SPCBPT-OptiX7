@@ -57,7 +57,7 @@ const bool estimation_save = true;
 #define DOT_BOUND_LIMIT_LESS false
 
 /* 截图控制 */
-const bool SCREENSHOT_ENABLE = true;
+const bool SCREENSHOT_ENABLE = 0;
 const int SCREENSHOT_INTERVAL = 1;
 
 //#define SCENE_BEDROOM

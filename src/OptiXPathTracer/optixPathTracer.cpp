@@ -590,7 +590,7 @@ void env_params_setup(const sutil::Scene& scene)
 }
 void lt_params_setup(const sutil::Scene& scene)
 {
-    lt_params.M_per_core = 10;
+    lt_params.M_per_core = 100;
     lt_params.core_padding = 800;
     lt_params.num_core = 1000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
@@ -1606,7 +1606,7 @@ int main( int argc, char* argv[] )
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
                     glfwSwapBuffers(window);
 
-                    estimation::es.estimation_mode = false;
+                    estimation::es.estimation_mode = 1;
                     if (estimation::es.estimation_mode == true) {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
@@ -1630,10 +1630,13 @@ int main( int argc, char* argv[] )
 
                     }
 
-                    if (SCREENSHOT_ENABLE)
-                        saveScreenShots(render_frame_record, "breakfast", "spcbpt+lighttrace");
-                    if (sum_render_time.count() > 60)
+                    /*if (SCREENSHOT_ENABLE)
+                        saveScreenShots(render_frame_record, "breakfast", "lighttrace");*/
+                    double curTime = sum_render_time.count();
+
+                    if (sum_render_time.count() > 200)
                     {
+                        //saveScreenShots(render_frame_record, "breakfast", "lighttrace");
                         break;
                     }
                     render_time_record = sum_render_time.count();
