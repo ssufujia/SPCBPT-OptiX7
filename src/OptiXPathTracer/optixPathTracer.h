@@ -56,6 +56,8 @@ const bool estimation_save = true;
 #define SPCBPT_TERMINATE_EARLY false
 #define DOT_BOUND_LIMIT_LESS false
 
+/*estimate mod*/
+#define BOOTH_MODE
 
 //#define SCENE_BEDROOM
 //#define SCENE_BREAKFAST

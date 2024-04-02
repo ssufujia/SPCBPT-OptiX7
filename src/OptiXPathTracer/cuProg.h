@@ -3789,6 +3789,7 @@ namespace Shift
     // @param u: integer, step size
     // @param statistic_prd: statistic_payload, interface for using statistic information
     // @return: float, reciprocal of the path PDF integral for given parameters
+
     RT_FUNCTION float reciprocal_estimation(unsigned& seed, BDPTVertex CP, BDPTVertex SP, float3 WC, int u, statistic_payload& statistic_prd)
     {
         float B = 1;
@@ -3797,8 +3798,14 @@ namespace Shift
         float max_B = 0;
         //above code: information setup
 
-        float res = 1 / B;
-        res = 0;
+        float res = 0.0;
+#ifdef BOOTH_MODE
+        res = 1 / B;
+        float rr_begin_bound = 0.5f;
+        float rr_rate = 0.5f;
+        float factor_mul = 1.0f;
+        bool rr_flag= false;
+#endif
         BDPTVertex buffer[SHIFT_VALID_SIZE];
         PathContainer path(buffer, 1, 0);
         splitingStack spliting_stack;
@@ -3820,9 +3827,33 @@ namespace Shift
                 DOT_pushRecordToBuffer(dirction_record, statistic_prd);
                 ////statistic collection end
             }
-            
             float factor = 1 - p / (B * q);
-    //        res += factor / B * sign;
+#ifdef BOOTH_MODE
+            factor_mul *= factor;
+            if (!rr_flag)
+			{
+				if (factor_mul < rr_begin_bound)
+				{
+					rr_flag = true;
+                    if (RR_TEST(seed, rr_rate))
+                    {
+                        spliting_stack.push(sign, 1);
+                        factor_mul /= rr_rate;
+                    }
+				}
+                else
+                    spliting_stack.push(sign, 1);
+			}
+            else
+            {
+                if (RR_TEST(seed, rr_rate))
+				{
+					spliting_stack.push(sign, 1);
+                    factor_mul/=rr_rate;
+				}
+            }
+            res += factor_mul / B;
+#else
             res += 1 / B * sign;
             //if (sample_success)printf("p %f q%f B%f u%d\n", p, q, B, path.size());
             float RRS = abs(factor);
@@ -3836,7 +3867,7 @@ namespace Shift
             {
                 spliting_stack.push(next_sign, int(RRS));
             }
-
+#endif
             loop_limit--;
             path.setSize(0);
             ////statistic collection
@@ -3852,6 +3883,7 @@ namespace Shift
 
 
         return res;
+
     }
 
     //return u, vertex number of alternate path 
