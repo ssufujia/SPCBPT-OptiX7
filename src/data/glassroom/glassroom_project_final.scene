@@ -1,0 +1,1368 @@
+
+cameraSetting
+{
+    up      0.000000 1.000000 0.000000
+
+    eye     -47.900162 2.651114 17.076302
+    lookat  -46.219166 2.541034 18.955288
+
+    #eye -46.47312 2.68404 2.538561
+	#lookat -44.25114 2.65041 2.337024
+
+#   #eye     -48.133595 2.471888 16.947020
+#   #lookat  -45.965446 2.312077 19.091230
+#   
+#   #eye     -48.243561 3.094823 16.479696
+#   #lookat  -46.303257 2.736173 18.432236
+
+	#eye     -48.345745 3.020571 16.293541
+	#lookat  -46.313599 2.975809 18.458923
+ 
+    #geo_normal 1
+    fov 45
+ 
+ 
+}
+
+material helper_emitters
+{
+	color 0.8 0.8 0.2
+}
+mesh
+{
+	file  glassroom/scene/helper_emitters.obj
+	material helper_emitters
+}
+mesh
+{	
+	file  glassroom/scene/shadow_surface2.obj
+	material helper_emitters
+}
+
+
+
+
+material Water
+{
+   color 1 1 1
+   trans 1
+   eta 1.42
+   roughness 0.001
+}
+
+material BoxBlack
+{
+   color 0 0 0
+   roughness 1.0
+}
+
+material Glass1
+{
+   color 1 1 1
+   trans 1
+   eta 1.3
+   roughness 0.001
+}
+
+material Glass2
+{
+   color 1 1 1
+   trans 1
+   eta 1.42
+   roughness 0.001
+}
+
+material material_scene/diningroom_endtable_frame.obj 
+{
+    color 0.95 0.95 0.95
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+mesh
+{
+    file glassroom\projector\lens7.obj
+    material Glass1
+}
+
+material mirror
+{
+    color 1 1 1
+    roughness 0.001
+    metallic 1.0
+    clearcoat 0.0
+}
+
+mesh
+{
+    file glassroom\projector\lens.obj
+    material Water
+}
+
+mesh
+{
+    file glassroom\projector\box.obj
+    material BoxBlack
+}
+
+
+mesh
+{
+    file glassroom\projector\mirror.obj
+    material mirror
+}
+
+
+material material_scene/carpet.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.1
+    metallic 1.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-3-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/carpet.obj
+    material  material_scene/carpet.obj
+}
+
+material material_scene/ceiling.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/ceiling.obj
+    material  material_scene/ceiling.obj
+}
+
+material material_scene/ceiling_fans.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/ceiling_fans.obj
+    material  material_scene/ceiling_fans.obj
+}
+
+material material_scene/ceiling_helper.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/ceiling_helper.obj
+    material  material_scene/ceiling_helper.obj
+}
+
+material material_scene/diningroom_candle.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_candle.obj
+    material  material_scene/diningroom_candle.obj
+}
+
+material material_scene/diningroom_endtable_book1.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-64-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_book1.obj
+    material  material_scene/diningroom_endtable_book1.obj
+}
+
+material material_scene/diningroom_endtable_book2.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-66-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_book2.obj
+    material  material_scene/diningroom_endtable_book2.obj
+}
+
+material material_scene/diningroom_endtable_deco1.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_deco1.obj
+    material  material_scene/diningroom_endtable_deco1.obj
+}
+
+
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_frame.obj
+    material  material_scene/diningroom_endtable_frame.obj
+}
+
+material material_scene/diningroom_endtable_handle.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_handle.obj
+    material  material_scene/diningroom_endtable_handle.obj
+}
+
+material material_scene/diningroom_endtable_main.obj 
+{
+    color 0.36 0.33 0.34
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_main.obj
+    material  material_scene/diningroom_endtable_main.obj
+}
+
+material material_scene/diningroom_endtable_photo.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-117-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_photo.obj
+    material  material_scene/diningroom_endtable_photo.obj
+}
+
+material material_scene/diningroom_endtable_plant.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-100-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_plant.obj
+    material  material_scene/diningroom_endtable_plant.obj
+}
+
+material material_scene/diningroom_endtable_stars.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_stars.obj
+    material  material_scene/diningroom_endtable_stars.obj
+}
+
+material material_scene/diningroom_endtable_vase.obj 
+{
+    color 1, 1, 1
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_endtable_vase.obj
+    material  material_scene/diningroom_endtable_vase.obj
+}
+
+material material_scene/diningroom_painting.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-117-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_painting.obj
+    material  material_scene/diningroom_painting.obj
+}
+
+material material_scene/diningroom_table_frame.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_table_frame.obj
+    material  material_scene/diningroom_table_frame.obj
+}
+
+material material_scene/diningroom_wall_deco.obj 
+{
+    color 1, 1, 1
+    roughness 0.0
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningroom_wall_deco.obj
+    material  material_scene/diningroom_wall_deco.obj
+}
+
+material material_scene/diningtable_candlebase.obj 
+{
+    color 1, 1, 1
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_candlebase.obj
+    material  material_scene/diningtable_candlebase.obj
+}
+
+material material_scene/diningtable_chair_frame.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-4-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_chair_frame.obj
+    material  material_scene/diningtable_chair_frame.obj
+}
+
+material material_scene/diningtable_chair_main.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-31-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_chair_main.obj
+    material  material_scene/diningtable_chair_main.obj
+}
+
+material material_scene/diningtable_flowers.obj 
+{
+    color 1.0 0.92 0.9
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_flowers.obj
+    material  material_scene/diningtable_flowers.obj
+}
+
+material material_scene/diningtable_glass.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.0
+    metallic 1.0
+    clearcoat 0.0
+    trans 1
+    eta 1.3
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_glass.obj
+    material  material_scene/diningtable_glass.obj
+}
+
+material material_scene/diningtable_leaves.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-99-689885.jpg
+}
+
+
+
+material material_scene/diningtable_metal.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_metal.obj
+    material  material_scene/diningtable_metal.obj
+}
+
+material material_scene/diningtable_procelin.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_procelin.obj
+    material  material_scene/diningtable_procelin.obj
+}
+
+material material_scene/diningtable_surface.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-12-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_surface.obj
+    material  material_scene/diningtable_surface.obj
+}
+
+material material_scene/diningtable_vase.obj 
+{
+    color 0.5 0.5 0.5
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/diningtable_vase.obj
+    material  material_scene/diningtable_vase.obj
+}
+
+material material_scene/door_handles.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/door_handles.obj
+    material  material_scene/door_handles.obj
+}
+
+material material_scene/doors_main.obj 
+{
+    color 0.95 0.95 0.95
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/doors_main.obj
+    material  material_scene/doors_main.obj
+}
+
+material material_scene/ground.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-118-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/ground.obj
+    material  material_scene/ground.obj
+}
+
+material material_scene/ground_deco.obj 
+{
+    color 0.95 0.95 0.95
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/ground_deco.obj
+    material  material_scene/ground_deco.obj
+}
+
+material material_scene/ground_marble_area.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-27-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/ground_marble_area.obj
+    material  material_scene/ground_marble_area.obj
+}
+
+material material_scene/ground_marble_line.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/ground_marble_line.obj
+    material  material_scene/ground_marble_line.obj
+}
+
+material material_scene/livingroom_chair1_frame.obj 
+{
+    color 0.02 0.02 0.01
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair1_frame.obj
+    material  material_scene/livingroom_chair1_frame.obj
+}
+
+material material_scene/livingroom_chair1_main.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-31-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair1_main.obj
+    material  material_scene/livingroom_chair1_main.obj
+}
+
+material material_scene/livingroom_chair2_books1.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-67-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_books1.obj
+    material  material_scene/livingroom_chair2_books1.obj
+}
+
+material material_scene/livingroom_chair2_books2.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-67-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_books2.obj
+    material  material_scene/livingroom_chair2_books2.obj
+}
+
+material material_scene/livingroom_chair2_deco.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_deco.obj
+    material  material_scene/livingroom_chair2_deco.obj
+}
+
+material material_scene/livingroom_chair2_frame.obj 
+{
+    color 0.02 0.02 0.01
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_frame.obj
+    material  material_scene/livingroom_chair2_frame.obj
+}
+
+material material_scene/livingroom_chair2_glassvase.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.0
+    metallic 1.0
+    clearcoat 0.0
+ 
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_glassvase.obj
+    material  material_scene/livingroom_chair2_glassvase.obj
+}
+
+material material_scene/livingroom_chair2_main.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-31-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_main.obj
+    material  material_scene/livingroom_chair2_main.obj
+}
+
+material material_scene/livingroom_chair2_plant.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-100-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_plant.obj
+    material  material_scene/livingroom_chair2_plant.obj
+}
+
+material material_scene/livingroom_chair2_water.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.0
+    metallic 1.0
+    clearcoat 0.0 
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_chair2_water.obj
+    material  material_scene/livingroom_chair2_water.obj
+}
+
+material material_scene/livingroom_endtable_book.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-70-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_endtable_book.obj
+    material  material_scene/livingroom_endtable_book.obj
+}
+
+material material_scene/livingroom_endtable_gold.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_endtable_gold.obj
+    material  material_scene/livingroom_endtable_gold.obj
+}
+
+material material_scene/livingroom_endtable_lid.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_endtable_lid.obj
+    material  material_scene/livingroom_endtable_lid.obj
+}
+
+material material_scene/livingroom_endtable_plant.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-50-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_endtable_plant.obj
+    material  material_scene/livingroom_endtable_plant.obj
+}
+
+material material_scene/livingroom_endtable_vase.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_endtable_vase.obj
+    material  material_scene/livingroom_endtable_vase.obj
+}
+
+material material_scene/livingroom_endtable2_metal.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_endtable2_metal.obj
+    material  material_scene/livingroom_endtable2_metal.obj
+}
+
+material material_scene/livingroom_endtable2_surface.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.02
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-12-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_endtable2_surface.obj
+    material  material_scene/livingroom_endtable2_surface.obj
+}
+
+material material_scene/livingroom_entable_base.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_entable_base.obj
+    material  material_scene/livingroom_entable_base.obj
+}
+
+material material_scene/livingroom_entable_book2.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-73-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_entable_book2.obj
+    material  material_scene/livingroom_entable_book2.obj
+}
+
+
+material material_scene/livingroom_entable_coffee.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.0
+    metallic 1.0
+    clearcoat 0.0
+ 
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_entable_coffee.obj
+    material  material_scene/livingroom_entable_coffee.obj
+}
+
+material material_scene/livingroom_entable_cup.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_entable_cup.obj
+    material  material_scene/livingroom_entable_cup.obj
+}
+
+material material_scene/livingroom_entable_darkmetal.obj 
+{
+    color 0.02 0.02 0.01
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_entable_darkmetal.obj
+    material  material_scene/livingroom_entable_darkmetal.obj
+}
+
+material material_scene/livingroom_entable_glass.obj 
+{
+    color 1.0 1.0 1.0
+
+    roughness 0.0
+    metallic 1.0
+    trans 1
+	eta 1.3
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_entable_glass.obj
+    material  material_scene/livingroom_entable_glass.obj
+}
+
+material material_scene/livingroom_lamp1_hat.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_lamp1_hat.obj
+    material  material_scene/livingroom_lamp1_hat.obj
+}
+
+material material_scene/livingroom_lamp2_metal.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_lamp2_metal_single_refine.obj
+    material  material_scene/livingroom_lamp2_metal.obj
+}
+
+material material_scene/livingroom_lap1_metal.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_lap1_metal.obj
+    material  material_scene/livingroom_lap1_metal.obj
+}
+
+material material_scene/livingroom_lap2_hat.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_lamp2_hat_single_refine.obj
+    material  material_scene/livingroom_lap2_hat.obj
+}
+
+material material_scene/livingroom_painting.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_painting.obj
+    material  material_scene/livingroom_painting.obj
+}
+
+material material_scene/livingroom_painting_paint.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/sunlight-effect-under-the-poplars.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_painting_paint.obj
+    material  material_scene/livingroom_painting_paint.obj
+}
+
+material material_scene/livingroom_standlamp.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.3
+    metallic 1.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_standlamp.obj
+    material  material_scene/livingroom_standlamp.obj
+}
+
+material material_scene/livingroom_wall_Deco.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-5-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_Deco.obj
+    material  material_scene/livingroom_wall_Deco.obj
+}
+
+material material_scene/livingroom_wall_deco_frame.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_deco_frame.obj
+    material  material_scene/livingroom_wall_deco_frame.obj
+}
+
+material material_scene/livingroom_wall_left.obj 
+{
+    color 1 1 1
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    #albedoTex glassroom/scene/texture/3d66model2019-B005-97-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_left_refine.obj
+    material  material_scene/livingroom_wall_left.obj
+}
+
+material material_scene/livingroom_wall_frame.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_frame_refine.obj
+    material  material_scene/livingroom_wall_frame.obj
+}
+
+material material_scene/livingroom_wall_frame2.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_frame2.obj
+    material  material_scene/livingroom_wall_frame2.obj
+}
+
+material material_scene/livingroom_wall_right.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-5-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_right.obj
+    material  material_scene/livingroom_wall_right.obj
+}
+
+material material_scene/livingroom_wall_right2.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+    albedoTex glassroom/scene/texture/3d66model2019-B005-5-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_wall_right2.obj
+    material  material_scene/livingroom_wall_right2.obj
+}
+
+material material_scene/sofa_legs.obj 
+{
+    color 0.02 0.02 0.01
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+material material_scene/livingroom_entable_bowl.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/livingroom_entable_bowl.obj
+    material  material_scene/livingroom_entable_bowl.obj
+}
+
+
+mesh
+{
+    file  glassroom/scene/sofa_legs.obj
+    material  material_scene/sofa_legs.obj
+}
+
+material material_scene/sofa_main.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+ 
+    albedoTex glassroom/scene/texture/3d66model2019-B005-31-689885.jpg
+}
+
+
+#mesh
+#{
+#    file  glassroom/scene/sofa_main.obj
+#    material  material_scene/sofa_main.obj
+#}
+
+material material_scene/sofa_pillows1.obj 
+{
+    color 0.33 0.27 0.0
+    roughness 0.5
+    metallic 0.0
+ 
+}
+
+
+mesh
+{
+    file  glassroom/scene/sofa_pillows1.obj
+    material  material_scene/sofa_pillows1.obj
+}
+
+material material_scene/sofa_pillows2.obj 
+{
+    color 0.8 0.8 0.8
+    roughness 0.5
+    metallic 0.0
+ 
+    albedoTex glassroom/scene/texture/3d66model2019-B005-31-689885.jpg
+}
+
+
+mesh
+{
+    file  glassroom/scene/sofa_pillows2.obj
+    material  material_scene/sofa_pillows2.obj
+}
+
+
+
+material material_scene/wall.obj 
+{
+    color 1.0 1.0 1.0
+    roughness 0.5
+    metallic 0.0
+    clearcoat 0.0
+}
+
+
+mesh
+{
+    file  glassroom/scene/wall.obj
+    material  material_scene/wall.obj
+}
+
+
+
+
+
+######
+###light inside
+###bug for no reason, discard
+#light
+#{
+#    position -19.7856 6.85866 12.9126
+#    v1 -30.9735 6.85866 12.9126
+#    v2 -19.7856 6.85866 11.6182 
+#    divLevel 3
+#    emission 24.5 28.5  40
+#    type Quad
+#}
+
+
+###light inside2
+ 
+light
+{
+	position -28.021770 2.056868 12.367024
+	v1 -26.021770 2.056868 12.367024
+	v2 -28.021770 4.056868 12.367024
+    divLevel 3
+    emission 48.5 56.5  80
+    type Quad
+}
+
+ 
+
+#lamp_sofa
+light
+{
+    position -48.2142 3.82248 15.6222 
+    v1 -48.2142 3.82248 15.49095
+    v2 -48.0981 3.82248 15.6222  
+    divLevel 1
+    emission 1000 1300 2100
+    type Quad
+}
+
+
+#side lamp_left 
+light
+{
+    position -36.0845 5.01849 25.65594 
+    v1 -36.0845 5.01849 25.5247
+    v2 -35.9684 5.01849 25.65594  
+
+    divLevel 1
+    emission 100 70 50
+    type Quad
+}
+
+#projector 
+light
+{
+ 	position -42.414833 4.336473 14.640813
+	v1 -42.414833 4.280985 14.640813
+	v2 -42.304020 4.336473 14.640813
+    divLevel 1
+    # emission 100300 100000 130000
+    
+    emission 100800 100000 130000
+
+	albedoTex glassroom/projector/caster_2024.png
+    type Quad
+}
+ 

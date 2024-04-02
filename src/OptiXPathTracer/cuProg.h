@@ -44,6 +44,9 @@
 
 #define ISINVALIDVALUE(ans) (ans.x>100000.0f|| isnan(ans.x)||ans.y>100000.0f|| isnan(ans.y)||ans.z>100000.0f|| isnan(ans.z))
 #define VERTEX_MAT(v) (v.getMat(Tracer::params.materials))
+
+#define HIT_LIGHT(v) (v.type == BDPTVertex::Type::HIT_LIGHT_SOURCE || v.type == BDPTVertex::Type::ENV_MISS)
+
 struct labelUnit
 {
     float3 position;
@@ -2772,7 +2775,7 @@ namespace Shift
                     bool success_hit;
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || (np.type != BDPTVertex::Type::HIT_LIGHT_SOURCE && np.type != BDPTVertex::Type::ENV_MISS))
+                    if (success_hit == false || !HIT_LIGHT(np))
                         continue;
                     Light light = Tracer::params.lights[np.materialId];
                     Tracer::lightSample light_sample;
@@ -2869,7 +2872,7 @@ namespace Shift
                 /* 此处np为中间的diffuse顶点 */
                 np = Tracer::FastTrace(v, dir, success_hit);
                 /* 这里直接continue是正确的 */
-                if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                if (success_hit == false || HIT_LIGHT(np) ||
                     Shift::glossy(np))
                     continue;
 
@@ -2886,7 +2889,7 @@ namespace Shift
                 bool success_hit;
                 /* 此处np为中间的diffuse顶点 */
                 np = Tracer::FastTrace(l, dir, success_hit);
-                if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                if (success_hit == false || HIT_LIGHT(np) ||
                     Shift::glossy(np))
                     continue;
             }
@@ -2953,7 +2956,7 @@ namespace Shift
                     /* 此处np为中间的diffuse顶点 */
                     np = Tracer::FastTrace(v, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                    if (success_hit == false || HIT_LIGHT(np) ||
                         Shift::glossy(np))
                         continue;
     
@@ -2973,7 +2976,7 @@ namespace Shift
                     /* 此处np为中间的diffuse顶点 */
                     np = Tracer::FastTrace(l, dir, success_hit);
                     /* 这里直接continue是正确的 */
-                    if (success_hit == false || np.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                    if (success_hit == false || HIT_LIGHT(np) ||
                         Shift::glossy(np))
                         continue;
                 }
@@ -3061,7 +3064,7 @@ namespace Shift
                 /* 此处np为中间的glossy顶点 */
                 np1 = Tracer::FastTrace(v, dir, success_hit);
                 /* 这里直接continue是正确的 */
-                if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                if (success_hit == false || HIT_LIGHT(np1) ||
                     !Shift::glossy(np1))
                     continue;
 
@@ -3083,7 +3086,7 @@ namespace Shift
                 /* 到了最后一次，追光源顶点 */
                 if (i == d - 1)
                 {
-                    if (success_hit == false || np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                    if (success_hit == false || !HIT_LIGHT(np2))
                     {
                         retrace_state = 0;
                         break;
@@ -3093,7 +3096,7 @@ namespace Shift
                 else
                     /* 之前 d-1 次，追 glossy 顶点 */
                 {
-                    if (success_hit == false || np2.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                    if (success_hit == false || HIT_LIGHT(np2) ||
                         !Shift::glossy(np2))
                     {
                         retrace_state = 0;
@@ -3190,7 +3193,7 @@ namespace Shift
                         onb.inverse_transform(dir);
                         bool success_hit;
                         np1 = Tracer::FastTrace(v, dir, success_hit);
-                        if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                        if (success_hit == false || HIT_LIGHT(np1) ||
                             !Shift::glossy(np1))
                         {
                             ++bb;
@@ -3209,7 +3212,7 @@ namespace Shift
                         onb.inverse_transform(dir);
                         bool success_hit;
                         np1 = Tracer::FastTrace(v, dir, success_hit);
-                        if (success_hit == false || np1.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                        if (success_hit == false || HIT_LIGHT(np1) ||
                             !Shift::glossy(np1))
                         {
                             ++bb;
@@ -3233,7 +3236,7 @@ namespace Shift
                     /* 到了最后一次，追光源顶点 */
                     if (i == d - 1)
                     {
-                        if (success_hit == false || np2.type != BDPTVertex::Type::HIT_LIGHT_SOURCE)
+                        if (success_hit == false || !HIT_LIGHT(np2))
                         {
                             retrace_state = 0;
                             ++bb;
@@ -3243,7 +3246,7 @@ namespace Shift
                     else 
                     /* 之前 d-1 次，追 glossy 顶点 */
                     {
-                        if (success_hit == false || np2.type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                        if (success_hit == false || HIT_LIGHT(np2) ||
                             !Shift::glossy(np2))
                         {
                             retrace_state = 0;
@@ -3570,7 +3573,7 @@ namespace Shift
 
                 bool success_hit;
                 path.get(0) = Tracer::FastTrace(CP, out_direction, success_hit);
-                if (success_hit == false || path.get(0).type == BDPTVertex::Type::HIT_LIGHT_SOURCE ||
+                if (success_hit == false || HIT_LIGHT(path.get(0)) ||
                     Shift::glossy(path.get(0)))
                 {
                     DOT_INVALIDATE_ALTERNATE_PATH(path); return false;

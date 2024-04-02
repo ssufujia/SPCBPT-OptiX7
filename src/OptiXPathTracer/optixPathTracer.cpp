@@ -599,16 +599,17 @@ void setLightImage()
         if (!valid[i])
             continue;
         int id = index[i];
-        if (id > 0)
+        if (id >= 0)
         {
-            light_image[id] += light_buffer[i];
+            float intensity = light_buffer[i].x + light_buffer[i].y + light_buffer[i].z;
+            if(!isnan(intensity) && isfinite(intensity))
+                light_image[id] += light_buffer[i];
         }
     }
     for (int i = 0; i < params.width * params.height; i++)
         light_image[i] /= params.lt.M;
 
     cudaMemcpy(params.lt.lightImage, light_image, params.width * params.height * sizeof(float3), cudaMemcpyHostToDevice);
-
     delete[] valid;
     delete[] light_buffer;
     delete[] index;
@@ -620,7 +621,7 @@ void estimation_setup(const string& path) {
     switch (render_alg_id)
     {
     case 0:algo += "pt"; break;
-    case 1:algo += "dropout"; break;
+    case 1:algo += "spcbpt+lighttrace"; break;
     case 2:algo += "spcbpt"; break;
     default:algo += "error"; break;
     }
@@ -1421,7 +1422,7 @@ int main( int argc, char* argv[] )
         //scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 #ifdef SCENE_PROJECTOR 
-        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project_final.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project3.scene");
 #endif 
 #ifdef SCENE_KITCHEN
@@ -1431,13 +1432,13 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
 #endif   
 #ifdef SCENE_HALLWAY
-        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_final.scene");
 #endif   
 #ifdef SCENE_WATER
         scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
 #endif 
 #ifdef SCENE_BREAKFAST
-        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_final.scene");
 #endif      
 
         //scenePath = string(SAMPLES_DIR) + string("/data/showcase/showcase.scene");
@@ -1594,6 +1595,12 @@ int main( int argc, char* argv[] )
                     render_time_record = sum_render_time.count();
                     render_frame_record = params.subframe_index;
 
+                    if (sum_render_time.count() > 300)
+                    {
+                        //img_save(sum_render_time.count(), params.subframe_index);
+                        break;
+                    }
+        
                     ++params.subframe_index;
                 } while (!glfwWindowShouldClose(window));
                 CUDA_SYNC_CHECK();

@@ -1150,7 +1150,7 @@ extern "C" __global__ void __raygen__shift_combine()
     ////   
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
 
-    //result += Tracer::params.lt.lightImage[image_index];// light_trace
+    result += Tracer::params.lt.lightImage[image_index];// light_trace
 
     float3             accum_color = result;
 
@@ -1265,7 +1265,7 @@ RT_FUNCTION void pushVertexToLightImage(BDPTVertex& light, BDPTVertex& eye, floa
     float3 res = light.flux / light.pdf * fv * G * factor;
      
     if (!light.isOrigin)
-        res *= rmis::eye_hit(eye, light, 1 / pixel_area);;
+        res *= rmis::eye_hit(eye, light, 1 / pixel_area);
     lt_params.lightBuffer[putId + bufferBias] = res;
     lt_params.lightIndex[putId + bufferBias] = index;
 }
@@ -1477,6 +1477,7 @@ extern "C" __global__ void __miss__env__BDPTVertex()
 
     MidVertex.type = BDPTVertex::Type::ENV_MISS;
     MidVertex.uv = dir2uv(prd->ray_direction); 
+    MidVertex.materialId = SKY.light_id;
     Tracer::lightSample light_sample;
     light_sample.ReverseSample(Tracer::params.lights[SKY.light_id], MidVertex.uv);
 

@@ -4,6 +4,7 @@ cameraSetting
 	lookat -0.623726 -5.587055 1.204728 
       up 0 0 1
 	geo_normal 1
+    env_file breafast_2.0/textures/sky_fire.hdr
 }
 light
 {	

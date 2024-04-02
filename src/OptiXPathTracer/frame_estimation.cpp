@@ -98,14 +98,14 @@ namespace estimation
             {
                 float3 a = make_float3(accm[i]);
                 float3 b = make_float3(reference[i]);
-                if (b.x + b.y + b.z > 0)
+                if (b.x + b.y + b.z > 0 && a.x + a.y +a.z >0)
                     valid_pixels += 1;
                 else continue;
                 float3 bias = a - b;
                 float3 r_bias = (a - b) / (b + make_float3(minLimit)); 
                 error3 += make_float3(abs(r_bias.x), abs(r_bias.y), abs(r_bias.z));
                 float error = (abs(r_bias.x) + abs(r_bias.y) + abs(r_bias.z)) / 3;
-                error = fmin(error, 50.0);
+                //error = fmin(error, 50.0);
                 mape += error;
             }
             error3 /= valid_pixels;
@@ -142,7 +142,7 @@ namespace estimation
                 float3 r_bias = (a - b) / (b + make_float3(minLimit));
                 float3 sqaure_rbias = r_bias * r_bias; 
                 float error = (abs(sqaure_rbias.x) + abs(sqaure_rbias.y) + abs(sqaure_rbias.z)) / 3; 
-                error = fmin(error, 100);
+                error = fmin(error, 50);
                 relmse += error;
             }
             return relmse / valid_pixels;

@@ -404,7 +404,7 @@ namespace rmis
     }
     RT_FUNCTION float eye_hit(BDPTVertex& eyeVertex, BDPTVertex& lightVertex, float eye_pdf)//hit camera
     {
-        float D_C = 1.0;
+        float D_C = 1;
 
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
