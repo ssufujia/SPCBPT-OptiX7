@@ -411,6 +411,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         for (int it = 0; it < CONNECTION_N; it++)
         {
             //sample spcbpt
+            
             //int light_id = 0;
             //float pmf_firstStage = 1;
             //if (Tracer::params.subspace_info.light_tree)
