@@ -410,29 +410,34 @@ extern "C" __global__ void __raygen__SPCBPT()
         //break;
         for (int it = 0; it < CONNECTION_N; it++)
         {
+            //sample spcbpt
+            //int light_id = 0;
+            //float pmf_firstStage = 1;
+            //if (Tracer::params.subspace_info.light_tree)
+            //{
+            //    light_id =
+            //        reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);
+            //}
+            //if (Tracer::params.sampler.subspace[light_id].size == 0)
+            //{
+            //    continue;
+            //}
+            //float pmf_secondStage;
+            //const BDPTVertex& light_subpath =
+            //    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
 
-            int light_id = 0;
-            float pmf_firstStage = 1;
-            if (Tracer::params.subspace_info.light_tree)
-            {
-                light_id =
-                    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);
-            }
-            if (Tracer::params.sampler.subspace[light_id].size == 0)
-            {
-                continue;
-            }
-            float pmf_secondStage;
-            const BDPTVertex& light_subpath =
-                reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
+            //sample uniform
+            float new_pmf = 1;
+            const BDPTVertex& new_light_subpath = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSample(payload.seed, new_pmf);
 
-            if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, light_subpath))
+            if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, new_light_subpath))
             { 
                 //printf("debug info %f\n", float3weight(tmp_float3));
-                float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
-                float3 res = connectVertex_SPCBPT(eye_subpath, light_subpath) / pmf;
+                //float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
+                float pmf = Tracer::params.sampler.path_count * new_pmf;
+                float3 res = connectVertex_SPCBPT(eye_subpath, new_light_subpath) / pmf;
                 if (!ISINVALIDVALUE(res) &&
-                    (eye_subpath.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
+                    (eye_subpath.depth + new_light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
                 {
                     result += res / CONNECTION_N;
                 }
@@ -1150,7 +1155,7 @@ extern "C" __global__ void __raygen__shift_combine()
     ////   
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
 
-    result += Tracer::params.lt.lightImage[image_index];// light_trace
+    //result += Tracer::params.lt.lightImage[image_index];// light_trace
 
     float3             accum_color = result;
 

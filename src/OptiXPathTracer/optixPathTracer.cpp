@@ -1527,7 +1527,7 @@ int main( int argc, char* argv[] )
         OPTIX_CHECK(optixInit()); // Need to initialize function table
         initCameraState(TScene);
         // initCameraState(*myScene);
-        estimation_setup(scenePath);
+        //estimation_setup(scenePath);
         initLaunchParams(TScene);
         dropOutTracingParamsInit();
         lt_params_setup(TScene);
@@ -1606,7 +1606,7 @@ int main( int argc, char* argv[] )
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
                     glfwSwapBuffers(window);
 
-                    estimation::es.estimation_mode = 1;
+                    estimation::es.estimation_mode = 0;
                     if (estimation::es.estimation_mode == true) {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);
@@ -1637,7 +1637,7 @@ int main( int argc, char* argv[] )
                     if (sum_render_time.count() > 200)
                     {
                         //saveScreenShots(render_frame_record, "breakfast", "lighttrace");
-                        break;
+                        //break;
                     }
                     render_time_record = sum_render_time.count();
                     render_frame_record = params.subframe_index;
