@@ -3766,12 +3766,18 @@ namespace Shift
         float max_B = 0;
         //above code: information setup
 
-        float res = 1 / B;
-        res = 0;
+        float res = 0.0;
+#ifdef BOOTH_MODE
+        res = 1 / B;
+        float rr_begin_bound = 0.5f;
+        float rr_rate = 0.5f;
+        float factor_mul = 1.0f;
+        bool rr_flag = false;
+#endif
         BDPTVertex buffer[SHIFT_VALID_SIZE];
         PathContainer path(buffer, 1, 0);
         splitingStack spliting_stack;
-        spliting_stack.push(1, 1); 
+        spliting_stack.push(1, 1);
         while (spliting_stack.empty() == false && loop_limit > 0)
         {
             int sign = spliting_stack.pop();
@@ -3779,7 +3785,7 @@ namespace Shift
             float p = alternate_path_eval(path, CP, SP, WC, u, statistic_prd);
             float q = alternate_path_pdf(path, CP, SP, WC, u, statistic_prd);
 
-            if (p>0 && dropOut_tracing::PG_reciprocal_estimation_enable && !statistic_prd.pg_p->trainEnd) {
+            if (p > 0 && dropOut_tracing::PG_reciprocal_estimation_enable && !statistic_prd.pg_p->trainEnd) {
                 ////statistic collection
                 dropOut_tracing::statistic_record dirction_record = statistic_prd.generate_record(dropOut_tracing::SlotUsage::Dirction);
                 float3 dir = normalize(path.get(0).position - SP.position);
@@ -3789,9 +3795,31 @@ namespace Shift
                 DOT_pushRecordToBuffer(dirction_record, statistic_prd);
                 ////statistic collection end
             }
-            
             float factor = 1 - p / (B * q);
-    //        res += factor / B * sign;
+#ifdef BOOTH_MODE
+            factor_mul *= factor;
+            //根据界限判断是否进行RR
+            if (!rr_flag && factor_mul < rr_begin_bound)
+            {
+                rr_flag = true;
+                if (RR_TEST(seed, rr_rate))
+                {
+                    spliting_stack.push(sign, 1);
+                    factor_mul /= rr_rate;
+                }
+            }
+            else if (!rr_flag) {
+                spliting_stack.push(sign, 1);
+            }
+            else {
+                if (RR_TEST(seed, rr_rate))
+                {
+                    spliting_stack.push(sign, 1);
+                    factor_mul /= rr_rate;
+                }
+            }
+            res += factor_mul / B;
+#else
             res += 1 / B * sign;
             //if (sample_success)printf("p %f q%f B%f u%d\n", p, q, B, path.size());
             float RRS = abs(factor);
@@ -3805,11 +3833,11 @@ namespace Shift
             {
                 spliting_stack.push(next_sign, int(RRS));
             }
-
+#endif
             loop_limit--;
             path.setSize(0);
             ////statistic collection
-            max_B = max_B > abs(p / q) ? max_B : abs(p / q); 
+            max_B = max_B > abs(p / q) ? max_B : abs(p / q);
         }
 
 
@@ -3821,6 +3849,7 @@ namespace Shift
 
 
         return res;
+
     }
 
     //return u, vertex number of alternate path 
