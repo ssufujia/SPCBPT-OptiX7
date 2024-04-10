@@ -320,6 +320,7 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
 
 RT_FUNCTION float3 lightStraghtHit(BDPTVertex& a)
 {
+    return make_float3(0.0f);
     float3 contri = a.flux;
     float pdf = a.pdf;
     float inver_weight = a.RMIS_pointer;
@@ -370,6 +371,10 @@ extern "C" __global__ void __raygen__SPCBPT()
 
        
     unsigned first_hit_id;
+
+    std::vector<const BDPTVertex&> completeEyePath, completeLightPath;
+    completeEyePath.push_back(payload.path.currentVertex());
+
     while (true)
     {
         ray_direction = payload.ray_direction;
@@ -404,6 +409,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         }
         if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
         BDPTVertex& eye_subpath = payload.path.currentVertex();
+        completeEyePath.push_back(eye_subpath);
         //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
         //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
         //result = make_float3(rnd(PG_id), rnd(PG_id), rnd(PG_id));
@@ -429,8 +435,13 @@ extern "C" __global__ void __raygen__SPCBPT()
 
             //sample uniform
             float new_pmf = 1;
-            const BDPTVertex& new_light_subpath = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSample(payload.seed, new_pmf);
-
+            int light_index;
+            const BDPTVertex& new_light_subpath = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleWithIndex(payload.seed, new_pmf, light_index);
+           
+            for (int _ = 0; _ < new_light_subpath.depth; _++)
+            {
+                completeLightPath.push_back(reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - _));
+            }
             if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, new_light_subpath))
             { 
                 //printf("debug info %f\n", float3weight(tmp_float3));
@@ -443,9 +454,14 @@ extern "C" __global__ void __raygen__SPCBPT()
                     result += res / CONNECTION_N;
                 }
             }
-     
+            if (new_light_subpath.depth == 1 && eye_subpath.depth == 1)
+            {
+                const BDPTVertex& light_source = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - 1);
+                rmis::testPath_4(eye_subpath, new_light_subpath, payload.path.lastVertex(), light_source);
+            }
         } 
         //printf("%d size error depth%d\n", Tracer::params.lights.count, payload.path.size);
+        
     } 
     
     //env map
@@ -457,7 +473,7 @@ extern "C" __global__ void __raygen__SPCBPT()
     //result = make_float3(rnd(first_hit_id), rnd(first_hit_id), rnd(first_hit_id));  
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
 
-    result += Tracer::params.lt.lightImage[image_index];// light_trace
+    //result += Tracer::params.lt.lightImage[image_index];// light_trace
 
     float3             accum_color = result;
 

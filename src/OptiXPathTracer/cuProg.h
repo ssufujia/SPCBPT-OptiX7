@@ -488,6 +488,18 @@ namespace Tracer {
 
             return LVC[jump_buffer[index]];
         }
+        RT_FUNCTION const BDPTVertex& uniformSampleWithIndex(unsigned int& seed, float& sample_pmf, int& index)
+        {
+            sample_pmf = 1.0 / vertex_count;
+            index = rnd(seed) * vertex_count;
+            index = jump_buffer[index];
+            return LVC[index];
+        }
+        RT_FUNCTION const BDPTVertex& getVertex(const int& index)
+        {
+            return LVC[index];
+        }
+
         RT_FUNCTION int sampleFirstStage(int eye_subsapce, unsigned int& seed, float& sample_pmf)
         {
             int begin_index = eye_subsapce * NUM_SUBSPACE;

@@ -208,7 +208,7 @@ namespace rmis
     {
         MidVertex.RMIS_pointer_3 = make_float3(0.0);
         MidVertex.RMIS_pointer = 0.0f;
-        MidVertex.RMIS_pointer_lt = 1.0f;
+        MidVertex.RMIS_pointer_lt = 0.0f;
     }
     //////////////////////////////////////////////////////////////////////////////////
     ////////////////////////eval mis weight///////////////////////////////////////////
@@ -216,6 +216,8 @@ namespace rmis
 
     RT_FUNCTION float general_connection(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)
     { 
+        if (eyeVertex.depth != 1 || lightVertex.depth != 1)
+            printf("error: invalid path! eyeVertexDepth: %d, lightVertexDepth: %d\n", eyeVertex.depth, lightVertex.depth);
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
         float3 flux = lightVertex.flux / lightVertex.pdf;
@@ -264,6 +266,7 @@ namespace rmis
 
     RT_FUNCTION float connection_direction_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
     { 
+        return 0;
         float3 connect_dir = lightVertex.normal;
         float3 flux = lightVertex.flux / lightVertex.pdf;
 
@@ -305,6 +308,7 @@ namespace rmis
     }
     RT_FUNCTION float connection_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
     { 
+        return 0;
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
         float3 flux = lightVertex.flux / lightVertex.pdf;
@@ -358,6 +362,7 @@ namespace rmis
     }
     RT_FUNCTION float light_hit_env(BDPTVertex& eyeVertex, BDPTVertex& lightVertex)
     {
+        return 0;
         float3 connect_dir = -lightVertex.normal;
         float3 flux = lightVertex.flux / lightVertex.pdf;
         float LL_pdf_A = getLast_pdf(eyeVertex, connect_dir, false);
@@ -400,6 +405,7 @@ namespace rmis
     }
     RT_FUNCTION float light_hit(BDPTVertex& eyeVertex, BDPTVertex& lightVertex)//lastvertex and virtual lightVertex
     {
+        return 0;
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
         float3 flux = lightVertex.flux / lightVertex.pdf;
@@ -467,6 +473,32 @@ namespace rmis
         D_B = ((lightVertex.RMIS_pointer * LL_pdf_B) + 1) / lightVertex.singlePdf;
         return D_C / (D_C + D_B);
 
+    }
+
+    RT_FUNCTION float testPath_4(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex, const BDPTVertex& cameraVertex, const BDPTVertex& LightSource)
+    {
+        float mis = general_connection(eyeVertex, lightVertex);
+        float p_0 = LightSource.singlePdf * getPdf_from_light_source(LightSource, lightVertex);
+        float3 LB = normalize(eyeVertex.lastPosition - eyeVertex.position);
+        float pdf_B = getPdf(eyeVertex, lightVertex, LB, true);
+        float LL_pdf_B = getLL_pdf(eyeVertex, lightVertex, true);
+        float p_1 = LightSource.singlePdf * pdf_B;
+        float p_2 = pdf_B * LL_pdf_B;
+        float expected_mis = p_0 / (p_0 + p_1 + p_2);
+
+        BDPTVertex new_lightVertex;
+        if(abs(mis - expected_mis) > 1e-5 || mis > 1)
+            printf("expected mis: %f, calculated result: %f\n", expected_mis, mis);
+    }
+
+    RT_FUNCTION void testPath(std::vector<const BDPTVertex&> eyePath, std::vector < const BDPTVertex&> lightPath)
+    {
+        float mis = general_connection(eyePath[eyePath.size() - 1], lightPath[0]);
+        float p_eye;
+        for (int i = 0; i < eyePath.size(); i++)
+        {
+            //todo: Ã÷ÌìÔÙÐ´
+        }
     }
 }
 #ifdef HIDDEN_NOT_USE 

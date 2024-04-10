@@ -35,7 +35,7 @@
 #define MIN_RR_RATE 0.3
 #define CONSERVATIVE_RATE 0.2
 #define CONNECTION_N 1
-#define MAX_PATH_LENGTH_FOR_MIS 16
+#define MAX_PATH_LENGTH_FOR_MIS 5
 #define LIMIT_PATH_TERMINATE true
 
 #define DIR_JUDGE 0 
@@ -87,7 +87,7 @@ const int SCREENSHOT_INTERVAL = 1;
 
 #ifdef SCENE_BREAKFAST
 #define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
-#define LIMIT_PATH_TERMINATE false
+#define LIMIT_PATH_TERMINATE true
 #endif // DEBUG
 
 #ifdef  SCENE_WATER
