@@ -216,8 +216,6 @@ namespace rmis
 
     RT_FUNCTION float general_connection(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)
     { 
-        if (eyeVertex.depth != 1 || lightVertex.depth != 1)
-            printf("error: invalid path! eyeVertexDepth: %d, lightVertexDepth: %d\n", eyeVertex.depth, lightVertex.depth);
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
         float3 flux = lightVertex.flux / lightVertex.pdf;
@@ -486,20 +484,69 @@ namespace rmis
         float p_2 = pdf_B * LL_pdf_B;
         float expected_mis = p_0 / (p_0 + p_1 + p_2);
 
-        BDPTVertex new_lightVertex;
         if(abs(mis - expected_mis) > 1e-5 || mis > 1)
             printf("expected mis: %f, calculated result: %f\n", expected_mis, mis);
     }
-
-    RT_FUNCTION void testPath(std::vector<const BDPTVertex&> eyePath, std::vector < const BDPTVertex&> lightPath)
+    RT_FUNCTION float getPdfFromPath(BDPTVertex* fullPath, int path_length, int beginIndex, int endIndex)
     {
-        float mis = general_connection(eyePath[eyePath.size() - 1], lightPath[0]);
-        float p_eye;
-        for (int i = 0; i < eyePath.size(); i++)
+        if (beginIndex > endIndex)
         {
-            //todo: 明天再写
+            if (beginIndex == path_length - 1)
+            {
+                return getPdf_from_light_source(fullPath[beginIndex], fullPath[endIndex]);
+            }
+            else
+            {
+                float3 LB = normalize(fullPath[beginIndex + 1].position - fullPath[beginIndex].position);
+                return getPdf(fullPath[beginIndex], fullPath[endIndex], LB, false);
+            }
+        }
+        else
+        {
+            float3 LB = normalize(fullPath[beginIndex - 1].position - fullPath[beginIndex].position);
+            return getPdf(fullPath[beginIndex], fullPath[endIndex], LB, true);
         }
     }
+    RT_FUNCTION void testPath(BDPTVertex* fullPath, int path_length, int eye_path_depth)
+    {        
+        float mis = general_connection(fullPath[eye_path_depth], fullPath[eye_path_depth + 1]);
+        float D_A = 0;
+        for (int i = 1; i < eye_path_depth - 1; i++)
+        {
+            //todo: 明天再写
+            float temp_weight = getPdfFromPath(fullPath, path_length, i + 2, i + 1) / getPdfFromPath(fullPath, path_length, i, i + 1);
+            D_A = (D_A + 1) * temp_weight;
+        }
+        float D_B = getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 1) / fullPath[path_length - 1].singlePdf;
+        for (int i = path_length - 1; i > eye_path_depth + 1; i--)
+        {
+            float temp_weight = getPdfFromPath(fullPath, path_length, i - 2, i - 1) / getPdfFromPath(fullPath, path_length, i, i - 1);
+            D_B = (D_B + 1) * temp_weight;
+        }
+        float expected_mis = 1 / (1 + D_A + D_B);
+        if (abs(mis - expected_mis) > 1e-3 || mis > 1)
+        {
+            printf("expected mis: %f, calculated result: %f\n", expected_mis, mis);
+            printf("D_A: %f, D_B: %f\n", D_A, D_B);
+            float D_B1 = getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 1) / fullPath[path_length - 1].singlePdf;
+            float D_B2 = (D_B1 + 1) * getPdfFromPath(fullPath, path_length, path_length - 3, path_length - 2) / getPdfFromPath(fullPath, path_length, path_length - 1, path_length - 2);
+            float D_B3 = (D_B2 + 1) * getPdfFromPath(fullPath, path_length, path_length - 4, path_length - 3) / getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 3);
+            float rmis_pointer1 = fullPath[path_length - 1].RMIS_pointer;
+            float rmis_pointer2 = fullPath[path_length - 2].RMIS_pointer;
+            float rmis_pointer3 = fullPath[path_length - 3].RMIS_pointer;
+
+            float LL_pdf_B = getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 1);
+            float pdf_B = getPdfFromPath(fullPath, path_length, path_length - 3, path_length - 2);
+            float D_B2_cal = ((rmis_pointer2 * LL_pdf_B) + 1) * pdf_B / fullPath[path_length - 2].singlePdf;
+
+            LL_pdf_B = getPdfFromPath(fullPath, path_length, path_length - 3, path_length - 2);
+            pdf_B = getPdfFromPath(fullPath, path_length, path_length - 4, path_length - 3);
+            float D_B3_cal = ((rmis_pointer3 * LL_pdf_B) + 1) * pdf_B / fullPath[path_length - 3].singlePdf;
+
+            printf("D_B1: %f, D_B2: %f, D_B1_CAL: %f, D_B2_CAL: %f\n",D_B2, D_B3, D_B2_cal, D_B3_cal);
+        }
+    }
+
 }
 #ifdef HIDDEN_NOT_USE 
 #endif // 0

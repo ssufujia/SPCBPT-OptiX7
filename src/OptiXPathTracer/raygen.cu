@@ -372,8 +372,9 @@ extern "C" __global__ void __raygen__SPCBPT()
        
     unsigned first_hit_id;
 
-    std::vector<const BDPTVertex&> completeEyePath, completeLightPath;
-    completeEyePath.push_back(payload.path.currentVertex());
+   BDPTVertex completePath[100];
+   int path_length = 0;
+    completePath[path_length++] = payload.path.currentVertex();
 
     while (true)
     {
@@ -409,7 +410,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         }
         if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
         BDPTVertex& eye_subpath = payload.path.currentVertex();
-        completeEyePath.push_back(eye_subpath);
+        completePath[path_length++] = eye_subpath;
         //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
         //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
         //result = make_float3(rnd(PG_id), rnd(PG_id), rnd(PG_id));
@@ -440,7 +441,7 @@ extern "C" __global__ void __raygen__SPCBPT()
            
             for (int _ = 0; _ < new_light_subpath.depth; _++)
             {
-                completeLightPath.push_back(reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - _));
+                completePath[path_length++] = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - _);
             }
             if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, new_light_subpath))
             { 
@@ -454,10 +455,11 @@ extern "C" __global__ void __raygen__SPCBPT()
                     result += res / CONNECTION_N;
                 }
             }
-            if (new_light_subpath.depth == 1 && eye_subpath.depth == 1)
+            if (new_light_subpath.depth == 2 && eye_subpath.depth == 1)
             {
                 const BDPTVertex& light_source = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - 1);
-                rmis::testPath_4(eye_subpath, new_light_subpath, payload.path.lastVertex(), light_source);
+                //rmis::testPath_4(eye_subpath, new_light_subpath, payload.path.lastVertex(), light_source);
+                rmis::testPath(completePath, path_length, eye_subpath.depth);
             }
         } 
         //printf("%d size error depth%d\n", Tracer::params.lights.count, payload.path.size);
