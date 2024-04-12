@@ -65,8 +65,8 @@ const bool estimation_save = true;
 #endif // BOOTH_MODE
 
 //#define SCENE_BEDROOM
-#define SCENE_BREAKFAST
-//#define SCENE_PROJECTOR
+//#define SCENE_BREAKFAST
+#define SCENE_PROJECTOR
 //#define SCENE_HALLWAY
 //#define SCENE_KITCHEN
 //#define SCENE_WATER
@@ -111,8 +111,7 @@ const bool estimation_save = true;
 #include"BDPTVertex.h"
 #include"decisionTree/classTree_common.h"
 #include"PG_common.h"
-#include"dropOutTracing_common.h"
-#include "tester.h"
+#include"dropOutTracing_common.h"]
 
 struct Subspace
 {   

@@ -36,7 +36,6 @@
 #include "cuProg.h"
 #include "pathControl.h"
 #include "rmis.h"
-#include "tester.h"
 //------------------------------------------------------------------------------
 //
 //
