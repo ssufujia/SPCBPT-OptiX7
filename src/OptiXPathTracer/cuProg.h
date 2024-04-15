@@ -3072,12 +3072,11 @@ namespace Shift
         //above code: information setup
 
         float res = 0.0;
+#define BOOTH_MODE
 #ifdef BOOTH_MODE
         res = 1 / B;
-        float rr_begin_bound = 0.5f;
-        float rr_rate = 0.5f;
+        float BOOTH_RATE= 1.0f;
         float factor_mul = 1.0f;
-        bool rr_flag = false;
 #endif
         BDPTVertex buffer[SHIFT_VALID_SIZE];
         PathContainer path(buffer, 1, 0);
@@ -3103,27 +3102,16 @@ namespace Shift
             float factor = 1 - p / (B * q);
 #ifdef BOOTH_MODE
             factor_mul *= factor;
-            //根据界限判断是否进行RR
-            if (!rr_flag && factor_mul < rr_begin_bound)
-            {
-                rr_flag = true;
-                if (RR_TEST(seed, rr_rate))
-                {
-                    spliting_stack.push(sign, 1);
-                    factor_mul /= rr_rate;
-                }
-            }
-            else if (!rr_flag) {
-                spliting_stack.push(sign, 1);
-            }
-            else {
-                if (RR_TEST(seed, rr_rate))
-                {
-                    spliting_stack.push(sign, 1);
-                    factor_mul /= rr_rate;
-                }
-            }
+            float RR_Ratio = fabsf(factor_mul) / BOOTH_RATE;
             res += factor_mul / B;
+            if (RR_Ratio > 1) {
+                spliting_stack.push(1, 1);
+            }
+            else if (RR_TEST(seed, RR_Ratio))
+            {
+                spliting_stack.push(1, 1);
+                factor_mul /= RR_Ratio;
+            }
 #else
             res += 1 / B * sign;
             //if (sample_success)printf("p %f q%f B%f u%d\n", p, q, B, path.size());
@@ -3152,9 +3140,7 @@ namespace Shift
         DOT_pushRecordToBuffer(bound_record, statistic_prd);
         ////statistic collection end
 
-
         return res;
-
     }
 
     //return u, vertex number of alternate path 

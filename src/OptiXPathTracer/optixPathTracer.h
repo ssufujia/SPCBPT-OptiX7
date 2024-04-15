@@ -56,17 +56,10 @@ const bool estimation_save = true;
 #define SPCBPT_TERMINATE_EARLY false
 #define DOT_BOUND_LIMIT_LESS false
 
-/*reciprocal_estimation mode*/
-//#define BOOTH_MODE
 
-#ifdef BOOTH_MODE
-#define RR_BEGIN_BOUND 0.5f
-#define RR_RATE 0.5f
-#endif // BOOTH_MODE
-
-//#define SCENE_BEDROOM
+#define SCENE_BEDROOM
 //#define SCENE_BREAKFAST
-#define SCENE_PROJECTOR
+//#define SCENE_PROJECTOR
 //#define SCENE_HALLWAY
 //#define SCENE_KITCHEN
 //#define SCENE_WATER
