@@ -208,7 +208,7 @@ namespace rmis
     {
         MidVertex.RMIS_pointer_3 = make_float3(0.0);
         MidVertex.RMIS_pointer = 0.0f;
-        MidVertex.RMIS_pointer_lt = 0.0f;
+        MidVertex.RMIS_pointer_lt = 1.0f;
     }
     //////////////////////////////////////////////////////////////////////////////////
     ////////////////////////eval mis weight///////////////////////////////////////////
@@ -264,7 +264,7 @@ namespace rmis
 
     RT_FUNCTION float connection_direction_lightSource(const BDPTVertex& eyeVertex, const BDPTVertex& lightVertex)//only for area light
     { 
-        return 0;
+        //return 0;
         float3 connect_dir = lightVertex.normal;
         float3 flux = lightVertex.flux / lightVertex.pdf;
 
@@ -360,7 +360,7 @@ namespace rmis
     }
     RT_FUNCTION float light_hit_env(BDPTVertex& eyeVertex, BDPTVertex& lightVertex)
     {
-        return 0;
+        //return 0;
         float3 connect_dir = -lightVertex.normal;
         float3 flux = lightVertex.flux / lightVertex.pdf;
         float LL_pdf_A = getLast_pdf(eyeVertex, connect_dir, false);
@@ -403,7 +403,7 @@ namespace rmis
     }
     RT_FUNCTION float light_hit(BDPTVertex& eyeVertex, BDPTVertex& lightVertex)//lastvertex and virtual lightVertex
     {
-        return 0;
+        //return 0;
         float3 connect_vec = eyeVertex.position - lightVertex.position;
         float3 connect_dir = normalize(connect_vec);
         float3 flux = lightVertex.flux / lightVertex.pdf;
@@ -443,8 +443,8 @@ namespace rmis
             D_A = 0;
         else
             D_A = (eyeVertex.RMIS_pointer * LL_pdf_A + 1) * pdf_A / eyeVertex.singlePdf;
-        D_B = lightVertex.RMIS_pointer * pdf_B / lightVertex.singlePdf;
-        return D_B / (1 + D_A + D_B + D_C);// not sure
+        D_B = lightVertex.RMIS_pointer;// * pdf_B / lightVertex.singlePdf
+        return D_B / ((1 + D_A + D_C) / pdf_B * lightVertex.singlePdf + D_B);// not sure
 
     }
     RT_FUNCTION float eye_hit(BDPTVertex& eyeVertex, BDPTVertex& lightVertex, float eye_pdf)//hit camera
@@ -511,7 +511,7 @@ namespace rmis
     {        
         float mis = general_connection(fullPath[eye_path_depth], fullPath[eye_path_depth + 1]);
         float D_A = 0;
-        for (int i = 1; i < eye_path_depth - 1; i++)
+        for (int i = 1; i < eye_path_depth; i++)
         {
             //todo: Ã÷ÌìÔÙÐ´
             float temp_weight = getPdfFromPath(fullPath, path_length, i + 2, i + 1) / getPdfFromPath(fullPath, path_length, i, i + 1);
@@ -524,10 +524,10 @@ namespace rmis
             D_B = (D_B + 1) * temp_weight;
         }
         float expected_mis = 1 / (1 + D_A + D_B);
-        if (abs(mis - expected_mis) > 1e-3 || mis > 1)
+        if (abs(mis - expected_mis) > 1e-2 || mis > 1) 
         {
             printf("expected mis: %f, calculated result: %f\n", expected_mis, mis);
-            printf("D_A: %f, D_B: %f\n", D_A, D_B);
+            //printf("D_A: %f, D_B: %f\n", D_A, D_B);
             float D_B1 = getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 1) / fullPath[path_length - 1].singlePdf;
             float D_B2 = (D_B1 + 1) * getPdfFromPath(fullPath, path_length, path_length - 3, path_length - 2) / getPdfFromPath(fullPath, path_length, path_length - 1, path_length - 2);
             float D_B3 = (D_B2 + 1) * getPdfFromPath(fullPath, path_length, path_length - 4, path_length - 3) / getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 3);
@@ -543,8 +543,66 @@ namespace rmis
             pdf_B = getPdfFromPath(fullPath, path_length, path_length - 4, path_length - 3);
             float D_B3_cal = ((rmis_pointer3 * LL_pdf_B) + 1) * pdf_B / fullPath[path_length - 3].singlePdf;
 
-            printf("D_B1: %f, D_B2: %f, D_B1_CAL: %f, D_B2_CAL: %f\n",D_B2, D_B3, D_B2_cal, D_B3_cal);
+            //LL_pdf = getLL_pdf(MidVertex, LastVertex);
+
+            //weight = tracing_weight_light(MidVertex, LastVertex);
+
+            //last_single_pdf = LastVertex.singlePdf;
+
+            //MidVertex.RMIS_pointer = (LastVertex.RMIS_pointer * LL_pdf + 1) / last_single_pdf;
+            float expected_pointer3 = (rmis_pointer2 * getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 1) + 1) / fullPath[path_length - 2].singlePdf;
+            printf("path length: %d, real D_B: %f, D_B1: %f, D_B1_CAL: %f, D_B2: %f, D_B2_CAL: %f\n",path_length, D_B, D_B2, D_B2_cal, getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 3), fullPath[path_length - 3].singlePdf);
+            printf("expected pointer3: %f, calculated pointer3: %f\n", expected_pointer3, rmis_pointer3);
+            //        D_B = ((lightVertex.RMIS_pointer * LL_pdf_B) + 1) * pdf_B / lightVertex.singlePdf;
+            //        float LL_pdf_B = getLL_pdf(eyeVertex, lightVertex, true);
+            //        float pdf_B = getPdf(eyeVertex, lightVertex, LB, true);
         }
+    }
+
+    RT_FUNCTION float get_path_pdf(BDPTVertex* fullPath, int path_length, int eye_path_depth)
+    {
+        float pdf = 1;
+        for (int i = 1; i < eye_path_depth; i++)
+        {
+            pdf *= getPdfFromPath(fullPath, path_length, i, i + 1);
+        }
+        for (int i = path_length - 1; i > eye_path_depth + 1; i--)
+        {
+            pdf *= getPdfFromPath(fullPath, path_length, i, i - 1);
+        }
+        //pdf *= fullPath[path_length - 1].singlePdf;
+        return pdf;
+    }
+
+    RT_FUNCTION float general_connection_test(BDPTVertex* fullPath, int path_length, int eye_path_depth, bool debug = false)
+    {
+        //float pdf = get_path_pdf(fullPath, path_length, eye_path_depth);
+        //float pdf_sum = 0;
+        //for (int i = 1; i < path_length - 1; i++)
+        //{
+        //    pdf_sum += get_path_pdf(fullPath, path_length, i);
+        //}
+        //return pdf / pdf_sum;
+
+
+        float D_A = 0;
+        for (int i = 1; i < eye_path_depth; i++)
+        {
+            float temp_weight = getPdfFromPath(fullPath, path_length, i + 2, i + 1) / getPdfFromPath(fullPath, path_length, i, i + 1);
+            D_A = (D_A + 1) * temp_weight;
+            if (debug)
+                printf("D_A: %f\n", D_A);
+        }
+        float D_B = getPdfFromPath(fullPath, path_length, path_length - 2, path_length - 1) / fullPath[path_length - 1].singlePdf;
+        for (int i = path_length - 1; i > eye_path_depth + 1; i--)
+        {
+            float temp_weight = getPdfFromPath(fullPath, path_length, i - 2, i - 1) / getPdfFromPath(fullPath, path_length, i, i - 1);
+            D_B = (D_B + 1) * temp_weight;
+            if (debug)
+                printf("D_B: %f\n", D_B);
+        }
+        float expected_mis = 1 / (1 + D_A + D_B);
+        return expected_mis;
     }
 
 }

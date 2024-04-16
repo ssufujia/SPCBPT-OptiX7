@@ -658,7 +658,7 @@ void estimation_setup(const string& path) {
     switch (render_alg_id)
     {
     case 0:algo += "pt"; break;
-    case 1:algo += "spcbpt+lighttrace"; break;
+    case 1:algo += "lvcbpt+lighttrace"; break;
     case 2:algo += "spcbpt"; break;
     default:algo += "error"; break;
     }
@@ -1478,6 +1478,7 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_final.scene");
 #endif      
 
+        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_final.scene");
         //scenePath = string(SAMPLES_DIR) + string("/data/showcase/showcase.scene");
 
         //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
@@ -1527,7 +1528,7 @@ int main( int argc, char* argv[] )
         OPTIX_CHECK(optixInit()); // Need to initialize function table
         initCameraState(TScene);
         // initCameraState(*myScene);
-        //estimation_setup(scenePath);
+        estimation_setup(scenePath);
         initLaunchParams(TScene);
         dropOutTracingParamsInit();
         lt_params_setup(TScene);

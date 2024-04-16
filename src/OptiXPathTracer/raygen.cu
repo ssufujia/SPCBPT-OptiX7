@@ -317,7 +317,54 @@ __device__  float3 connectVertex_SPCBPT(const BDPTVertex& a, const BDPTVertex& b
     }
     return  ans;
 }
+__device__  float3 connectVertex_SPCBPT_TEST(const BDPTVertex& a, const BDPTVertex& b, BDPTVertex* completePath, int path_length)
+{
+    if (b.is_DIRECTION())
+    {
+        return direction_connect_ZGCBPT(a, b);
+    }
+    float3 connectVec = a.position - b.position;
+    float3 connectDir = normalize(connectVec);
+    float G = abs(dot(a.normal, connectDir)) * abs(dot(b.normal, connectDir)) / dot(connectVec, connectVec);
+    float3 LA = a.lastPosition - a.position;
+    float3 LA_DIR = normalize(LA);
+    float3 LB = b.lastPosition - b.position;
+    float3 LB_DIR = normalize(LB);
 
+    float3 fa, fb;
+    MaterialData::Pbr mat_a = VERTEX_MAT(a);
+    fa = Tracer::Eval(mat_a, a.normal, LA_DIR, -connectDir);
+
+    MaterialData::Pbr mat_b;
+    if (!b.isOrigin)
+    {
+        mat_b = VERTEX_MAT(b);
+        fb = Tracer::Eval(mat_b, b.normal, connectDir, LB_DIR);
+    }
+    else
+    {
+        if (dot(b.normal, -connectDir) > 0.0f)
+        {
+            fb = make_float3(0.0f);
+        }
+        else
+        {
+            fb = make_float3(1.0f);
+        }
+    }
+
+    float3 contri = a.flux * b.flux * fa * fb * G;
+    float pdf = a.pdf * b.pdf;
+    //float3 ans = contri / pdf;// *(b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection(a, b));
+    float3 ans = (a.flux / a.pdf) * (b.flux / b.pdf) * fa * fb * G
+        * (b.depth == 0 ? rmis::connection_lightSource(a, b) : rmis::general_connection_test(completePath, path_length, a.depth));
+
+    if (ISINVALIDVALUE(ans))
+    {
+        return make_float3(0.0f);
+    }
+    return  ans;
+}
 RT_FUNCTION float3 lightStraghtHit(BDPTVertex& a)
 {
     return make_float3(0.0f);
@@ -372,8 +419,8 @@ extern "C" __global__ void __raygen__SPCBPT()
        
     unsigned first_hit_id;
 
-   BDPTVertex completePath[100];
-   int path_length = 0;
+    BDPTVertex completePath[100];
+    int path_length = 0;
     completePath[path_length++] = payload.path.currentVertex();
 
     while (true)
@@ -410,6 +457,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         }
         if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
         BDPTVertex& eye_subpath = payload.path.currentVertex();
+        path_length = eye_subpath.depth;
         completePath[path_length++] = eye_subpath;
         //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
         //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
@@ -439,7 +487,7 @@ extern "C" __global__ void __raygen__SPCBPT()
             int light_index;
             const BDPTVertex& new_light_subpath = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->uniformSampleWithIndex(payload.seed, new_pmf, light_index);
            
-            for (int _ = 0; _ < new_light_subpath.depth; _++)
+            for (int _ = 0; _ <= new_light_subpath.depth; _++)
             {
                 completePath[path_length++] = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - _);
             }
@@ -448,19 +496,38 @@ extern "C" __global__ void __raygen__SPCBPT()
                 //printf("debug info %f\n", float3weight(tmp_float3));
                 //float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 float pmf = Tracer::params.sampler.path_count * new_pmf;
-                float3 res = connectVertex_SPCBPT(eye_subpath, new_light_subpath) / pmf;
+                //float3 res = connectVertex_SPCBPT(eye_subpath, new_light_subpath) / pmf;
+                float3 res = connectVertex_SPCBPT_TEST(eye_subpath, new_light_subpath, completePath, path_length) / pmf;
                 if (!ISINVALIDVALUE(res) &&
                     (eye_subpath.depth + new_light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
                 {
                     result += res / CONNECTION_N;
                 }
             }
-            if (new_light_subpath.depth == 2 && eye_subpath.depth == 1)
+
+            if (new_light_subpath.depth == 1 && eye_subpath.depth > 0)
             {
-                const BDPTVertex& light_source = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - 1);
-                //rmis::testPath_4(eye_subpath, new_light_subpath, payload.path.lastVertex(), light_source);
-                rmis::testPath(completePath, path_length, eye_subpath.depth);
+                float ans = 0;
+                for(int i = 1; i< new_light_subpath.depth + eye_subpath.depth + 1; i++)
+                    ans += rmis::general_connection_test(completePath, path_length, i);
+                if (ans > 1 + 1e-2)
+                {
+                    printf("eye_depth: %d, light_depth: %d, get mis: %f\n", eye_subpath.depth, new_light_subpath.depth, ans);
+                    float mis = rmis::general_connection_test(completePath, path_length, eye_subpath.depth, true);
+                    float pdf = rmis::get_path_pdf(completePath, path_length, eye_subpath.depth);
+                    float pdf_sum = 0;
+                    for (int i = 1; i < new_light_subpath.depth + eye_subpath.depth + 1; i++)
+                        pdf_sum += rmis::get_path_pdf(completePath, path_length, i);
+                    printf("calculated mis: %f, expected mis: %f\n", mis, pdf / pdf_sum);
+                }
             }
+
+            //if (new_light_subpath.depth == 2 && eye_subpath.depth == 1 && path_length == 5)
+            //{
+            //    const BDPTVertex& light_source = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - 1);
+            //    //rmis::testPath_4(eye_subpath, new_light_subpath, payload.path.lastVertex(), light_source);
+            //    rmis::testPath(completePath, path_length, eye_subpath.depth);
+            //}
         } 
         //printf("%d size error depth%d\n", Tracer::params.lights.count, payload.path.size);
         
