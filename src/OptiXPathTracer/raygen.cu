@@ -367,7 +367,7 @@ __device__  float3 connectVertex_SPCBPT_TEST(const BDPTVertex& a, const BDPTVert
 }
 RT_FUNCTION float3 lightStraghtHit(BDPTVertex& a)
 {
-    return make_float3(0.0f);
+    //return make_float3(0.0f);
     float3 contri = a.flux;
     float pdf = a.pdf;
     float inver_weight = a.RMIS_pointer;
@@ -419,9 +419,9 @@ extern "C" __global__ void __raygen__SPCBPT()
        
     unsigned first_hit_id;
 
-    BDPTVertex completePath[100];
-    int path_length = 0;
-    completePath[path_length++] = payload.path.currentVertex();
+    //BDPTVertex completePath[100];
+   // int path_length = 0;
+    //completePath[path_length++] = payload.path.currentVertex();
 
     while (true)
     {
@@ -457,8 +457,8 @@ extern "C" __global__ void __raygen__SPCBPT()
         }
         if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
         BDPTVertex& eye_subpath = payload.path.currentVertex();
-        path_length = eye_subpath.depth;
-        completePath[path_length++] = eye_subpath;
+        //path_length = eye_subpath.depth;
+        //completePath[path_length++] = eye_subpath;
         //unsigned PG_id = Tracer::params.pg_params.getStreeId(eye_subpath.position);
         //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
         //result = make_float3(rnd(PG_id), rnd(PG_id), rnd(PG_id));
@@ -489,15 +489,15 @@ extern "C" __global__ void __raygen__SPCBPT()
            
             for (int _ = 0; _ <= new_light_subpath.depth; _++)
             {
-                completePath[path_length++] = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - _);
+                //completePath[path_length++] = reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->getVertex(light_index - _);
             }
             if (Tracer::visibilityTest(Tracer::params.handle, eye_subpath, new_light_subpath))
             { 
                 //printf("debug info %f\n", float3weight(tmp_float3));
                 //float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 float pmf = Tracer::params.sampler.path_count * new_pmf;
-                //float3 res = connectVertex_SPCBPT(eye_subpath, new_light_subpath) / pmf;
-                float3 res = connectVertex_SPCBPT_TEST(eye_subpath, new_light_subpath, completePath, path_length) / pmf;
+                float3 res = connectVertex_SPCBPT(eye_subpath, new_light_subpath) / pmf;
+                //float3 res = connectVertex_SPCBPT_TEST(eye_subpath, new_light_subpath, completePath, path_length) / pmf;
                 if (!ISINVALIDVALUE(res) &&
                     (eye_subpath.depth + new_light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
                 {
@@ -505,22 +505,22 @@ extern "C" __global__ void __raygen__SPCBPT()
                 }
             }
 
-            if (new_light_subpath.depth == 1 && eye_subpath.depth > 0)
-            {
-                float ans = 0;
-                for(int i = 1; i< new_light_subpath.depth + eye_subpath.depth + 1; i++)
-                    ans += rmis::general_connection_test(completePath, path_length, i);
-                if (ans > 1 + 1e-2)
-                {
-                    printf("eye_depth: %d, light_depth: %d, get mis: %f\n", eye_subpath.depth, new_light_subpath.depth, ans);
-                    float mis = rmis::general_connection_test(completePath, path_length, eye_subpath.depth, true);
-                    float pdf = rmis::get_path_pdf(completePath, path_length, eye_subpath.depth);
-                    float pdf_sum = 0;
-                    for (int i = 1; i < new_light_subpath.depth + eye_subpath.depth + 1; i++)
-                        pdf_sum += rmis::get_path_pdf(completePath, path_length, i);
-                    printf("calculated mis: %f, expected mis: %f\n", mis, pdf / pdf_sum);
-                }
-            }
+            //if (new_light_subpath.depth == 1 && eye_subpath.depth > 0)
+            //{
+            //    float ans = 0;
+            //    for(int i = 1; i< new_light_subpath.depth + eye_subpath.depth + 1; i++)
+            //        ans += rmis::general_connection_test(completePath, path_length, i);
+            //    if (ans > 1 + 1e-2)
+            //    {
+            //        printf("eye_depth: %d, light_depth: %d, get mis: %f\n", eye_subpath.depth, new_light_subpath.depth, ans);
+            //        float mis = rmis::general_connection_test(completePath, path_length, eye_subpath.depth, true);
+            //        float pdf = rmis::get_path_pdf(completePath, path_length, eye_subpath.depth);
+            //        float pdf_sum = 0;
+            //        for (int i = 1; i < new_light_subpath.depth + eye_subpath.depth + 1; i++)
+            //            pdf_sum += rmis::get_path_pdf(completePath, path_length, i);
+            //        printf("calculated mis: %f, expected mis: %f\n", mis, pdf / pdf_sum);
+            //    }
+            //}
 
             //if (new_light_subpath.depth == 2 && eye_subpath.depth == 1 && path_length == 5)
             //{
@@ -542,7 +542,7 @@ extern "C" __global__ void __raygen__SPCBPT()
     //result = make_float3(rnd(first_hit_id), rnd(first_hit_id), rnd(first_hit_id));  
     const unsigned int image_index = launch_idx.y * launch_dims.x + launch_idx.x;
 
-    //result += Tracer::params.lt.lightImage[image_index];// light_trace
+    result += Tracer::params.lt.lightImage[image_index];// light_trace
 
     float3             accum_color = result;
 

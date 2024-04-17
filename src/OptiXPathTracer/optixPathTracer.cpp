@@ -1321,7 +1321,13 @@ void preprocessing(sutil::Scene& scene)
     //MyThrustOp::train_optimal_E(Gamma);
 
     subspaceInfo.Q = thrust::raw_pointer_cast(Q_star);
-    subspaceInfo.CMFGamma = thrust::raw_pointer_cast(MyThrustOp::Gamma2CMFGamma(Gamma));
+
+    //thrust::host_vector<int> subspaceSize;
+    //subspaceSize.resize(NUM_SUBSPACE);
+    //for (int i = 0; i < NUM_SUBSPACE; i++)
+    //    subspaceSize[i] = params.sampler.subspace[i].size;
+
+    subspaceInfo.CMFGamma = thrust::raw_pointer_cast(MyThrustOp::Gamma2CMFGamma(Gamma, params.sampler.subspace));
 
     //thrust::device_ptr<float> CausticGamma;
     //MyThrustOp::preprocess_getGamma(CausticGamma, true);

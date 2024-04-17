@@ -3933,12 +3933,29 @@ namespace MyThrustOp
         Q = Q_dev.data();
     }
 
-    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma)
+    thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma,Subspace* subspace)
     {
         thrust_host_float p(Gamma, Gamma + NUM_SUBSPACE * NUM_SUBSPACE);
         static thrust_dev_float d_CMFGamma;
         static thrust_dev_float d_CMFGamma_caustic;
         thrust_dev_float& d_cmf_gamma = d_CMFGamma;
+
+        thrust::device_vector<Subspace> d_a(subspace, subspace + NUM_SUBSPACE);
+        thrust::host_vector<Subspace> h_a = d_a;
+
+        float weight_sum = 0;
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            weight_sum += float(h_a[i].size);
+        }
+        for (int i = 0; i < NUM_SUBSPACE; i++)
+        {
+            for (int j = 0; j < NUM_SUBSPACE; j++)
+            {
+                p[i * NUM_SUBSPACE + j] = (float)(h_a[j].size) / weight_sum;
+            }
+        }
+
 
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
