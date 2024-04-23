@@ -3952,7 +3952,7 @@ namespace MyThrustOp
         {
             for (int j = 0; j < NUM_SUBSPACE; j++)
             {
-                p[i * NUM_SUBSPACE + j] = (float)(h_a[j].size) / weight_sum;
+                //p[i * NUM_SUBSPACE + j] = (float)(h_a[j].size) / weight_sum;
             }
         }
 

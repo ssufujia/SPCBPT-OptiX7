@@ -590,7 +590,7 @@ void env_params_setup(const sutil::Scene& scene)
 }
 void lt_params_setup(const sutil::Scene& scene)
 {
-    lt_params.M_per_core = 100;
+    lt_params.M_per_core = 10;
     lt_params.core_padding = 800;
     lt_params.num_core = 1000;
     lt_params.M = lt_params.M_per_core * lt_params.num_core;
@@ -1412,7 +1412,7 @@ void initCameraState(const sutil::Scene& scene)
 int main( int argc, char* argv[] )
 { 
 
-    //params.caustic_path_only = 1;
+    params.caustic_path_only = 1;
 
     //Cthrust;
     //PathTracerState state;
@@ -1456,20 +1456,12 @@ int main( int argc, char* argv[] )
     {
         string scenePath = " ";
         const float SET_ERROR = -1.0f;
-        //scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_oneLightSource.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
 
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water_smooth.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
 #ifdef SCENE_PROJECTOR 
         scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project_final.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_project3.scene");
 #endif 
 #ifdef SCENE_KITCHEN
-        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_refine.scene");
+        scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_final.scene");
 #endif 
 #ifdef SCENE_BEDROOM
         scenePath = string(SAMPLES_DIR) + string("/data/bedroom.scene");
@@ -1484,42 +1476,11 @@ int main( int argc, char* argv[] )
         scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_final.scene");
 #endif      
 
-        //scenePath = string(SAMPLES_DIR) + string("/data/kitchen/kitchen_final.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/showcase/showcase.scene");
-
-        //scenePath = string(SAMPLES_DIR) + string("/data/white-room/white-room-obj.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_v4_normal_c.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/artware/artware_SPPM.scene");
-
-        //scenePath = string(SAMPLES_DIR) + string("/data/breafast_2.0/breafast_3.0.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/glass/glass.scene");
-
-         //scenePath = string(SAMPLES_DIR) + string("/data/bathroom/bathroom.scene");
-        // scenePath = string(SAMPLES_DIR) + string("/data/bathroom_b/scene_no_light_sur.scene");
-
-
-        // scenePath = string(SAMPLES_DIR) + string("/data/house/house_uvrefine2.scene"); 
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_test.scene"); 
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/water.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/water/simple_n.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_specular.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_mirror_emitter.scene");
-        
-        //scenePath = string(SAMPLES_DIR) + string("/data/water_pool/water_pool2.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/L_S_SDE/L_S_SDE_close.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/cornell_box/cornell_refract.scene"); 
-        //scenePath = string(SAMPLES_DIR) + string("/data/glassroom/glassroom_simple.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/hallway/hallway-teaser_su3.scene");
-        //scenePath = string(SAMPLES_DIR) + string("/data/projector/projector.scene");
-
         auto myScene = LoadScene(scenePath.c_str()); 
         
         myScene->getMeshData(0);
-        //cout << scenePath << std::endl;
         
         sutil::Scene TScene;
-        //char scene_path2[] = "D:/optix7PlayGround/OptiX SDK 7.5.0/SDK/data/house/Victorian House Blendswap.gltf";
-        //sutil::loadScene(scene_path2, TScene); 
 
         Scene_shift(*myScene, TScene);
         LightSource_shift(*myScene, params, TScene);
@@ -1613,7 +1574,7 @@ int main( int argc, char* argv[] )
                     render_fps = 1.0 / (display_time.count() + render_time.count() + state_update_time.count());
                     glfwSwapBuffers(window);
 
-                    estimation::es.estimation_mode = 1;
+                    estimation::es.estimation_mode = 0;
                     if (estimation::es.estimation_mode == true) {
                         float error = estimation::es.relMse_estimate(MyThrustOp::copy_to_host(params.accum_buffer, params.width * params.height), params);
                         printf("render time sum %f frame %d relMse %f\n", sum_render_time.count(), params.subframe_index, error);

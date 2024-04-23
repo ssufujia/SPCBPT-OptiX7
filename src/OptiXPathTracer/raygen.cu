@@ -467,20 +467,20 @@ extern "C" __global__ void __raygen__SPCBPT()
         {
             //sample spcbpt
             
-            //int light_id = 0;
-            //float pmf_firstStage = 1;
-            //if (Tracer::params.subspace_info.light_tree)
-            //{
-            //    light_id =
-            //        reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);
-            //}
-            //if (Tracer::params.sampler.subspace[light_id].size == 0)
-            //{
-            //    continue;
-            //}
-            //float pmf_secondStage;
-            //const BDPTVertex& light_subpath =
-            //    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
+            /*int light_id = 0;
+            float pmf_firstStage = 1;
+            if (Tracer::params.subspace_info.light_tree)
+            {
+                light_id =
+                    reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleFirstStage(eye_subpath.subspaceId, payload.seed, pmf_firstStage);
+            }
+            if (Tracer::params.sampler.subspace[light_id].size == 0)
+            {
+                continue;
+            }
+            float pmf_secondStage;
+            const BDPTVertex& light_subpath =
+                reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);*/
 
             //sample uniform
             float new_pmf = 1;

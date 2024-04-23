@@ -88,8 +88,8 @@ namespace rmis
 
         last_single_pdf = LastVertex.singlePdf;
 
-        MidVertex.RMIS_pointer = ((LastVertex.RMIS_pointer * LL_pdf) + weight) / last_single_pdf;
-        //MidVertex.RMIS_pointer = (LastVertex.RMIS_pointer * LL_pdf  + 1) / last_single_pdf;
+        //MidVertex.RMIS_pointer = ((LastVertex.RMIS_pointer * LL_pdf) + weight) / last_single_pdf;
+        MidVertex.RMIS_pointer = (LastVertex.RMIS_pointer * LL_pdf  + 1) / last_single_pdf;
     }
 
 
@@ -252,7 +252,7 @@ namespace rmis
             D_C = eyeVertex.RMIS_pointer_lt * LL_pdf_A * pdf_A / eyeVertex.singlePdf;
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
-        return weight / (weight + D_A + D_B + weight * D_C);
+        //return weight / (weight + D_A + D_B + weight * D_C);
 
         if (eyeVertex.depth == 1)
             D_A = 0;
@@ -295,7 +295,7 @@ namespace rmis
         float D_B = D_B_0 * pdf_B / lightVertex.singlePdf;
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
-        return weight / (weight + D_A + D_B + weight * D_C);
+        //return weight / (weight + D_A + D_B + weight * D_C);
 
         if (eyeVertex.depth == 1)
             D_A = 0;
@@ -338,7 +338,7 @@ namespace rmis
         float D_B = D_B_0 * pdf_B / lightVertex.singlePdf;
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB)); 
-        return weight / (weight + D_A + D_B + weight * D_C);
+        //return weight / (weight + D_A + D_B + weight * D_C);
 
         if (eyeVertex.depth == 1)
             D_A = 0;
@@ -391,7 +391,7 @@ namespace rmis
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
         //return  pdf_B;
-        return D_B / ((weight + D_A + weight * D_C) / pdf_B * lightVertex.singlePdf + D_B);
+        //return D_B / ((weight + D_A + weight * D_C) / pdf_B * lightVertex.singlePdf + D_B);
 
         if (eyeVertex.depth == 1)
             D_A = 0;
@@ -437,7 +437,7 @@ namespace rmis
 
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
-        return D_B / ((weight + D_A + weight * D_C) / pdf_B * lightVertex.singlePdf + D_B);
+        //return D_B / ((weight + D_A + weight * D_C) / pdf_B * lightVertex.singlePdf + D_B);
 
         if (eyeVertex.depth == 1)
             D_A = 0;
@@ -467,7 +467,7 @@ namespace rmis
         float D_B = D_B_0 * pdf_B / lightVertex.singlePdf;
 
         //rtPrintf("%f %f %f %f\n", pdf_A, pdf_B, weight_B,float3sum(LB));
-        return D_C / (D_C + D_B / weight);
+        //return D_C / (D_C + D_B / weight);
 
         D_B = ((lightVertex.RMIS_pointer * LL_pdf_B) + 1) / lightVertex.singlePdf;
         return D_C / (D_C + D_B);

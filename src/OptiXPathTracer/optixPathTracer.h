@@ -60,9 +60,8 @@ const bool estimation_save = true;
 const bool SCREENSHOT_ENABLE = 0;
 const int SCREENSHOT_INTERVAL = 1;
 
-//#define SCENE_BEDROOM
-#define SCENE_BREAKFAST
-//#define SCENE_PROJECTOR
+#define SCENE_BEDROOM
+//#define SCENE_BREAKFAST
 //#define SCENE_PROJECTOR
 //#define SCENE_HALLWAY
 //#define SCENE_KITCHEN
