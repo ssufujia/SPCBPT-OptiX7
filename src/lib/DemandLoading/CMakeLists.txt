@@ -18,7 +18,7 @@
 #  SUCH DAMAGES
 #
 
-if( CUDA_VERSION VERSION_LESS "11.1" )
+if( CUDAToolkit_VERSION VERSION_LESS "11.1" )
   message( WARNING "Skipping DemandLoading library and samples, which require CUDA 11.1 or later." )
   return()
 endif()
@@ -26,11 +26,6 @@ endif()
 # Demand loading device code requires sm_60.  The necessary NVRTC compiler option is written to a configuration header file.
 string( REPLACE "compute_50" "compute_60" DEMAND_NVRTC_OPTIONS "${CUDA_NVRTC_OPTIONS}" )
 configure_file(include/DemandLoading/demandLoadingConfig.h.in include/DemandLoading/demandLoadingConfig.h @ONLY)
-
-# CUDA compilation doesn't pick up the DemandLoading include path target property.
-include_directories( include )
-
-cuda_wrap_srcs( PagingSystemKernels OBJ generated_files PagingSystemKernels.cu "" OPTIONS "" )
 
 add_library( DemandLoading STATIC
   DemandLoaderImpl.cpp
@@ -41,6 +36,7 @@ add_library( DemandLoading STATIC
   PageTableManager.h
   PagingSystem.cpp
   PagingSystem.h
+  PagingSystemKernels.cu
   PagingSystemKernels.h
   RequestContext.h
   RequestHandler.h
@@ -105,7 +101,6 @@ add_library( DemandLoading STATIC
   Util/Stopwatch.h
   Util/TraceFile.cpp
   Util/TraceFile.h
-  ${generated_files}
   )
 
 source_group( "Header Files\\Implementation" FILES
@@ -163,9 +158,12 @@ target_include_directories( DemandLoading PUBLIC
 
 target_link_libraries( DemandLoading PUBLIC
   ImageSource
-  ${CUDA_LIBRARIES}
-  ${CUDA_CUDA_LIBRARY}
+  spcbpt_common
+  CUDA::cuda_driver
+  CUDA::cudart_static
   )
+
+spcbpt_configure_cuda_target(DemandLoading)
 
 # NVTX Profiling
 option( DEMAND_LOADING_USE_NVTX "Enable NVTX profiling" OFF )
@@ -182,7 +180,7 @@ endif()
 
 set_property(TARGET DemandLoading PROPERTY FOLDER "${OPTIX_IDE_FOLDER}")
 
-set( DEMAND_LOADING_BUILD_DOCS TRUE CACHE BOOL "Build Demand Loading library docs (requires Doxygen)" )
+set( DEMAND_LOADING_BUILD_DOCS OFF CACHE BOOL "Build Demand Loading library docs (requires Doxygen)" )
 set( DEMAND_LOADING_EXTRACT_ALL YES CACHE STRING "Extract all symbols for documentation (suppresses undocumented symbol warnings)" )
 set( DEMAND_LOADING_WARN_IF_UNDOCUMENTED YES CACHE STRING "Warn about undocumented symbols when building documentation" )
 

@@ -47,4 +47,4 @@ target_include_directories( imgui
   INTERFACE ..
   PRIVATE . )
 target_compile_definitions( imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD )
-target_link_libraries( imgui glfw glad ${OPENGL_gl_LIBRARY})
+target_link_libraries( imgui PRIVATE glfw glad OpenGL::GL)

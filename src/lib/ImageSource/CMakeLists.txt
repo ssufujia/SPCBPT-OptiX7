@@ -18,16 +18,12 @@
 #  SUCH DAMAGES
 #
 
-# CUDA compilation doesn't pick up the ImageSource include path target property.
-include_directories( include )
-
-cuda_wrap_srcs( DeviceMandelbrotImageKernels OBJ mandelbrot_generated_files DeviceMandelbrotImageKernels.cu "" OPTIONS "" )
-cuda_wrap_srcs( DeviceConstantImageKernels OBJ constant_generated_files DeviceConstantImageKernels.cu "" OPTIONS "" )
-
 add_library( ImageSource STATIC
   CheckerBoardImage.cpp
   DeviceConstantImage.cpp
+  DeviceConstantImageKernels.cu
   DeviceMandelbrotImage.cpp
+  DeviceMandelbrotImageKernels.cu
   Exception.h
   ImageSource.cpp
   Stopwatch.h
@@ -40,13 +36,18 @@ add_library( ImageSource STATIC
   include/ImageSource/ImageSource.h
   include/ImageSource/MultiCheckerImage.h
   include/ImageSource/TextureInfo.h
-  ${mandelbrot_generated_files}
-  ${constant_generated_files}
   )
 
 target_include_directories( ImageSource PUBLIC
   include
   )
+
+target_link_libraries( ImageSource PUBLIC
+  spcbpt_common
+  CUDA::cudart_static
+)
+
+spcbpt_configure_cuda_target(ImageSource)
 
 find_package( OpenEXR )
 if( NOT OpenEXR_FOUND )
