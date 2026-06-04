@@ -1,15 +1,8 @@
 # CMakeLists.txt for G4CU project
-
-#project(device_thrust)
-project(device_thrust LANGUAGES CXX CUDA)
-# required cmake version
-cmake_minimum_required(VERSION 2.8)
-
-
-# packages
-#find_package(CUDA)
-find_package(CUDAToolkit)
-#include_directories ("${PROJECT_SOURCE_DIR}")
+#
+# The parent OptiX SDK CMake uses its bundled FindCUDA module.  Keep this
+# target on the same path instead of enabling CMake's native CUDA language in a
+# nested project, which would trigger a second CUDA compiler probe.
 
 # nvcc flags -g for debug
 #set(CUDA_NVCC_FLAGS -O3;-G;-g)
@@ -24,9 +17,5 @@ source_group("Include" FILES ${CURRENT_HEADERS})
 source_group("Source" FILES ${CURRENT_SOURCES}) 
 
 
-#cuda_add_library(device_thrust SHARED ${CURRENT_HEADERS} ${CURRENT_SOURCES})
-add_library(device_thrust STATIC ${CURRENT_HEADERS} ${CURRENT_SOURCES}) 
-target_link_libraries(device_thrust CUDA::cublas)
-#cuda_add_cublas_to_target(device_thrust)
-#target_link_libraries(device_thrust PUBLIC 
-#cublas)
+cuda_add_library(device_thrust STATIC ${CURRENT_HEADERS} ${CURRENT_SOURCES})
+target_link_libraries(device_thrust ${CUDA_cublas_LIBRARY})

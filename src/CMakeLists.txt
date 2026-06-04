@@ -77,21 +77,23 @@
 # https://devtalk.nvidia.com/default/board/90/
 
 
-# This sets up the name of our project.  For our purposes the main thing this controls is
-# the name of the VS solution file.
-project(OptiX-Samples)
-
 # This enforces a particular version of CMake that we require to process the script files
 # properly.  We rely on VERSION_GREATER_EQUAL which requires CMake v. 3.7.
 cmake_minimum_required(VERSION 3.7 FATAL_ERROR)
+
+# CMake 4 no longer accepts the very old policy versions used by bundled
+# third-party CMakeLists such as GLFW.  Keep those vendored files untouched and
+# opt the whole build into the oldest policy level CMake 4 still supports.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+  set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
+# This sets up the name of our project.  For our purposes the main thing this controls is
+# the name of the VS solution file.
+project(OptiX-Samples)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-# As of CMake 2.6 policies were introduced in order to provide a mechanism for
-# adding backwards compatibility one feature at a time.  We will just specify
-# that all policies will use version 2.8.12 semantics.
-cmake_policy(VERSION 2.8.12)
 
 if( POLICY CMP0072 )
   # FindOpenGL prefers GLVND by default when available
@@ -183,6 +185,7 @@ endif()
 mark_as_advanced(CLEAR CUDA_64_BIT_DEVICE_CODE)
 
 set(CUDA_MIN_SM_TARGET sm_50 CACHE STRING "Minimum CUDA SM architecture to use for compilation.")
+set(CUDA_NVCC_FLAGS_DESCRIPTION "Semi-colon delimit multiple arguments.")
 
 function(optix_add_cuda_flag_config config flag)
   string(TOUPPER "${config}" config)
@@ -190,11 +193,13 @@ function(optix_add_cuda_flag_config config flag)
   if(index EQUAL -1)
     list(APPEND CUDA_NVCC_FLAGS${config} ${flag})
     set(CUDA_NVCC_FLAGS${config} ${CUDA_NVCC_FLAGS${config}} CACHE STRING ${CUDA_NVCC_FLAGS_DESCRIPTION} FORCE)
+    set(CUDA_NVCC_FLAGS${config} ${CUDA_NVCC_FLAGS${config}} PARENT_SCOPE)
   endif()
 endfunction()
 
 function(optix_add_cuda_flag flag)
   optix_add_cuda_flag_config( "" ${flag} )
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} PARENT_SCOPE)
 endfunction()
 
 # Add some useful default arguments to the NVCC and NVRTC flags.  This is an example of
@@ -242,7 +247,17 @@ mark_as_advanced(CUDA_NVRTC_FLAGS)
 
 # This passes a preprocessor definition to cl.exe when processing CUDA code.
 if(USING_WINDOWS_CL)
-  list(APPEND CUDA_NVCC_FLAGS --compiler-options /D_USE_MATH_DEFINES)
+  list(FIND CUDA_NVCC_FLAGS "/D_USE_MATH_DEFINES" index)
+  if(index EQUAL -1)
+    list(APPEND CUDA_NVCC_FLAGS --compiler-options /D_USE_MATH_DEFINES)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} CACHE STRING ${CUDA_NVCC_FLAGS_DESCRIPTION} FORCE)
+  endif()
+endif()
+
+option(CUDA_ALLOW_UNSUPPORTED_HOST_COMPILER "Pass -allow-unsupported-compiler to NVCC on Windows." ON)
+if(WIN32 AND CUDA_ALLOW_UNSUPPORTED_HOST_COMPILER)
+  optix_add_cuda_flag("-allow-unsupported-compiler")
+  optix_add_cuda_flag("-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
 endif()
 
 # Put all the runtime stuff in the same directory.  By default, CMake puts each targets'

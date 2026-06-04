@@ -27,9 +27,6 @@
 #
 
 include_directories(${SAMPLES_INCLUDE_DIR})
- 
-cmake_minimum_required(VERSION 2.8)
-
 
 add_subdirectory(cuda_thrust)
 set (EXTRA_LIBS ${EXTRA_LIBS} device_thrust)
