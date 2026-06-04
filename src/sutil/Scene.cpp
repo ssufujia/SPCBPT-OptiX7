@@ -30,6 +30,12 @@
 #include <optix_function_table_definition.h>
 #include <optix_stubs.h>
 
+#if OPTIX_VERSION < 80000
+#define SUTIL_OPTIX_MODULE_CREATE optixModuleCreateFromPTX
+#else
+#define SUTIL_OPTIX_MODULE_CREATE optixModuleCreate
+#endif
+
 #include <cuda/whitted.h>
 #include <sutil/Exception.h>
 #include <sutil/Matrix.h>
@@ -694,7 +700,7 @@ void Scene::createPTXModule()
         m_ptx_module = {};
         char log[2048];
         size_t sizeof_log = sizeof(log);
-        OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
+        OPTIX_CHECK_LOG(SUTIL_OPTIX_MODULE_CREATE(
             m_context,
             &module_compile_options,
             &m_pipeline_compile_options,
@@ -714,7 +720,7 @@ void Scene::createPTXModule()
         m_ptx_module_hit = {};
         char log[2048];
         size_t sizeof_log = sizeof(log);
-        OPTIX_CHECK_LOG(optixModuleCreateFromPTX(
+        OPTIX_CHECK_LOG(SUTIL_OPTIX_MODULE_CREATE(
             m_context,
             &module_compile_options,
             &m_pipeline_compile_options,
@@ -1660,7 +1666,9 @@ void Scene::createPipeline()
 
     OptixPipelineLinkOptions pipeline_link_options = {};
     pipeline_link_options.maxTraceDepth          = whitted::MAX_TRACE_DEPTH;
+#if OPTIX_VERSION < 80000
     pipeline_link_options.debugLevel             = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#endif
     {
         char log[2048];
         size_t sizeof_log = sizeof(log);
