@@ -1,2 +1,49 @@
-build
-src/build
+# SPCBPT-OptiX7 local development ignores
+
+# Build trees (out-of-source)
+/build/
+/build-*/
+/src/build/
+
+# In-source CMake pollution
+/src/CMakeCache.txt
+/src/CMakeFiles/
+/src/CMakeScripts/
+/src/cmake_install.cmake
+/src/compile_commands.json
+/src/*.sln
+/src/*.vcxproj*
+/src/ALL_BUILD*
+/src/ZERO_CHECK*
+/src/INSTALL*
+/src/RUN_TESTS*
+/src/Nightly*
+/src/Continuous*
+/src/Experimental*
+/src/DartConfiguration.tcl
+/src/Testing/
+/src/bin/
+/src/x64/
+/src/Win32/
+/src/Debug/
+/src/Release/
+/src/RelWithDebInfo/
+/src/MinSizeRel/
+
+# IDE / editor
+.vs/
+.vscode/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+
+# Local planning / agent working notes (do not upload)
+.planning/
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
