@@ -10,6 +10,8 @@ add_library(spcbpt_renderer STATIC
   Preprocessor.h
   Quaternion.h
   Record.h
+  RendererRuntime.cpp
+  RendererRuntime.h
   Scene.cpp
   Scene.h
   Texture.h

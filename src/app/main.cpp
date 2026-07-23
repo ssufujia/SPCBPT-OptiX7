@@ -57,6 +57,7 @@
 #include "sceneLoader.h"
 #include "scene_shift.h"
 #include <renderer/Record.h>
+#include <renderer/RendererRuntime.h>
 #include <io.h>
 
 #include <thrust/device_vector.h>
@@ -78,10 +79,10 @@ bool resize_dirty = false;
 bool minimized    = false; 
 // Camera state
 bool             camera_changed = true;
-MyParams* d_params = nullptr; 
+spcbpt::RendererRuntime renderer;
+MyParams& params = renderer.params();
 sutil::Camera    camera;
 sutil::Trackball trackball;
-MyParams   params = {};
 LightTraceParams& lt_params = params.lt;
 PreTraceParams& pr_params = params.pre_tracer;
 subspaceMacroInfo& subspaceInfo = params.subspace_info;
@@ -366,76 +367,6 @@ void printUsageAndExit( const char* argv0 )
 }
 
 
-void initLaunchParams(const sutil::Scene& scene) {
-    CUDA_CHECK(cudaMalloc(
-        reinterpret_cast<void**>(&params.accum_buffer),
-        width * height * sizeof(float4)
-    ));
-    params.frame_buffer = nullptr; // Will be set when output buffer is mapped
-
-    params.subframe_index = 0u;
-
-    const float loffset = scene.aabb().maxExtent();
-    
-    std::vector<MaterialData::Pbr> material_vec;
-    for (int i = 0; i < scene.materials().size(); i++)
-    {
-        material_vec.push_back(scene.materials()[i].pbr);
-    }
-    
-    params.materials = HostToDeviceBuffer(material_vec.data(), material_vec.size());
-
-    // TODO: add light support to sutil::Scene
-    //std::vector<Light> lights(2);
-    //lights[0].type = Light::Type::POINT;
-    //lights[0].point.color = { 1.0f, 1.0f, 0.8f };
-    //lights[0].point.intensity = 5.0f;
-    //lights[0].point.position = scene.aabb().center() + make_float3(loffset);
-    //lights[0].point.falloff = Light::Falloff::QUADRATIC;
-    //lights[1].type = Light::Type::POINT;
-    //lights[1].point.color = { 0.8f, 0.8f, 1.0f };
-    //lights[1].point.intensity = 3.0f;
-    //lights[1].point.position = scene.aabb().center() + make_float3(-loffset, 0.5f * loffset, -0.5f * loffset);
-    //lights[1].point.falloff = Light::Falloff::QUADRATIC;
-
-    //params.lights.count = static_cast<uint32_t>(lights.size());
-    //CUDA_CHECK(cudaMalloc(
-    //    reinterpret_cast<void**>(&params.lights.data),
-    //    lights.size() * sizeof(Light)
-    //));
-    //CUDA_CHECK(cudaMemcpy(
-    //    reinterpret_cast<void*>(params.lights.data),
-    //    lights.data(),
-    //    lights.size() * sizeof(Light),
-    //    cudaMemcpyHostToDevice
-    //));
-
-    params.miss_color = make_float3(0.1f);
-    //params.scene_epsilon = 1e-3f;
-    //params.scene_maximum = 1e16f;
-    //CUDA_CHECK( cudaStreamCreate( &stream ) );
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_params), sizeof(MyParams)));
-
-    params.handle = scene.traversableHandle();
-    subspaceInfo.eye_tree = nullptr;
-    subspaceInfo.light_tree = nullptr;
-    subspaceInfo.Q = nullptr;
-    subspaceInfo.CMFGamma = nullptr;
-
-    params.estimate_pr.ready = false;
-    params.estimate_pr.ref_buffer = nullptr;
-    if (estimation::es.estimation_mode == true)
-    {
-        params.estimate_pr.ref_buffer = estimation::es.ref_ptr;
-        params.estimate_pr.height = estimation::es.ref_height;
-        params.estimate_pr.width = estimation::es.ref_width;
-        params.estimate_pr.ready = true;
-    }  
-    params.spcbpt_pure = SPCBPT_PURE;
-}
-
- 
-
 void handleResize( sutil::CUDAOutputBuffer<uchar4>& output_buffer, MyParams& params )
 {
     if( !resize_dirty )
@@ -694,25 +625,20 @@ void launchLightTrace(sutil::Scene& scene)
 {
     lt_params.launch_frame += 1;
 
-    CUDA_CHECK(cudaMemcpyAsync(reinterpret_cast<void*>(d_params),
-        &params,
-        sizeof(MyParams),
-        cudaMemcpyHostToDevice,
-        0 // stream
-    ));
+    renderer.uploadParams();
 
     scene.switchRaygen(std::string("light trace"));
     OPTIX_CHECK(optixLaunch(
         scene.pipeline(),
         0,
-        reinterpret_cast<CUdeviceptr>(d_params),
+        reinterpret_cast<CUdeviceptr>(renderer.deviceParams()),
         sizeof(MyParams),
         scene.sbt(),
         lt_params.num_core,
         1,
         1
     ));
-    CUDA_SYNC_CHECK();  
+    renderer.synchronize();
 }
 void launchLVCTrace(sutil::Scene& scene)
 { 
@@ -737,25 +663,20 @@ int launchPretrace(sutil::Scene& scene)
 {
     pr_params.iteration += 1;
 
-    CUDA_CHECK(cudaMemcpyAsync(reinterpret_cast<void*>(d_params),
-        &params,
-        sizeof(MyParams),
-        cudaMemcpyHostToDevice,
-        0 // stream
-    ));
+    renderer.uploadParams();
 
     scene.switchRaygen(std::string("pretrace"));
     OPTIX_CHECK(optixLaunch(
         scene.pipeline(),
         0,
-        reinterpret_cast<CUdeviceptr>(d_params),
+        reinterpret_cast<CUdeviceptr>(renderer.deviceParams()),
         sizeof(MyParams),
         scene.sbt(),
         pr_params.num_core,
         1,
         1
     ));
-    CUDA_SYNC_CHECK();
+    renderer.synchronize();
     int validSample = MyThrustOp::valid_sample_gather(
         thrust::device_pointer_cast(pr_params.paths), pr_params.num_core,
         thrust::device_pointer_cast(pr_params.conns), pr_params.get_element_count()
@@ -1344,32 +1265,11 @@ void preprocessing(sutil::Scene& scene)
         subspaceInfo.caustic_ratio = thrust::raw_pointer_cast(CausticRatio);
     }
 }
-void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer, sutil::Scene& scene)
+void launchSubframe(sutil::CUDAOutputBuffer<uchar4>& output_buffer)
 {
-    //printf("subframe id %d\n", params.subframe_index);
-    scene.switchRaygen(render_alg[render_alg_id]);
-    // Launch
     uchar4* result_buffer_data = output_buffer.map();
-    params.frame_buffer = result_buffer_data;
-    CUDA_CHECK(cudaMemcpyAsync(reinterpret_cast<void*>(d_params),
-        &params,
-        sizeof(MyParams),
-        cudaMemcpyHostToDevice,
-        0 // stream
-    ));
-
-    OPTIX_CHECK(optixLaunch(
-        scene.pipeline(),
-        0,             // stream
-        reinterpret_cast<CUdeviceptr>(d_params),
-        sizeof(MyParams),
-        scene.sbt(),
-        params.width,  // launch width
-        params.height, // launch height
-        1       // launch depth
-    ));
+    renderer.renderFrame( result_buffer_data, render_alg[render_alg_id] );
     output_buffer.unmap();
-    CUDA_SYNC_CHECK();
 }
 
  
@@ -1487,31 +1387,23 @@ int main( int argc, char* argv[] )
 
         if( !scene_override.empty() )
             scenePath = scene_override;
-        std::ifstream scene_file( scenePath );
-        if( !scene_file )
-            throw std::runtime_error( "Scene file does not exist or is unreadable: " + scenePath );
+        const unsigned int render_width = params.width;
+        const unsigned int render_height = params.height;
+        width = static_cast<int32_t>( render_width );
+        height = static_cast<int32_t>( render_height );
+        renderer.loadScene( { scenePath } );
+        renderer.initialize( { render_width, render_height } );
+        sutil::Scene& TScene = renderer.scene();
 
-        auto myScene = LoadScene(scenePath.c_str()); 
-        
-        myScene->getMeshData(0);
-        
-        sutil::Scene TScene;
-
-        Scene_shift(*myScene, TScene);
-        LightSource_shift(*myScene, params, TScene);
-        
-        TScene.finalize();
-        
-        // initCameraState();
-
-        //
-        // Set up OptiX state
-        // 
-        OPTIX_CHECK(optixInit()); // Need to initialize function table
         initCameraState(TScene);
-        // initCameraState(*myScene);
         estimation_setup(scenePath);
-        initLaunchParams(TScene);
+        if (estimation::es.estimation_mode)
+        {
+            params.estimate_pr.ref_buffer = estimation::es.ref_ptr;
+            params.estimate_pr.height = estimation::es.ref_height;
+            params.estimate_pr.width = estimation::es.ref_width;
+            params.estimate_pr.ready = true;
+        }
         dropOutTracingParamsInit();
         lt_params_setup(TScene);
         preTracer_params_setup(TScene);
@@ -1574,7 +1466,7 @@ int main( int argc, char* argv[] )
                         updateDropOutTracingParams();
                         updateDropOutTracingCombineWeight();
                     }
-                    launchSubframe(output_buffer, TScene);
+                    launchSubframe(output_buffer);
 
                     t1 = std::chrono::steady_clock::now();
                     render_time += t1 - t0;
