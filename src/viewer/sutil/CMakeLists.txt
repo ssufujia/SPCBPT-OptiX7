@@ -1,12 +1,5 @@
 set(sutil_sources
   "${SPCBPT_GENERATED_CONFIG}"
-  "${SPCBPT_SOURCE_DIR}/cuda/BufferView.h"
-  "${SPCBPT_SOURCE_DIR}/cuda/GeometryData.h"
-  "${SPCBPT_SOURCE_DIR}/cuda/Light.h"
-  "${SPCBPT_SOURCE_DIR}/cuda/LocalGeometry.h"
-  "${SPCBPT_SOURCE_DIR}/cuda/MaterialData.h"
-  "${SPCBPT_SOURCE_DIR}/cuda/util.h"
-  "${SPCBPT_SOURCE_DIR}/cuda/helpers.h"
   CUDAOutputBuffer.h
   Exception.h
   GLDisplay.cpp
@@ -26,7 +19,6 @@ set(sutil_sources
 add_library(spcbpt_viewer STATIC
   ${sutil_sources}
 )
-add_library(sutil_7_sdk ALIAS spcbpt_viewer)
 
 target_compile_definitions(spcbpt_viewer PUBLIC
   SUTILAPI=

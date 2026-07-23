@@ -21,7 +21,6 @@ set(optix_path_tracer_sources
   PG_common.h
   PG_host.h
   pathControl.h
-  tester.h
   DOT_PG_trainingParams.h
   decisionTree/classTree_common.h
   decisionTree/classTree_host.h

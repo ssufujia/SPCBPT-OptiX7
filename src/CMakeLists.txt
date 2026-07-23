@@ -42,10 +42,6 @@ target_link_libraries(spcbpt_device_api INTERFACE OptiX::OptiX)
 
 include("${PROJECT_SOURCE_DIR}/cmake/OptiXModern.cmake")
 
-if(SPCBPT_BUILD_DEMAND_LOADING)
-  add_subdirectory(lib/ImageSource)
-  add_subdirectory(lib/DemandLoading)
-endif()
 add_subdirectory(renderer)
 add_subdirectory(viewer)
 add_subdirectory(app)

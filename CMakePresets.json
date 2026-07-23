@@ -25,7 +25,6 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "SPCBPT_CUDA_ARCHITECTURES": "89",
         "SPCBPT_OPTIX_INPUT_ARCH": "sm_89",
-        "SPCBPT_BUILD_DEMAND_LOADING": "OFF",
         "BUILD_SHARED_LIBS": "ON"
       }
     }
