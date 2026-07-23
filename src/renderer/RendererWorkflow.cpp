@@ -23,6 +23,21 @@
 namespace spcbpt
 {
 
+namespace
+{
+
+int lightTraceElementCount( const LightTraceParams& params )
+{
+    return params.num_core * params.core_padding;
+}
+
+int preTraceElementCount( const PreTraceParams& params )
+{
+    return params.num_core * params.padding;
+}
+
+} // namespace
+
 class RendererWorkflow::Impl
 {
   public:
@@ -225,11 +240,11 @@ class RendererWorkflow::Impl
 
         CUDA_CHECK( cudaMalloc(
             reinterpret_cast<void**>( &lvc_ptr ),
-            sizeof( BDPTVertex ) * lt_params.get_element_count()
+            sizeof( BDPTVertex ) * lightTraceElementCount( lt_params )
         ) );
         CUDA_CHECK( cudaMalloc(
             reinterpret_cast<void**>( &valid_ptr ),
-            sizeof( bool ) * lt_params.get_element_count()
+            sizeof( bool ) * lightTraceElementCount( lt_params )
         ) );
         CUDA_CHECK( cudaMalloc(
             reinterpret_cast<void**>( &light_image ),
@@ -237,15 +252,15 @@ class RendererWorkflow::Impl
         ) );
         CUDA_CHECK( cudaMalloc(
             reinterpret_cast<void**>( &pixel_id ),
-            sizeof( int ) * lt_params.get_element_count()
+            sizeof( int ) * lightTraceElementCount( lt_params )
         ) );
         CUDA_CHECK( cudaMalloc(
             reinterpret_cast<void**>( &light_buffer ),
-            sizeof( float3 ) * lt_params.get_element_count()
+            sizeof( float3 ) * lightTraceElementCount( lt_params )
         ) );
         CUDA_CHECK( cudaMalloc(
             reinterpret_cast<void**>( &random_state ),
-            sizeof( curandState ) * lt_params.get_element_count()
+            sizeof( curandState ) * lightTraceElementCount( lt_params )
         ) );
 
         lt_params.ans         = lvc_ptr;
@@ -258,31 +273,33 @@ class RendererWorkflow::Impl
 
     void setLightImage()
     {
-        std::vector<float3> light_buffer( params.lt.get_element_count() );
-        std::vector<int> indices( params.lt.get_element_count() );
+        std::vector<float3> light_buffer( lightTraceElementCount( params.lt ) );
+        std::vector<int> indices( lightTraceElementCount( params.lt ) );
         std::vector<float3> light_image( params.width * params.height );
-        std::unique_ptr<bool[]> valid( new bool[params.lt.get_element_count()] );
+        std::unique_ptr<bool[]> valid(
+            new bool[lightTraceElementCount( params.lt )]
+        );
 
         CUDA_CHECK( cudaMemcpy(
             light_buffer.data(),
             params.lt.lightBuffer,
-            params.lt.get_element_count() * sizeof( float3 ),
+            lightTraceElementCount( params.lt ) * sizeof( float3 ),
             cudaMemcpyDeviceToHost
         ) );
         CUDA_CHECK( cudaMemcpy(
             indices.data(),
             params.lt.lightIndex,
-            params.lt.get_element_count() * sizeof( int ),
+            lightTraceElementCount( params.lt ) * sizeof( int ),
             cudaMemcpyDeviceToHost
         ) );
         CUDA_CHECK( cudaMemcpy(
             valid.get(),
             params.lt.validState,
-            params.lt.get_element_count() * sizeof( bool ),
+            lightTraceElementCount( params.lt ) * sizeof( bool ),
             cudaMemcpyDeviceToHost
         ) );
 
-        for( int i = 0; i < params.lt.get_element_count(); ++i )
+        for( int i = 0; i < lightTraceElementCount( params.lt ); ++i )
         {
             if( !valid[i] )
                 continue;
@@ -320,7 +337,7 @@ class RendererWorkflow::Impl
         ) );
         CUDA_CHECK( cudaMalloc(
             reinterpret_cast<void**>( &pretrace_connection ),
-            sizeof( preTraceConnection ) * pr_params.get_element_count()
+            sizeof( preTraceConnection ) * preTraceElementCount( pr_params )
         ) );
         pr_params.paths   = pretrace_path;
         pr_params.conns   = pretrace_connection;
@@ -349,23 +366,27 @@ class RendererWorkflow::Impl
 
     void launchLVCTrace()
     {
-        if( !SPCBPT_PURE && !params.spcbpt_pure )
+        if( !params.spcbpt_pure )
             dot_params.discard_ratio = dot_params.discard_ratio_next;
 
         launchLightTrace();
         const auto vertices = thrust::device_pointer_cast( params.lt.ans );
         const auto valid = thrust::device_pointer_cast( params.lt.validState );
         SubspaceSampler sampler =
-            MyThrustOp::LVC_Process( vertices, valid, params.lt.get_element_count() );
+            MyThrustOp::LVC_Process(
+                vertices,
+                valid,
+                lightTraceElementCount( params.lt )
+            );
         setLightImage();
         params.sampler = sampler;
 
-        if( !SPCBPT_PURE && !params.spcbpt_pure )
+        if( !params.spcbpt_pure )
         {
             sampler = MyThrustOp::LVC_Process_glossyOnly(
                 vertices,
                 valid,
-                params.lt.get_element_count(),
+                lightTraceElementCount( params.lt ),
                 params.materials
             );
             params.sampler.glossy_count         = sampler.glossy_count;
@@ -398,7 +419,7 @@ class RendererWorkflow::Impl
             thrust::device_pointer_cast( pr_params.paths ),
             pr_params.num_core,
             thrust::device_pointer_cast( pr_params.conns ),
-            pr_params.get_element_count()
+            preTraceElementCount( pr_params )
         );
     }
 
@@ -408,7 +429,7 @@ class RendererWorkflow::Impl
         constexpr int pg_training_data_online_batch = 0;
         constexpr int batch_sample_count = 1000000;
 
-        if( !PG_ENABLE )
+        if( !runtime.config().path_guiding_enabled )
         {
             params.pg_params.pg_enable = 0;
             return;
@@ -416,12 +437,12 @@ class RendererWorkflow::Impl
 
         std::vector<path_guiding::PG_training_mat> training_materials;
         int build_iteration_max = 12;
-        if( PG_SELF_TRAIN )
+        if( runtime.config().path_guiding_self_train )
         {
             constexpr int initial_path = 1000;
             int split_limit = initial_path;
             int target_path = initial_path;
-            if( PG_MORE_TRAINING )
+            if( runtime.config().path_guiding_more_training )
             {
                 build_iteration_max += 4;
                 split_limit *= 2;
@@ -564,7 +585,7 @@ class RendererWorkflow::Impl
 
     void dropOutTracingParamsSetup()
     {
-        if( SPCBPT_PURE || params.spcbpt_pure )
+        if( params.spcbpt_pure )
             return;
 
         dot_params.pixel_dirty = true;
@@ -693,7 +714,7 @@ class RendererWorkflow::Impl
             return;
         }
         ++combine_train_iteration;
-        if( SPCBPT_PURE || params.spcbpt_pure )
+        if( params.spcbpt_pure )
             return;
         if( !combine_state_initialized )
             initializeCombineWeightState();
@@ -848,7 +869,7 @@ class RendererWorkflow::Impl
 
     void updateDropOutTracingParams()
     {
-        if( SPCBPT_PURE || params.spcbpt_pure )
+        if( params.spcbpt_pure )
             return;
         if( dropout_train_iteration > 0
             && dropout_train_iteration > dropOut_tracing::iteration_stop_learning )
@@ -1153,7 +1174,7 @@ class RendererWorkflow::Impl
             current_q_samples += MyThrustOp::preprocess_getQ(
                 thrust::device_pointer_cast( params.lt.ans ),
                 thrust::device_pointer_cast( params.lt.validState ),
-                params.lt.get_element_count(),
+                lightTraceElementCount( params.lt ),
                 q_star
             );
             updateDropOutTracingParams();
@@ -1171,7 +1192,7 @@ class RendererWorkflow::Impl
             MyThrustOp::Gamma2CMFGamma( gamma, params.sampler.subspace )
         );
 
-        if( !SPCBPT_PURE && !params.spcbpt_pure )
+        if( !params.spcbpt_pure )
         {
             thrust::host_vector<float> caustic_gamma_values(
                 dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE

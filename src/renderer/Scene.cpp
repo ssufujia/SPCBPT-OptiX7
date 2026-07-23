@@ -1487,7 +1487,7 @@ void Scene::createProgramGroups()
         SPCBPT_groups_desc[rayGenProg].raygen.module = m_ptx_module;
 //        SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__shift_combine";
 //        SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__SPCBPT_no_rmis";
-        if (SPCBPT_PURE)
+        if (m_spcbpt_pure)
         {
             SPCBPT_groups_desc[rayGenProg].raygen.entryFunctionName = "__raygen__SPCBPT";
         }
@@ -1670,6 +1670,7 @@ void Scene::createPipeline()
         m_light_trace_ray_group[normalHitProg],
 
         m_SPCBPT_eye_subpath_group[rayGenProg],
+        m_SPCBPT_eye_subpath_group[SPCBPT_SPECIAL_rayGen],
         m_SPCBPT_eye_subpath_group[missProg],
         m_SPCBPT_eye_subpath_group[lightHitProg],
         m_SPCBPT_eye_subpath_group[normalHitProg],

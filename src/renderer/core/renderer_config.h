@@ -3,8 +3,6 @@
 // Small renderer contract shared by the host pipeline builder and device-facing
 // launch code. Keep application/UI configuration out of this header.
 
-constexpr bool SPCBPT_PURE = true;
-
 enum RayType
 {
     RAY_TYPE_RADIANCE = 0,

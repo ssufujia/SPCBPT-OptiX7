@@ -61,37 +61,6 @@ struct HitGroupData
 //};
 
 
-struct LaunchParams
-{
-    unsigned int             width;
-    unsigned int             height;
-    unsigned int             subframe_index;
-    float4*                  accum_buffer;
-    uchar4*                  frame_buffer;
-    int                      max_depth;
-    //float                    scene_epsilon;
-    //float                    scene_maximum;
-
-    float3                   eye;
-    float3                   U;
-    float3                   V;
-    float3                   W;
-
-    BufferView<Light>        lights;
-    BufferView<MaterialData::Pbr> materials;
-    float3                   miss_color;
-    OptixTraversableHandle   handle;
-
-    bool eye_subspace_visualize;
-    bool light_subspace_visualize;
-    bool caustic_path_only;
-    bool specular_subspace_visualize;
-    bool caustic_prob_visualize;
-    bool PG_grid_visualize;
-    bool error_heat_visual;
-    bool spcbpt_pure;
-};
-
 struct PayloadRadiance
 {
     float3 vis_pos_A;

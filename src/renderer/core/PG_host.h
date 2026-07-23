@@ -393,10 +393,6 @@ namespace path_guiding
         }
         bool build_tree(int div_limit = 24000 * 2, int path_num = -1)
         {
-            if(!PG_ENABLE)
-                return false;
-
-              
             int k_2 = pow(2, path_k);
             if (path_num == -1)path_num = 12000 * k_2;
             //int path_num = 12000 * k_2;

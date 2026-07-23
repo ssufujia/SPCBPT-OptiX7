@@ -4,6 +4,7 @@
 #include <renderer/Exception.h>
 #include <renderer/core/sceneLoader.h>
 #include <renderer/core/scene_shift.h>
+#include <spcbptConfig.h>
 
 #include <cuda_runtime.h>
 #include <optix_stubs.h>
@@ -22,6 +23,11 @@ RendererRuntime::~RendererRuntime()
     reset();
 }
 
+SceneConfig SceneConfig::defaultScene()
+{
+    return { std::string( SPCBPT_ASSETS_DIR ) + "/bedroom.scene" };
+}
+
 void RendererRuntime::loadScene( const SceneConfig& config )
 {
     if( config.path.empty() )
@@ -37,7 +43,6 @@ void RendererRuntime::loadScene( const SceneConfig& config )
     m_scene = std::make_unique<sutil::Scene>();
     Scene_shift( *m_source_scene, *m_scene );
     LightSource_shift( *m_source_scene, m_params, *m_scene );
-    m_scene->finalize();
 }
 
 void RendererRuntime::initialize( const RendererConfig& config )
@@ -46,17 +51,43 @@ void RendererRuntime::initialize( const RendererConfig& config )
         throw std::logic_error( "RendererRuntime::loadScene must be called first" );
     if( config.width == 0 || config.height == 0 )
         throw std::invalid_argument( "Renderer dimensions must be non-zero" );
+    if( config.active_path_depth <= 0
+        || config.active_path_depth > SPCBPT_DEVICE_MAX_PATH_DEPTH )
+    {
+        throw std::invalid_argument(
+            "Active path depth must be in [1, "
+            + std::to_string( SPCBPT_DEVICE_MAX_PATH_DEPTH ) + "]"
+        );
+    }
+    if( config.connection_count <= 0 )
+        throw std::invalid_argument( "Connection count must be positive" );
+    if( m_scene_finalized && config.spcbpt_pure != m_config.spcbpt_pure )
+    {
+        throw std::logic_error(
+            "SPCBPT algorithm mode cannot change after scene finalization"
+        );
+    }
 
     releaseLaunchBuffers();
 
-    m_params.width        = config.width;
-    m_params.height       = config.height;
-    m_params.max_depth    = MAX_PATH_LENGTH_FOR_MIS;
-    m_params.subframe_index = 0;
-    m_params.frame_buffer = nullptr;
-    m_params.miss_color   = make_float3( 0.1f );
-    m_params.handle       = m_scene->traversableHandle();
-    m_params.spcbpt_pure  = SPCBPT_PURE;
+    if( !m_scene_finalized )
+    {
+        m_scene->setSpcbptPure( config.spcbpt_pure );
+        m_scene->finalize();
+        m_scene_finalized = true;
+    }
+
+    m_config                   = config;
+    m_params.width             = config.width;
+    m_params.height            = config.height;
+    m_params.active_path_depth = config.active_path_depth;
+    m_params.connection_count  = config.connection_count;
+    m_params.subframe_index    = 0;
+    m_params.frame_buffer      = nullptr;
+    m_params.miss_color        = make_float3( 0.1f );
+    m_params.handle            = m_scene->traversableHandle();
+    m_params.spcbpt_pure       = config.spcbpt_pure;
+    m_params.rmis_enabled      = config.rmis_enabled;
 
     std::vector<MaterialData::Pbr> materials;
     materials.reserve( m_scene->materials().size() );
@@ -107,8 +138,16 @@ void RendererRuntime::resize( unsigned int width, unsigned int height )
         reinterpret_cast<void**>( &m_params.accum_buffer ),
         static_cast<size_t>( width ) * height * sizeof( float4 )
     ) );
+    m_config.width  = width;
+    m_config.height = height;
     m_params.width  = width;
     m_params.height = height;
+    m_params.dot_params.pixel_dirty = true;
+}
+
+void RendererRuntime::markImageDirty()
+{
+    m_params.dot_params.pixel_dirty = true;
 }
 
 void RendererRuntime::renderFrame( uchar4* output, const std::string& raygen )
@@ -197,7 +236,9 @@ void RendererRuntime::reset()
     }
     m_scene.reset();
     m_source_scene.reset();
-    m_params = {};
+    m_params          = {};
+    m_config          = {};
+    m_scene_finalized = false;
 }
 
 } // namespace spcbpt

@@ -25,89 +25,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef OPTIXPATHTRACER_H
-#define OPTIXPATHTRACER_H
+#ifndef SPCBPT_LAUNCH_PARAMS_H
+#define SPCBPT_LAUNCH_PARAMS_H
 
+#include "device_compile_config.h"
 #include "renderer_config.h"
-
-#define NUM_SUBSPACE 300
-#define NUM_SUBSPACE_LIGHTSOURCE  (int(0.2f * NUM_SUBSPACE))
-
-#define RR_MIN_LIMIT
-#define MIN_RR_RATE 0.3f
-#define CONSERVATIVE_RATE 0.2f
-#define CONNECTION_N 1
-#ifndef MAX_PATH_LENGTH_FOR_MIS
-#define MAX_PATH_LENGTH_FOR_MIS 16
-#endif
-#define LIMIT_PATH_TERMINATE true
-
-#define DIR_JUDGE 0 
-#define RMIS_FLAG true
-
-#define DOT_DEBUG_INFO_ENABLE false
-/* Path Guiding 开关 */
-static const bool PG_ENABLE = false;
-const bool FIX_ITERATION = false;
-const bool PG_SELF_TRAIN = true;
-const bool estimation_save = true;
-
-#define PG_MORE_TRAINING false
-#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM false
-#define DOT_STOP_LEARNING_LATER false
-#define DOT_LESS_MIS_WEIGHT false
-#define SPCBPT_TERMINATE_EARLY false
-#define DOT_BOUND_LIMIT_LESS false
-
-/* 截图控制 */
-const bool SCREENSHOT_ENABLE = 0;
-const int SCREENSHOT_INTERVAL = 1;
-
-#define SCENE_BEDROOM
-//#define SCENE_BREAKFAST
-//#define SCENE_PROJECTOR
-//#define SCENE_HALLWAY
-//#define SCENE_KITCHEN
-//#define SCENE_WATER
-
-
-#ifdef SCENE_BEDROOM 
-#undef MAX_PATH_LENGTH_FOR_MIS
-#define MAX_PATH_LENGTH_FOR_MIS 12 
-#endif // KITCHEN
-
-#ifdef SCENE_KITCHEN
-#define CONNECTION_N 3 
-#undef MAX_PATH_LENGTH_FOR_MIS
-#define MAX_PATH_LENGTH_FOR_MIS 12
-#endif // KITCHEN
-
-#ifdef SCENE_PROJECTOR
-#define PG_MORE_TRAINING true
-//#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
-#define SPCBPT_TERMINATE_EARLY true
-#define DOT_BOUND_LIMIT_LESS true
-#endif // 
-
-#ifdef SCENE_BREAKFAST
-#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true
-#define LIMIT_PATH_TERMINATE false
-#endif // DEBUG
-
-#ifdef  SCENE_WATER
-#define DOT_STOP_LEARNING_LATER true
-#define DOT_LESS_MIS_WEIGHT true
-#define LIMIT_PATH_TERMINATE false
-#endif //  WATER
-
-#ifdef SCENE_HALLWAY
-#define DOT_MORE_PROXY_LIGHT_SUBPATH_NUM true 
-#undef MAX_PATH_LENGTH_FOR_MIS
-#define MAX_PATH_LENGTH_FOR_MIS 12
-#define DOT_BOUND_LIMIT_LESS true
-#endif // SCENE_HALLWAY
-
-
 
 #include"whitted.h"
 #include"BDPTVertex.h"
@@ -115,7 +37,9 @@ const int SCREENSHOT_INTERVAL = 1;
 #include"PG_common.h"
 #include"dropOutTracing_common.h"
 #include <curand_kernel.h>
-#include "tester.h"
+
+#include <cstddef>
+#include <type_traits>
 
 struct Subspace
 {   
@@ -138,11 +62,6 @@ struct LightTraceParams
     int* lightIndex;
     float3* lightBuffer;
     curandState* rand_state;
-
-    __host__ int get_element_count()
-    {
-        return num_core * core_padding;
-    }
 };
 namespace TrainData
 {
@@ -152,7 +71,6 @@ namespace TrainData
 typedef TrainData::pathInfo_sample preTracePath;
 typedef TrainData::pathInfo_node preTraceConnection;
 
-#define PRETRACE_CONN_PADDING 10
 struct PreTraceParams
 {
     int num_core;
@@ -161,11 +79,6 @@ struct PreTraceParams
     preTracePath* paths;
     preTraceConnection* conns;
     bool PG_mode;
-    __host__ int get_element_count()
-    {
-        return padding * num_core;
-    }
-
 };
 struct SubspaceSampler
 {
@@ -289,8 +202,36 @@ struct EstimationParams
     int height;
     bool ready;
 };
-struct PTParams :whitted::LaunchParams
+struct DeviceLaunchParams
 {
+    unsigned int             width;
+    unsigned int             height;
+    unsigned int             subframe_index;
+    float4*                  accum_buffer;
+    uchar4*                  frame_buffer;
+    int                      active_path_depth;
+    int                      connection_count;
+
+    float3                   eye;
+    float3                   U;
+    float3                   V;
+    float3                   W;
+
+    BufferView<Light>        lights;
+    BufferView<MaterialData::Pbr> materials;
+    float3                   miss_color;
+    OptixTraversableHandle   handle;
+
+    bool eye_subspace_visualize;
+    bool light_subspace_visualize;
+    bool caustic_path_only;
+    bool specular_subspace_visualize;
+    bool caustic_prob_visualize;
+    bool PG_grid_visualize;
+    bool error_heat_visual;
+    bool spcbpt_pure;
+    unsigned int rmis_enabled;
+
     LightTraceParams lt;
     SubspaceSampler sampler;
     PreTraceParams pre_tracer;
@@ -300,59 +241,27 @@ struct PTParams :whitted::LaunchParams
 
     PG_params pg_params;
     DropOutTracing_params dot_params;
-    __host__ void image_resize()
-    {
-        dot_params.pixel_dirty = true;
-    }
 };
-typedef PTParams MyParams;
+using MyParams = DeviceLaunchParams;
 
-
-struct ParallelogramLight
-{
-    float3 corner;
-    float3 v1, v2;
-    float3 normal;
-    float3 emission;
-};
-
-
-struct Params
-{
-    unsigned int subframe_index;
-    float4*      accum_buffer;
-    uchar4*      frame_buffer;
-    unsigned int width;
-    unsigned int height;
-    unsigned int samples_per_launch;
-
-    float3       eye;
-    float3       U;
-    float3       V;
-    float3       W;
-
-    ParallelogramLight     light; // TODO: make light list
-    OptixTraversableHandle handle;
-};
-
-
-struct RayGenData
-{
-};
-
-
-struct MissData
-{
-    float4 bg_color;
-};
-
-
-struct HitGroupData
-{
-    float3  emission_color;
-    float3  diffuse_color;
-    float4* vertices;
-};
+static_assert( std::is_standard_layout_v<LightTraceParams> );
+static_assert( std::is_trivially_copyable_v<LightTraceParams> );
+static_assert( std::is_standard_layout_v<PreTraceParams> );
+static_assert( std::is_trivially_copyable_v<PreTraceParams> );
+static_assert( std::is_standard_layout_v<SubspaceSampler> );
+static_assert( std::is_trivially_copyable_v<SubspaceSampler> );
+static_assert( std::is_standard_layout_v<DeviceLaunchParams> );
+static_assert( std::is_trivially_copyable_v<DeviceLaunchParams> );
+static_assert( alignof( DeviceLaunchParams ) >= alignof( OptixTraversableHandle ) );
+static_assert( offsetof( DeviceLaunchParams, width ) == 0 );
+static_assert(
+    offsetof( DeviceLaunchParams, frame_buffer )
+        > offsetof( DeviceLaunchParams, accum_buffer )
+);
+static_assert(
+    offsetof( DeviceLaunchParams, lt )
+        > offsetof( DeviceLaunchParams, rmis_enabled )
+);
 
 namespace TrainData
 {
@@ -499,4 +408,4 @@ namespace TrainData
 
 }
 
-#endif // !OPTIXPATHTRACER_H
+#endif // SPCBPT_LAUNCH_PARAMS_H

@@ -1,6 +1,7 @@
 set(optix_path_tracer_sources
   optixPathTracer.h
   launch_params.h
+  device_compile_config.h
   renderer_config.h
   sceneLoader.h
   sceneLoader.cpp
@@ -57,18 +58,12 @@ target_compile_options(spcbpt_optix_ir PRIVATE
 spcbpt_configure_cuda_target(spcbpt_optix_ir)
 set_property(TARGET spcbpt_optix_ir PROPERTY CUDA_ARCHITECTURES OFF)
 
-set(spcbpt_optix_ir_stamp "${SPCBPT_OPTIX_IR_DIR}/.deployed")
-add_custom_command(
-  OUTPUT "${spcbpt_optix_ir_stamp}"
+add_custom_target(spcbpt_optix_ir_deploy
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${SPCBPT_OPTIX_IR_DIR}"
   COMMAND "${CMAKE_COMMAND}" -E copy_if_different
           $<TARGET_OBJECTS:spcbpt_optix_ir>
           "${SPCBPT_OPTIX_IR_DIR}"
-  COMMAND "${CMAKE_COMMAND}" -E touch "${spcbpt_optix_ir_stamp}"
   DEPENDS spcbpt_optix_ir
   COMMAND_EXPAND_LISTS
   VERBATIM
-)
-add_custom_target(spcbpt_optix_ir_deploy
-  DEPENDS "${spcbpt_optix_ir_stamp}"
 )

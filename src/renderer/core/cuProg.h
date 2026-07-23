@@ -137,12 +137,14 @@ namespace Tracer {
 
 RT_FUNCTION float connectRate_SOL(int eye_label, int light_label, float lum_sum)
 {
-    return Tracer::params.subspace_info.gamma_ss(eye_label, light_label) * lum_sum * CONNECTION_N;
+    return Tracer::params.subspace_info.gamma_ss(eye_label, light_label)
+        * lum_sum * Tracer::params.connection_count;
 }
 
 RT_FUNCTION float3 connectRate_SOL(int eye_label, int light_label, float3 lum_sum)
 {
-    return Tracer::params.subspace_info.gamma_ss(eye_label, light_label) * lum_sum * CONNECTION_N;
+    return Tracer::params.subspace_info.gamma_ss(eye_label, light_label)
+        * lum_sum * Tracer::params.connection_count;
 }
 
 
@@ -1773,8 +1775,8 @@ namespace Tracer
     }
     RT_FUNCTION float SPCBPT_MIS_sum_compute(const BDPTVertex* path, int path_size)
     {
-        float eye_pdf[MAX_PATH_LENGTH_FOR_MIS];
-        float3 light_contri[MAX_PATH_LENGTH_FOR_MIS];
+        float eye_pdf[SPCBPT_DEVICE_MAX_PATH_DEPTH];
+        float3 light_contri[SPCBPT_DEVICE_MAX_PATH_DEPTH];
         light_contri[path_size - 1] = path[path_size - 1].flux;
         eye_pdf[0] = 1;
         eye_pdf[1] = path[1].pdf;

@@ -238,13 +238,6 @@ namespace dropOut_tracing
                 weight -= CMF_Gamma[eye_id * dropOut_tracing::default_specularSubSpaceNumber + specular_id - 1];
             return weight / specular_Q[specular_id] * selection_const;
         }
-        __host__ void image_resize()
-        {
-            pixel_dirty = true;
-        }
-
-         
-
         RT_FUNCTION __host__ unsigned pixel2unitId(uint2 pixel, uint2 size)const
         {
             uint2 pixel_unit = make_uint2(pixel.x / dropOut_tracing::pixel_unit_size, pixel.y / dropOut_tracing::pixel_unit_size);

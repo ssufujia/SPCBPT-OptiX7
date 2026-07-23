@@ -1,5 +1,6 @@
 #ifndef PG_COMMON
 #define PG_COMMON 
+#include <cstdio>
 #include"rt_function.h"
 #include <optix.h>
 #include <cuda/random.h>

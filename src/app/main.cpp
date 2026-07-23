@@ -61,6 +61,7 @@ using namespace std;
 
 static double render_time_record = 0.0;
 static int render_frame_record = 0;
+static constexpr bool ESTIMATION_SAVE = true;
 
 bool resize_dirty = false;
 bool minimized = false;
@@ -116,7 +117,7 @@ static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
             window_params->height
         );
         camera_changed = true;
-        window_params->image_resize();
+        renderer.markImageDirty();
     }
     else if( mouse_button == GLFW_MOUSE_BUTTON_RIGHT )
     {
@@ -128,7 +129,7 @@ static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
             window_params->height
         );
         camera_changed = true;
-        window_params->image_resize();
+        renderer.markImageDirty();
     }
 }
 
@@ -144,45 +145,12 @@ static void windowSizeCallback( GLFWwindow* window, int32_t res_x, int32_t res_y
     window_params->height = res_y;
     camera_changed = true;
     resize_dirty = true;
-    window_params->image_resize();
+    renderer.markImageDirty();
 }
 
 static void windowIconifyCallback( GLFWwindow* window, int32_t iconified )
 {
     minimized = iconified > 0;
-}
-
-void saveScreenShots(
-    int render_frame,
-    const string& scene_name,
-    const string& algorithm_name = "dropout"
-)
-{
-    if( render_frame % SCREENSHOT_INTERVAL != 0 )
-        return;
-
-    std::cout << "save screenshot. render frame: " << render_frame << std::endl;
-    const string path1 = "screenshots";
-    const string path2 = path1 + "/" + scene_name;
-    const string path3 = path2 + "/" + algorithm_name;
-    if( _access_s( path1.c_str(), 0 ) != 0 )
-        _mkdir( path1.c_str() );
-    if( _access_s( path2.c_str(), 0 ) != 0 )
-        _mkdir( path2.c_str() );
-    if( _access_s( path3.c_str(), 0 ) != 0 )
-        _mkdir( path3.c_str() );
-
-    sutil::ImageBuffer output_buffer;
-    auto host_buffer =
-        MyThrustOp::copy_to_host( params.frame_buffer, params.height * params.width );
-    output_buffer.data = host_buffer.data();
-    output_buffer.width = params.width;
-    output_buffer.height = params.height;
-    output_buffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
-
-    std::stringstream filename;
-    filename << "./" << path3 << "/" << render_frame << ".png";
-    sutil::saveImage( filename.str().c_str(), output_buffer, true );
 }
 
 void img_save( double render_time = -1.0, int frame = 0 )
@@ -257,7 +225,7 @@ static void keyCallback(
             params.spcbpt_pure =
                 render_alg[render_alg_id] == "SPCBPT_eye_ForcePure"
                     ? true
-                    : SPCBPT_PURE;
+                    : renderer.config().spcbpt_pure;
             std::printf( "raygen switching to %s\n", render_alg[render_alg_id].c_str() );
             camera_changed = true;
             resize_dirty = true;
@@ -280,7 +248,7 @@ static void keyCallback(
         camera.setLookat( lookat );
         camera_changed = true;
         resize_dirty = true;
-        params.image_resize();
+        renderer.markImageDirty();
     }
 }
 
@@ -289,7 +257,7 @@ static void scrollCallback( GLFWwindow* window, double xscroll, double yscroll )
     if( trackball.wheelEvent( static_cast<int>( yscroll ) ) )
     {
         camera_changed = true;
-        params.image_resize();
+        renderer.markImageDirty();
     }
 }
 
@@ -402,7 +370,7 @@ void initCameraState( const sutil::Scene& scene )
 {
     camera = scene.camera();
     camera_changed = true;
-    params.image_resize();
+    renderer.markImageDirty();
     trackball.setCamera( &camera );
     trackball.setMoveSpeed( 10.0f );
     trackball.setReferenceFrame(
@@ -464,43 +432,21 @@ int main( int argc, char* argv[] )
 
     try
     {
-        string scene_path = " ";
-#ifdef SCENE_PROJECTOR
-        scene_path =
-            string( SPCBPT_ASSETS_DIR )
-            + string( "/glassroom/glassroom_project_final.scene" );
-#endif
-#ifdef SCENE_KITCHEN
-        scene_path =
-            string( SPCBPT_ASSETS_DIR ) + string( "/kitchen/kitchen_final.scene" );
-#endif
-#ifdef SCENE_BEDROOM
-        scene_path = string( SPCBPT_ASSETS_DIR ) + string( "/bedroom.scene" );
-#endif
-#ifdef SCENE_HALLWAY
-        scene_path =
-            string( SPCBPT_ASSETS_DIR )
-            + string( "/hallway/hallway-teaser_final.scene" );
-#endif
-#ifdef SCENE_WATER
-        scene_path =
-            string( SPCBPT_ASSETS_DIR ) + string( "/water/water_smooth.scene" );
-#endif
-#ifdef SCENE_BREAKFAST
-        scene_path =
-            string( SPCBPT_ASSETS_DIR )
-            + string( "/breafast_2.0/breafast_final.scene" );
-#endif
+        spcbpt::SceneConfig scene_config = spcbpt::SceneConfig::defaultScene();
         if( !scene_override.empty() )
-            scene_path = scene_override;
+            scene_config.path = scene_override;
+        const string& scene_path = scene_config.path;
 
         const unsigned int render_width = params.width;
         const unsigned int render_height = params.height;
         width = static_cast<int32_t>( render_width );
         height = static_cast<int32_t>( render_height );
 
-        renderer.loadScene( { scene_path } );
-        renderer.initialize( { render_width, render_height } );
+        renderer.loadScene( scene_config );
+        spcbpt::RendererConfig renderer_config;
+        renderer_config.width  = render_width;
+        renderer_config.height = render_height;
+        renderer.initialize( renderer_config );
         sutil::Scene& scene = renderer.scene();
 
         initCameraState( scene );
@@ -623,7 +569,7 @@ int main( int argc, char* argv[] )
                         params.subframe_index,
                         error * 100.0f
                     );
-                    if( estimation_save )
+                    if( ESTIMATION_SAVE )
                     {
                         estimation::es.outputFile
                             << params.subframe_index << " "

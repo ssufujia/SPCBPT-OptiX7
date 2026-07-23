@@ -36,7 +36,6 @@
 #include "cuProg.h"
 #include "pathControl.h"
 #include "rmis.h"
-#include "tester.h"
 //------------------------------------------------------------------------------
 //
 //
@@ -192,7 +191,7 @@ extern "C" __global__ void __raygen__pinhole()
 
         payload.depth += 1;
 
-        if (float3weight(payload.currentResult) > 0.0f && (payload.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
+        if (float3weight(payload.currentResult) > 0.0f && (payload.depth + 2 <= Tracer::params.active_path_depth || !LIMIT_PATH_TERMINATE))
         {
             const float  L_dist = length(payload.vis_pos_A- payload.vis_pos_B);
             const float3 L = (payload.vis_pos_B - payload.vis_pos_A) / L_dist;
@@ -200,7 +199,7 @@ extern "C" __global__ void __raygen__pinhole()
                 payload.result += payload.currentResult; 
             payload.currentResult = make_float3(0);
         }
-        if (payload.done || (payload.depth + 1 >= MAX_PATH_LENGTH_FOR_MIS && LIMIT_PATH_TERMINATE)) {
+        if (payload.done || (payload.depth + 1 >= Tracer::params.active_path_depth && LIMIT_PATH_TERMINATE)) {
             //printf("%d\n", payload.depth);
             break;
         }
@@ -451,11 +450,11 @@ extern "C" __global__ void __raygen__SPCBPT()
         if (payload.path.hit_lightSource())
         {
             float3 res = lightStraghtHit(payload.path.currentVertex());
-            if (payload.depth < MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE)
+            if (payload.depth < Tracer::params.active_path_depth || !LIMIT_PATH_TERMINATE)
                 result += res;
             break;
         }
-        if (payload.depth >= MAX_PATH_LENGTH_FOR_MIS && SPCBPT_TERMINATE_EARLY)break;
+        if (payload.depth >= Tracer::params.active_path_depth && SPCBPT_TERMINATE_EARLY)break;
         BDPTVertex& eye_subpath = payload.path.currentVertex();
         //path_length = eye_subpath.depth;
         //completePath[path_length++] = eye_subpath;
@@ -463,7 +462,7 @@ extern "C" __global__ void __raygen__SPCBPT()
         //unsigned count = Tracer::params.pg_params.spatio_trees[PG_id].count;
         //result = make_float3(rnd(PG_id), rnd(PG_id), rnd(PG_id));
         //break;
-        for (int it = 0; it < CONNECTION_N; it++)
+        for (int it = 0; it < Tracer::params.connection_count; it++)
         {
             //sample spcbpt
             
@@ -499,9 +498,9 @@ extern "C" __global__ void __raygen__SPCBPT()
                 float3 res = connectVertex_SPCBPT(eye_subpath, new_light_subpath) / pmf;
                 //float3 res = connectVertex_SPCBPT_TEST(eye_subpath, new_light_subpath, completePath, path_length) / pmf;
                 if (!ISINVALIDVALUE(res) &&
-                    (eye_subpath.depth + new_light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
+                    (eye_subpath.depth + new_light_subpath.depth + 2 <= Tracer::params.active_path_depth || !LIMIT_PATH_TERMINATE))
                 {
-                    result += res / CONNECTION_N;
+                    result += res / Tracer::params.connection_count;
                 }
             }
 
@@ -773,7 +772,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
 
-    BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS +4];
+    BDPTVertex pathBuffer[SPCBPT_DEVICE_MAX_PATH_DEPTH + 4];
     int buffer_size = 0;
     pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++; 
 
@@ -799,7 +798,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
         pathBuffer[buffer_size] = payload.path.currentVertex(); buffer_size++;
         if (payload.path.hit_lightSource())
         {  
-            if (RMIS_FLAG)
+            if (Tracer::params.rmis_enabled)
             { 
                 float3 res = lightStraghtHit(payload.path.currentVertex());
                 result += res;
@@ -816,17 +815,17 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
                 pathBuffer[buffer_size - 1] = light_vertex;
 
                 res = eval_path(pathBuffer, buffer_size, buffer_size);
-                if (buffer_size > MAX_PATH_LENGTH_FOR_MIS)
+                if (buffer_size > Tracer::params.active_path_depth)
                     res *= 0;
                 result += res;
             }
             break;
         }
-        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS + 4) 
+        if (buffer_size >= Tracer::params.active_path_depth + 4)
             break;
 
         BDPTVertex& eye_subpath = payload.path.currentVertex();
-        for (int it = 0; it < CONNECTION_N; it++)
+        for (int it = 0; it < Tracer::params.connection_count; it++)
         {
 
             int light_id = 0;
@@ -844,14 +843,14 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
             const BDPTVertex& light_subpath =
                 reinterpret_cast<Tracer::SubspaceSampler_device*>(&Tracer::params.sampler)->sampleSecondStage(light_id, payload.seed, pmf_secondStage);
 
-            if ((buffer_size + light_subpath.depth + 1 <= MAX_PATH_LENGTH_FOR_MIS ) &&
+            if ((buffer_size + light_subpath.depth + 1 <= Tracer::params.active_path_depth ) &&
                 (Tracer::visibilityTest(Tracer::params.handle, eye_subpath.position, light_subpath.position)))
             { 
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
                 
 
                 float3 res;
-                if (RMIS_FLAG)
+                if (Tracer::params.rmis_enabled)
                 {
                     res = connectVertex_SPCBPT(eye_subpath, light_subpath) / pmf;
                 }
@@ -874,7 +873,7 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
                  
                 if (!ISINVALIDVALUE(res))
                 {
-                    result += res / CONNECTION_N;
+                    result += res / Tracer::params.connection_count;
                 }
             }
         }
@@ -942,7 +941,7 @@ extern "C" __global__ void __raygen__shift_combine()
     /* 视子路初始化 */
     init_EyeSubpath(payload.path, ray_origin, ray_direction);
 
-    BDPTVertex pathBuffer[MAX_PATH_LENGTH_FOR_MIS];
+    BDPTVertex pathBuffer[SPCBPT_DEVICE_MAX_PATH_DEPTH];
     int buffer_size = 0;
     pathBuffer[buffer_size++] = payload.path.currentVertex();
 
@@ -975,7 +974,7 @@ extern "C" __global__ void __raygen__shift_combine()
         /* 记录一下历史路径 */
         payload.path_record = (payload.path_record) |
             ((long long)Shift::glossy(payload.path.currentVertex()) << payload.depth);
-        if (buffer_size < MAX_PATH_LENGTH_FOR_MIS)
+        if (buffer_size < Tracer::params.active_path_depth)
         {
             pathBuffer[buffer_size++] = payload.path.currentVertex();
             if (buffer_size > 2 && Shift::vertex_very_close(pathBuffer[buffer_size - 1], pathBuffer[buffer_size - 2]))
@@ -1035,12 +1034,12 @@ extern "C" __global__ void __raygen__shift_combine()
             break;
         }
 
-        if (buffer_size >= MAX_PATH_LENGTH_FOR_MIS)
+        if (buffer_size >= Tracer::params.active_path_depth)
             break;
 
         BDPTVertex& eye_vertex = payload.path.currentVertex();
 
-        for (int it = 0; it < CONNECTION_N; it++)
+        for (int it = 0; it < Tracer::params.connection_count; it++)
         {
             if (dropOut_tracing::debug_PT_ONLY)continue;
             /* 暂时取消LSDE这样的光路筛选方式，改用dropoutTracing_common.h里根据四参数的形式来决定是否连接的方式，仅要求视子路为diffuse */
@@ -1067,7 +1066,7 @@ extern "C" __global__ void __raygen__shift_combine()
             //if (Shift::glossy(light_subpath))continue;
             //if (Shift::glossy(eye_vertex))continue;
             if (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position) &&
-                (eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS || !LIMIT_PATH_TERMINATE))
+                (eye_vertex.depth + light_subpath.depth + 2 <= Tracer::params.active_path_depth || !LIMIT_PATH_TERMINATE))
             {
                 float pmf = Tracer::params.sampler.path_count * pmf_secondStage * pmf_firstStage;
 
@@ -1078,7 +1077,7 @@ extern "C" __global__ void __raygen__shift_combine()
                 Shift::PathContainer originPath(const_cast<BDPTVertex*>(&light_subpath), -1, light_subpath.depth + 1);
                 bool caustic_flag = false;
                 if (!Tracer::params.spcbpt_pure && Shift::path_alreadyCaustic(pathBuffer, buffer_size, originPath, light_subpath.depth) &&
-                    light_subpath.depth + 1 < SHIFT_VALID_SIZE && eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS)
+                    light_subpath.depth + 1 < SHIFT_VALID_SIZE && eye_vertex.depth + light_subpath.depth + 2 <= Tracer::params.active_path_depth)
                 {
                     Shift::PathContainer tempPath(const_cast<BDPTVertex*>(&light_subpath), -1, 0);
                     int path_size = Shift::dropoutTracing_concatenate(pathBuffer, buffer_size, 0, tempPath, originPath);
@@ -1096,7 +1095,7 @@ extern "C" __global__ void __raygen__shift_combine()
                     {
                         //if (Tracer::params.caustic_path_only && caustic_flag == true)
                         //    res = make_float3(float3weight(res), 0, float3weight(res));
-                        result += res / CONNECTION_N;    
+                        result += res / Tracer::params.connection_count;
                     }
                     if (caustic_eye)
                     {
@@ -1153,7 +1152,7 @@ extern "C" __global__ void __raygen__shift_combine()
             pixel_record.specularId = abs(light_subpath.get_specular_id());
 
             if (
-                (eye_vertex.depth + light_subpath.depth + 2 <= MAX_PATH_LENGTH_FOR_MIS) &&
+                (eye_vertex.depth + light_subpath.depth + 2 <= Tracer::params.active_path_depth) &&
                 (Tracer::visibilityTest(Tracer::params.handle, eye_vertex.position, light_subpath.position)))
             {
                 const BDPTVertex* light_ptr = &light_subpath;
@@ -1730,7 +1729,7 @@ extern "C" __global__ void __raygen__TrainData()
     float3 ray_origin = eye;
     //printf("eye %f %f %f\n", eye.x, eye.y, eye.z);
 
-    BDPTVertex buffer[PRETRACE_CONN_PADDING];
+    BDPTVertex buffer[SPCBPT_DEVICE_PRETRACE_CONNECTION_CAPACITY];
     int buffer_size = 0;
 
     int resample_number = 0;
@@ -1887,7 +1886,7 @@ extern "C" __global__ void __raygen__TrainData_V2()
     float3 ray_direction = normalize(d.x * U + d.y * V + W);
     float3 ray_origin = eye; 
 
-    BDPTVertex buffer[PRETRACE_CONN_PADDING];
+    BDPTVertex buffer[SPCBPT_DEVICE_PRETRACE_CONNECTION_CAPACITY];
     int buffer_size = 0;
 
     int resample_number = 0;

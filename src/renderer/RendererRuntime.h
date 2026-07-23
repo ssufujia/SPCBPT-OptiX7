@@ -14,12 +14,21 @@ namespace spcbpt
 struct SceneConfig
 {
     std::string path;
+
+    static SceneConfig defaultScene();
 };
 
 struct RendererConfig
 {
-    unsigned int width  = 64;
-    unsigned int height = 64;
+    unsigned int width                   = 64;
+    unsigned int height                  = 64;
+    int          active_path_depth       = 12;
+    int          connection_count        = 1;
+    bool         spcbpt_pure              = true;
+    bool         rmis_enabled             = true;
+    bool         path_guiding_enabled     = false;
+    bool         path_guiding_self_train  = true;
+    bool         path_guiding_more_training = false;
 };
 
 class RendererRuntime
@@ -34,6 +43,7 @@ class RendererRuntime
     void loadScene( const SceneConfig& config );
     void initialize( const RendererConfig& config );
     void resize( unsigned int width, unsigned int height );
+    void markImageDirty();
     void renderFrame( uchar4* output, const std::string& raygen = "pt" );
     void uploadParams();
     void synchronize();
@@ -45,6 +55,7 @@ class RendererRuntime
     MyParams& params() { return m_params; }
     const MyParams& params() const { return m_params; }
     MyParams* deviceParams() const { return m_device_params; }
+    const RendererConfig& config() const { return m_config; }
 
     sutil::Scene& scene();
     const sutil::Scene& scene() const;
@@ -54,6 +65,8 @@ class RendererRuntime
 
     MyParams                       m_params        = {};
     MyParams*                      m_device_params = nullptr;
+    RendererConfig                 m_config        = {};
+    bool                           m_scene_finalized = false;
     std::unique_ptr<::Scene>       m_source_scene;
     std::unique_ptr<sutil::Scene>  m_scene;
 };

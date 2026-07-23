@@ -136,6 +136,7 @@ public:
     void buildMeshAccels();
     void buildInstanceAccel( int rayTypeCount = RayType::RAY_TYPE_COUNT );
     void switchRaygen(std::string raygenName);
+    void setSpcbptPure( bool enabled ) { m_spcbpt_pure = enabled; }
     void setEnvFilePath(std::string envFileName) { m_env_file_name = envFileName; }
     std::string getEnvFilePath()const { return m_env_file_name; }
     void addDirectionalLight(float3 dir, float3 intensity) { return dir_lights.push_back(std::make_pair(dir,intensity)); }
@@ -184,6 +185,7 @@ private:
 
     OptixTraversableHandle               m_ias_handle               = 0;
     CUdeviceptr                          m_d_ias_output_buffer      = 0;
+    bool                                 m_spcbpt_pure              = true;
     std::string                          m_env_file_name = {};
 };
 
