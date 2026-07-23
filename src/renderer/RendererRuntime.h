@@ -33,6 +33,7 @@ class RendererRuntime
 
     void loadScene( const SceneConfig& config );
     void initialize( const RendererConfig& config );
+    void resize( unsigned int width, unsigned int height );
     void renderFrame( uchar4* output, const std::string& raygen = "pt" );
     void uploadParams();
     void synchronize();

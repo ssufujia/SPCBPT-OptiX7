@@ -451,7 +451,4 @@ namespace path_guiding
         }
     };
 }
-
-
-SD_PGTrainer PGTrainer_api;
 #endif // !PG_HOST

@@ -94,6 +94,23 @@ void RendererRuntime::initialize( const RendererConfig& config )
     camera.UVWFrame( m_params.U, m_params.V, m_params.W );
 }
 
+void RendererRuntime::resize( unsigned int width, unsigned int height )
+{
+    if( !isInitialized() )
+        throw std::logic_error( "RendererRuntime::initialize must be called first" );
+    if( width == 0 || height == 0 )
+        throw std::invalid_argument( "Renderer dimensions must be non-zero" );
+
+    CUDA_CHECK( cudaFree( m_params.accum_buffer ) );
+    m_params.accum_buffer = nullptr;
+    CUDA_CHECK( cudaMalloc(
+        reinterpret_cast<void**>( &m_params.accum_buffer ),
+        static_cast<size_t>( width ) * height * sizeof( float4 )
+    ) );
+    m_params.width  = width;
+    m_params.height = height;
+}
+
 void RendererRuntime::renderFrame( uchar4* output, const std::string& raygen )
 {
     if( !isInitialized() )

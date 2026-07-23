@@ -12,6 +12,8 @@ add_library(spcbpt_renderer STATIC
   Record.h
   RendererRuntime.cpp
   RendererRuntime.h
+  RendererWorkflow.cpp
+  RendererWorkflow.h
   Scene.cpp
   Scene.h
   Texture.h
