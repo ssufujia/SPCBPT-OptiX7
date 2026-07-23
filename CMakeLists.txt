@@ -139,5 +139,11 @@ target_compile_definitions(spcbpt_project_options INTERFACE
 set(OPTIX_IDE_FOLDER "SPCBPT")
 set(SPCBPT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+include(CTest)
+
 add_subdirectory(third_party)
 add_subdirectory(src)
+
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()

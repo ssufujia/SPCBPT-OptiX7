@@ -1,7 +1,7 @@
 #ifndef PG_DEVICE
 #define PG_DEVICE
 #include"PG_common.h"
-#include "random.h"
+#include <cuda/random.h>
 
 //rtBuffer<Spatio_tree_node, 1> spatio_trees; 
 //rtBuffer<quad_tree_node, 1> quad_trees; 

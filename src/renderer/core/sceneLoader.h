@@ -28,7 +28,7 @@ freely, subject to the following restrictions:
 //#include <optixu/optixu_math_stream_namespace.h> 
 
 #include <sutil/sutil.h> 
-#include <device_include/commonStructs.h>
+#include <cuda/commonStructs.h>
 #include "material_parameters.h"
 #include "properties.h"
 #include "light_parameters.h"

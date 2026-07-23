@@ -1,4 +1,5 @@
 #include "scene_shift.h" 
+#include <spcbptConfig.h>
 #include<sutil/Exception.h>
 #include<optix.h> 
 #include <stb/stb_image.h>

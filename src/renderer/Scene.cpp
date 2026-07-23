@@ -35,13 +35,13 @@
 #endif
 #define SUTIL_OPTIX_MODULE_CREATE optixModuleCreate
 
-#include <cuda/whitted.h>
+#include <renderer/core/whitted.h>
 #include <sutil/Exception.h>
 #include <renderer/Matrix.h>
 #include <sutil/Quaternion.h>
 #include <sutil/Record.h>
 #include <renderer/Scene.h>
-#include <sampleConfig.h>
+#include <spcbptConfig.h>
 
 #define TINYGLTF_IMPLEMENTATION
 //#define STB_IMAGE_IMPLEMENTATION        // Implementation in sutil.cpp

@@ -29,8 +29,9 @@
 #pragma once
 
 #include <cuda/BufferView.h>
+#include <cuda/GeometryData.h>
+#include <cuda/Light.h>
 #include <cuda/MaterialData.h>
-#include <cuda/whitted.h>
 #include <sutil/Aabb.h>
 #include <renderer/Camera.h>
 #include <renderer/Matrix.h>

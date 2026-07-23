@@ -8,7 +8,6 @@ target_include_directories(optixPathTracer
     "${SPCBPT_SOURCE_DIR}/renderer/core"
     "${SPCBPT_SOURCE_DIR}/cuda"
     "${SPCBPT_SOURCE_DIR}"
-    "${SPCBPT_SOURCE_DIR}/device_include"
     "${PROJECT_SOURCE_DIR}/third_party"
 )
 

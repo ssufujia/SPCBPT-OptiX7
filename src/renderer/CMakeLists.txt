@@ -1,6 +1,7 @@
 add_library(spcbpt_renderer STATIC
   Camera.cpp
   Camera.h
+  ImageCodecs.cpp
   Matrix.h
   Preprocessor.h
   Scene.cpp

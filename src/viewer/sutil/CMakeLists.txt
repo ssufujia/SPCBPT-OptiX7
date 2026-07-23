@@ -1,12 +1,12 @@
 set(sutil_sources
   "${SPCBPT_GENERATED_CONFIG}"
-  "${SAMPLES_CUDA_DIR}/BufferView.h"
-  "${SAMPLES_CUDA_DIR}/GeometryData.h"
-  "${SAMPLES_CUDA_DIR}/Light.h"
-  "${SAMPLES_CUDA_DIR}/LocalGeometry.h"
-  "${SAMPLES_CUDA_DIR}/MaterialData.h"
-  "${SAMPLES_CUDA_DIR}/util.h"
-  "${SAMPLES_CUDA_DIR}/helpers.h"
+  "${SPCBPT_SOURCE_DIR}/cuda/BufferView.h"
+  "${SPCBPT_SOURCE_DIR}/cuda/GeometryData.h"
+  "${SPCBPT_SOURCE_DIR}/cuda/Light.h"
+  "${SPCBPT_SOURCE_DIR}/cuda/LocalGeometry.h"
+  "${SPCBPT_SOURCE_DIR}/cuda/MaterialData.h"
+  "${SPCBPT_SOURCE_DIR}/cuda/util.h"
+  "${SPCBPT_SOURCE_DIR}/cuda/helpers.h"
   Aabb.h
   CUDAOutputBuffer.h
   Exception.h

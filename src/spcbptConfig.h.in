@@ -1,0 +1,6 @@
+#pragma once
+
+// Build-tree paths required by the current runtime. Machine-specific values
+// stay in the generated header and are never committed.
+#define SPCBPT_ASSETS_DIR "@SPCBPT_ASSETS_DIR@"
+#define SPCBPT_OPTIX_IR_DIR "@SPCBPT_OPTIX_IR_DIR@"

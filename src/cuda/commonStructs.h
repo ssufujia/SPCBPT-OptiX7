@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,10 +47,8 @@ struct DirectionalLight
 #endif
   float3 direction;
   float radius;
-  float3 v0;  // basis vectors for area sampling
-  float3 v1; 
+  float3 v0;
+  float3 v1;
   float3 color;
   int casts_shadow;
 };
-
-

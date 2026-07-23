@@ -31,7 +31,7 @@
 #include <cuda_runtime.h>
 #include <optix.h>
 #include <optix_stubs.h>
-#include <sampleConfig.h>
+#include <spcbptConfig.h>
 #include <sutil/CUDAOutputBuffer.h>
 #include <sutil/Camera.h>
 #include <sutil/Exception.h>
@@ -1419,8 +1419,6 @@ int main( int argc, char* argv[] )
     params.width = 1920;
     params.height = 1000;
     sutil::CUDAOutputBufferType output_buffer_type = sutil::CUDAOutputBufferType::GL_INTEROP;
-    // OptiX 9 still accepts the legacy launcher; keep it until launch-path migration is verified.
-    _putenv("OPTIX_FORCE_DEPRECATED_LAUNCHER=1");
 
     //
     // Parse command line options

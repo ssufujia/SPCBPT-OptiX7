@@ -1,7 +1,7 @@
 #ifndef CLASSTREE_DEVICE
 #define CLASSTREE_DEVICE 
 #include "classTree_common.h"   
-#include"random.h"
+#include <cuda/random.h>
 namespace classTree
 { 
 

@@ -17,6 +17,7 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.*/
 
 #include"sceneLoader.h"
+#include <spcbptConfig.h>
 
 static const int kMaxLineLength = 2048;
 std::vector<LightParameter> breakLight(LightParameter& a,int divLevel)

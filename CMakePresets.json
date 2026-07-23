@@ -11,7 +11,7 @@
       "displayName": "Release OptiX 9 (Ninja)",
       "description": "Shared Release configuration. Machine paths belong in CMakeUserPresets.json.",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build-release-optix9",
+      "binaryDir": "${sourceDir}/build/release-optix9",
       "architecture": {
         "value": "x64",
         "strategy": "external"
@@ -33,10 +33,7 @@
   "buildPresets": [
     {
       "name": "release-optix9",
-      "configurePreset": "release-optix9",
-      "targets": [
-        "optixPathTracer"
-      ]
+      "configurePreset": "release-optix9"
     }
   ]
 }

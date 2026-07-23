@@ -1,7 +1,7 @@
 #ifndef RMIS_H
 #define RMIS_H
 #include <optix.h>
-#include "random.h"
+#include <cuda/random.h>
 #include "rt_function.h"
 
 #include "BDPTVertex.h"

@@ -14,10 +14,7 @@
   "buildPresets": [
     {
       "name": "release-optix9-local",
-      "configurePreset": "release-optix9-local",
-      "targets": [
-        "optixPathTracer"
-      ]
+      "configurePreset": "release-optix9-local"
     }
   ]
 }

@@ -27,7 +27,6 @@
 //
 
 
-#include <sampleConfig.h>
 #include <sutil/Exception.h>
 #include <sutil/GLDisplay.h>
 #include <sutil/PPMLoader.h>
@@ -39,16 +38,12 @@
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
-#define STB_IMAGE_IMPLEMENTATION
 #include <tinygltf/stb_image.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <tinygltf/stb_image_write.h>
 #define TINYEXR_USE_MINIZ 0
 #define TINYEXR_USE_STB_ZLIB 1
 #define TINYEXR_IMPLEMENTATION
 #include <tinyexr/tinyexr.h>
-
-#include <nvrtc.h>
 
 #include <algorithm>
 #include <chrono>
@@ -119,21 +114,6 @@ static void savePPM( const unsigned char* Pix, const char* fname, int wid, int h
 }
 
 
-static bool dirExists( const char* path )
-{
-#if defined( _WIN32 )
-    DWORD attrib = GetFileAttributes( path );
-    return ( attrib != INVALID_FILE_ATTRIBUTES ) && ( attrib & FILE_ATTRIBUTE_DIRECTORY );
-#else
-    DIR* dir = opendir( path );
-    if( dir == NULL )
-        return false;
-
-    closedir( dir );
-    return true;
-#endif
-}
-
 static bool fileExists( const char* path )
 {
     std::ifstream str( path );
@@ -143,73 +123,6 @@ static bool fileExists( const char* path )
 static bool fileExists( const std::string& path )
 {
     return fileExists( path.c_str() );
-}
-
-static std::string existingFilePath( const char* directory, const char* relativeSubDir, const char* relativePath )
-{
-    std::string path = directory ? directory : "";
-    if( relativeSubDir )
-    {
-        path += '/';
-        path += relativeSubDir;
-    }
-    if( relativePath )
-    {
-        path += '/';
-        path += relativePath;
-    }
-    return fileExists( path ) ? path : "";
-}
-
-std::string getSampleDir()
-{
-    static const char* directories[] =
-    {
-        // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_DIR once SDK 6/7 packages are split
-        getenv( "OPTIX_EXP_SAMPLES_SDK_DIR" ),
-        getenv( "OPTIX_SAMPLES_SDK_DIR" ),
-        SAMPLES_DIR,
-        "."
-    };
-    for( const char* directory : directories )
-    {
-        if( directory && dirExists( directory ) )
-            return directory;
-    }
-
-    throw Exception( "sutil::getSampleDir couldn't locate an existing sample directory" );
-}
-
-const char* sampleFilePath( const char* relativeSubDir, const char* relativePath )
-{
-    static std::string s;
-
-    // Allow for overrides.
-    static const char* directories[] =
-    {
-        // TODO: Remove the environment variable OPTIX_EXP_SAMPLES_SDK_DIR once SDK 6/7 packages are split
-        getenv( "OPTIX_EXP_SAMPLES_SDK_DIR" ),
-        getenv( "OPTIX_SAMPLES_SDK_DIR" ),
-        SAMPLES_DIR,
-        "."
-    };
-    for( const char* directory : directories )
-    {
-        if( directory )
-        {
-            s = existingFilePath( directory, relativeSubDir, relativePath );
-            if( !s.empty() )
-            {
-                return s.c_str();
-            }
-        }
-    }
-    throw Exception( ( std::string{ "sutil::sampleDataFilePath couldn't locate " } +relativePath ).c_str() );
-}
-
-const char* sampleDataFilePath( const char* relativePath )
-{
-    return sampleFilePath( "data", relativePath );
 }
 
 size_t pixelFormatSize( BufferImageFormat format )
@@ -889,6 +802,9 @@ double currentTime()
 }
 
 
+#if 0
+// Retained temporarily for source-history comparison only. SPCBPT loads native
+// OptiX-IR in renderer/Scene.cpp and no longer builds or locates PTX via sutil.
 #define STRINGIFY( x ) STRINGIFY2( x )
 #define STRINGIFY2( x ) #x
 #define LINE_STR STRINGIFY( __LINE__ )
@@ -1138,6 +1054,8 @@ const char* getInputData( const char*                     sample,
     dataSize = ptx->size();
     return ptx->c_str();
 }
+
+#endif
 
 void ensureMinimumSize( int& w, int& h )
 {
