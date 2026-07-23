@@ -29,6 +29,15 @@ set_tests_properties(spcbpt.headless_smoke PROPERTIES
   TIMEOUT 120
 )
 
+add_test(
+  NAME spcbpt.reload_smoke
+  COMMAND spcbpt_smoke --reload-check
+)
+set_tests_properties(spcbpt.reload_smoke PROPERTIES
+  LABELS "gpu;optix;smoke;reload"
+  TIMEOUT 120
+)
+
 add_executable(spcbpt_renderer_linkcheck
   renderer_linkcheck.cpp
 )

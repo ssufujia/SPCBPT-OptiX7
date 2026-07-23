@@ -14,7 +14,9 @@
 #include <thrust/host_vector.h>
 
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <cstring>
 #include <stdexcept>
 #include <utility>
@@ -34,6 +36,80 @@ int lightTraceElementCount( const LightTraceParams& params )
 int preTraceElementCount( const PreTraceParams& params )
 {
     return params.num_core * params.padding;
+}
+
+template <typename T>
+class ScopedCudaAllocation
+{
+  public:
+    explicit ScopedCudaAllocation( size_t count )
+    {
+        CUDA_CHECK( cudaMalloc(
+            reinterpret_cast<void**>( &m_pointer ),
+            count * sizeof( T )
+        ) );
+    }
+
+    ~ScopedCudaAllocation()
+    {
+        if( m_pointer )
+            CUDA_CHECK_NOTHROW( cudaFree( m_pointer ) );
+    }
+
+    ScopedCudaAllocation( const ScopedCudaAllocation& ) = delete;
+    ScopedCudaAllocation& operator=( const ScopedCudaAllocation& ) = delete;
+
+    T* release()
+    {
+        T* pointer = m_pointer;
+        m_pointer = nullptr;
+        return pointer;
+    }
+
+  private:
+    T* m_pointer = nullptr;
+};
+
+class ScopedTexture
+{
+  public:
+    explicit ScopedTexture( spcbpt::Texture texture )
+        : m_texture( texture )
+    {
+    }
+
+    ~ScopedTexture()
+    {
+        if( m_texture.texture )
+            CUDA_CHECK_NOTHROW( cudaDestroyTextureObject( m_texture.texture ) );
+        if( m_texture.array )
+            CUDA_CHECK_NOTHROW( cudaFreeArray( m_texture.array ) );
+    }
+
+    ScopedTexture( const ScopedTexture& ) = delete;
+    ScopedTexture& operator=( const ScopedTexture& ) = delete;
+
+    const spcbpt::Texture& get() const { return m_texture; }
+
+    spcbpt::Texture release()
+    {
+        const spcbpt::Texture texture = m_texture;
+        m_texture = {};
+        return texture;
+    }
+
+  private:
+    spcbpt::Texture m_texture;
+};
+
+template <typename T>
+void freeCudaAllocation( T*& pointer )
+{
+    if( pointer )
+    {
+        CUDA_CHECK_NOTHROW( cudaFree( pointer ) );
+        pointer = nullptr;
+    }
 }
 
 } // namespace
@@ -65,6 +141,7 @@ class RendererWorkflow::Impl
                   std::vector<bool>( dropOut_tracing::default_surfaceSubSpaceNumber, false )
               )
           )
+        , scene_generation( renderer.sceneGeneration() )
     {
     }
 
@@ -75,11 +152,19 @@ class RendererWorkflow::Impl
         if( algorithm_state_initialized )
             throw std::logic_error( "RendererWorkflow algorithm state is already initialized" );
 
-        dropOutTracingParamsInit();
-        ltParamsSetup();
-        preTracerParamsSetup();
-        envParamsSetup();
-        algorithm_state_initialized = true;
+        try
+        {
+            dropOutTracingParamsInit();
+            ltParamsSetup();
+            preTracerParamsSetup();
+            envParamsSetup();
+            algorithm_state_initialized = true;
+        }
+        catch( ... )
+        {
+            rollbackAlgorithmState();
+            throw;
+        }
     }
 
     void runPreprocessing()
@@ -109,6 +194,8 @@ class RendererWorkflow::Impl
         }
         runtime.renderFrame( output, raygen );
     }
+
+    std::uint64_t sceneGeneration() const { return scene_generation; }
 
   private:
     static constexpr int TRAIN_CAPACITY = 30000;
@@ -181,14 +268,17 @@ class RendererWorkflow::Impl
             "load and build sampling cmf from file %s\n",
             scene.getEnvFilePath().c_str()
         );
-        HDRLoader hdr_env( std::string( SPCBPT_ASSETS_DIR ) + "/" + scene.getEnvFilePath() );
+        const std::filesystem::path env_path =
+            std::filesystem::path( scene.getResourceRoot() ) / scene.getEnvFilePath();
+        HDRLoader hdr_env( env_path.lexically_normal().string() );
 
         const float3 default_color = make_float3( 1.0f );
-        params.sky.height   = hdr_env.height();
-        params.sky.width    = hdr_env.width();
-        params.sky.divLevel = std::sqrt( 0.5f * NUM_SUBSPACE_LIGHTSOURCE );
-        params.sky.ssBase   = 0;
-        params.sky.size     = hdr_env.height() * hdr_env.width();
+        envInfo next_sky = {};
+        next_sky.height   = hdr_env.height();
+        next_sky.width    = hdr_env.width();
+        next_sky.divLevel = std::sqrt( 0.5f * NUM_SUBSPACE_LIGHTSOURCE );
+        next_sky.ssBase   = 0;
+        next_sky.size     = hdr_env.height() * hdr_env.width();
 
         float4* hdr_raster = reinterpret_cast<float4*>( hdr_env.raster() );
         for( int i = 0; i < scene.dir_lights.size(); ++i )
@@ -197,10 +287,10 @@ class RendererWorkflow::Impl
             float3 dir = dir_light.first;
             dir.y = -dir.y;
             const float2 uv = dir2uv( -dir );
-            const auto coord = params.sky.uv2coord( uv );
-            const int index = params.sky.coord2index( coord );
+            const auto coord = next_sky.uv2coord( uv );
+            const int index = next_sky.coord2index( coord );
             hdr_raster[index] += make_float4(
-                dir_light.second * params.sky.size / ( 4 * M_PI ),
+                dir_light.second * next_sky.size / ( 4 * M_PI ),
                 0.0f
             );
             std::printf(
@@ -212,15 +302,39 @@ class RendererWorkflow::Impl
             );
         }
 
-        const auto env_tex = hdr_env.loadTexture( default_color, nullptr );
-        params.sky.tex = env_tex.texture;
-        params.sky.cmf = thrust::raw_pointer_cast(
-            envMapCMFBuild( hdr_raster, hdr_env.height() * hdr_env.width(), params.sky )
+        ScopedTexture env_texture(
+            hdr_env.loadTexture( default_color, nullptr )
         );
-        params.sky.center   = scene.aabb().center();
-        params.sky.r        = length( scene.aabb().m_min - scene.aabb().m_max );
-        params.sky.valid    = true;
-        params.sky.light_id = params.lights.count - 1;
+        next_sky.tex = env_texture.get().texture;
+        next_sky.cmf = thrust::raw_pointer_cast(
+            envMapCMFBuild( hdr_raster, hdr_env.height() * hdr_env.width(), next_sky )
+        );
+        next_sky.center   = scene.aabb().center();
+        next_sky.r        = length( scene.aabb().m_min - scene.aabb().m_max );
+        next_sky.valid    = true;
+        next_sky.light_id = params.lights.count - 1;
+
+        scene.adoptTexture( env_texture.get() );
+        env_texture.release();
+        params.sky = next_sky;
+    }
+
+    void rollbackAlgorithmState()
+    {
+        freeCudaAllocation( lt_params.ans );
+        freeCudaAllocation( lt_params.validState );
+        freeCudaAllocation( lt_params.lightImage );
+        freeCudaAllocation( lt_params.lightIndex );
+        freeCudaAllocation( lt_params.lightBuffer );
+        freeCudaAllocation( lt_params.rand_state );
+        freeCudaAllocation( pr_params.paths );
+        freeCudaAllocation( pr_params.conns );
+        lt_params = {};
+        pr_params = {};
+        params.sky = {};
+        MyThrustOp::invalidate_scene_caches();
+        algorithm_state_initialized = false;
+        preprocessing_complete = false;
     }
 
     void ltParamsSetup()
@@ -231,44 +345,23 @@ class RendererWorkflow::Impl
         lt_params.M            = lt_params.M_per_core * lt_params.num_core;
         lt_params.launch_frame = 0;
 
-        BDPTVertex* lvc_ptr = nullptr;
-        bool* valid_ptr = nullptr;
-        float3* light_image = nullptr;
-        int* pixel_id = nullptr;
-        float3* light_buffer = nullptr;
-        curandState* random_state = nullptr;
+        const size_t light_trace_count =
+            static_cast<size_t>( lightTraceElementCount( lt_params ) );
+        ScopedCudaAllocation<BDPTVertex> lvc( light_trace_count );
+        ScopedCudaAllocation<bool> valid( light_trace_count );
+        ScopedCudaAllocation<float3> image(
+            static_cast<size_t>( params.width ) * params.height
+        );
+        ScopedCudaAllocation<int> indices( light_trace_count );
+        ScopedCudaAllocation<float3> buffer( light_trace_count );
+        ScopedCudaAllocation<curandState> random_states( light_trace_count );
 
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &lvc_ptr ),
-            sizeof( BDPTVertex ) * lightTraceElementCount( lt_params )
-        ) );
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &valid_ptr ),
-            sizeof( bool ) * lightTraceElementCount( lt_params )
-        ) );
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &light_image ),
-            sizeof( float3 ) * params.width * params.height
-        ) );
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &pixel_id ),
-            sizeof( int ) * lightTraceElementCount( lt_params )
-        ) );
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &light_buffer ),
-            sizeof( float3 ) * lightTraceElementCount( lt_params )
-        ) );
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &random_state ),
-            sizeof( curandState ) * lightTraceElementCount( lt_params )
-        ) );
-
-        lt_params.ans         = lvc_ptr;
-        lt_params.validState  = valid_ptr;
-        lt_params.lightImage  = light_image;
-        lt_params.lightBuffer = light_buffer;
-        lt_params.lightIndex  = pixel_id;
-        lt_params.rand_state  = random_state;
+        lt_params.ans         = lvc.release();
+        lt_params.validState  = valid.release();
+        lt_params.lightImage  = image.release();
+        lt_params.lightBuffer = buffer.release();
+        lt_params.lightIndex  = indices.release();
+        lt_params.rand_state  = random_states.release();
     }
 
     void setLightImage()
@@ -329,18 +422,14 @@ class RendererWorkflow::Impl
         pr_params.padding   = 10;
         pr_params.iteration = 0;
 
-        preTracePath* pretrace_path = nullptr;
-        preTraceConnection* pretrace_connection = nullptr;
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &pretrace_path ),
-            sizeof( preTracePath ) * pr_params.num_core
-        ) );
-        CUDA_CHECK( cudaMalloc(
-            reinterpret_cast<void**>( &pretrace_connection ),
-            sizeof( preTraceConnection ) * preTraceElementCount( pr_params )
-        ) );
-        pr_params.paths   = pretrace_path;
-        pr_params.conns   = pretrace_connection;
+        ScopedCudaAllocation<preTracePath> paths(
+            static_cast<size_t>( pr_params.num_core )
+        );
+        ScopedCudaAllocation<preTraceConnection> connections(
+            static_cast<size_t>( preTraceElementCount( pr_params ) )
+        );
+        pr_params.paths   = paths.release();
+        pr_params.conns   = connections.release();
         pr_params.PG_mode = false;
     }
 
@@ -1223,6 +1312,7 @@ class RendererWorkflow::Impl
 
     bool algorithm_state_initialized = false;
     bool preprocessing_complete = false;
+    std::uint64_t scene_generation = 0;
 
     int combine_train_iteration = 0;
     bool combine_state_initialized = false;
@@ -1248,24 +1338,34 @@ class RendererWorkflow::Impl
 };
 
 RendererWorkflow::RendererWorkflow( RendererRuntime& runtime )
-    : m_impl( std::make_unique<Impl>( runtime ) )
+    : m_runtime( runtime )
+    , m_impl( std::make_unique<Impl>( runtime ) )
 {
 }
 
 RendererWorkflow::~RendererWorkflow() = default;
 
+void RendererWorkflow::synchronizeSceneGeneration()
+{
+    if( m_impl->sceneGeneration() != m_runtime.sceneGeneration() )
+        m_impl = std::make_unique<Impl>( m_runtime );
+}
+
 void RendererWorkflow::initializeAlgorithmState()
 {
+    synchronizeSceneGeneration();
     m_impl->initializeAlgorithmState();
 }
 
 void RendererWorkflow::runPreprocessing()
 {
+    synchronizeSceneGeneration();
     m_impl->runPreprocessing();
 }
 
 void RendererWorkflow::renderFrame( uchar4* output, const std::string& raygen )
 {
+    synchronizeSceneGeneration();
     m_impl->renderFrame( output, raygen );
 }
 

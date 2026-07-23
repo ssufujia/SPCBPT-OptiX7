@@ -143,6 +143,7 @@ namespace MyThrustOp
     float4* reference_h2d(thrust::host_vector<float4> h_ref);
 
     void clear_training_set();
+    void invalidate_scene_caches();
     std::vector<classTree::divide_weight> getCausticCentroidCandidate(bool eye_side, int max_size);
 
 

@@ -2,6 +2,7 @@
 
 #include <renderer/Camera.h>
 #include <renderer/Exception.h>
+#include <renderer/core/cuda_thrust/device_thrust.h>
 #include <renderer/core/sceneLoader.h>
 #include <renderer/core/scene_shift.h>
 #include <spcbptConfig.h>
@@ -16,6 +17,74 @@
 namespace spcbpt
 {
 
+namespace
+{
+
+std::filesystem::path normalizedAbsolutePath( const std::filesystem::path& path )
+{
+    return std::filesystem::absolute( path ).lexically_normal();
+}
+
+SceneConfig resolveSceneConfig( const SceneConfig& config )
+{
+    if( config.path.empty() )
+        throw std::invalid_argument( "Scene path is empty" );
+
+    SceneConfig resolved = config;
+    const std::filesystem::path resource_root = normalizedAbsolutePath(
+        config.resource_root.empty()
+            ? std::filesystem::path( SPCBPT_ASSETS_DIR )
+            : std::filesystem::path( config.resource_root )
+    );
+    std::filesystem::path scene_path = config.path;
+    if( scene_path.is_relative() )
+    {
+        const std::filesystem::path cwd_path = normalizedAbsolutePath( scene_path );
+        const std::filesystem::path root_path =
+            ( resource_root / scene_path ).lexically_normal();
+        scene_path = std::filesystem::is_regular_file( cwd_path ) ? cwd_path : root_path;
+    }
+    else
+    {
+        scene_path = scene_path.lexically_normal();
+    }
+
+    resolved.path = scene_path.string();
+    resolved.resource_root = resource_root.string();
+    return resolved;
+}
+
+template <typename T>
+void freeDevicePointer( T*& pointer )
+{
+    if( pointer )
+    {
+        CUDA_CHECK_NOTHROW( cudaFree( pointer ) );
+        pointer = nullptr;
+    }
+}
+
+void releaseAlgorithmBuffers( MyParams& params )
+{
+    freeDevicePointer( params.lt.ans );
+    freeDevicePointer( params.lt.validState );
+    freeDevicePointer( params.lt.lightImage );
+    freeDevicePointer( params.lt.lightIndex );
+    freeDevicePointer( params.lt.lightBuffer );
+    freeDevicePointer( params.lt.rand_state );
+    freeDevicePointer( params.pre_tracer.paths );
+    freeDevicePointer( params.pre_tracer.conns );
+    params.lt = {};
+    params.pre_tracer = {};
+    params.sampler = {};
+    params.subspace_info = {};
+    params.pg_params = {};
+    params.dot_params = {};
+    params.sky = {};
+}
+
+} // namespace
+
 RendererRuntime::RendererRuntime() = default;
 
 RendererRuntime::~RendererRuntime()
@@ -25,24 +94,65 @@ RendererRuntime::~RendererRuntime()
 
 SceneConfig SceneConfig::defaultScene()
 {
-    return { std::string( SPCBPT_ASSETS_DIR ) + "/bedroom.scene" };
+    return { "bedroom.scene", SPCBPT_ASSETS_DIR, std::nullopt };
 }
 
 void RendererRuntime::loadScene( const SceneConfig& config )
 {
-    if( config.path.empty() )
-        throw std::invalid_argument( "Scene path is empty" );
-    if( !std::filesystem::is_regular_file( config.path ) )
-        throw std::runtime_error( "Scene file is missing or unreadable: " + config.path );
+    const SceneConfig resolved_config = resolveSceneConfig( config );
+    if( !std::filesystem::is_regular_file( resolved_config.path ) )
+    {
+        throw std::runtime_error(
+            "Scene file is missing or unreadable: " + resolved_config.path
+        );
+    }
 
-    reset();
-    m_source_scene.reset( LoadScene( config.path.c_str() ) );
-    if( !m_source_scene )
-        throw std::runtime_error( "Scene loader returned no scene" );
+    unloadScene();
+    try
+    {
+        m_source_scene.reset( LoadScene(
+            resolved_config.path.c_str(),
+            resolved_config.resource_root.c_str()
+        ) );
+        if( !m_source_scene )
+            throw std::runtime_error( "Scene loader returned no scene" );
 
-    m_scene = std::make_unique<sutil::Scene>();
-    Scene_shift( *m_source_scene, *m_scene );
-    LightSource_shift( *m_source_scene, m_params, *m_scene );
+        if( resolved_config.camera_override )
+        {
+            const SceneCameraOverride& camera = *resolved_config.camera_override;
+            m_source_scene->eye = camera.eye;
+            m_source_scene->lookat = camera.lookat;
+            m_source_scene->up = camera.up;
+            m_source_scene->fov = camera.fov_y;
+            m_source_scene->use_camera = true;
+        }
+
+        m_scene = std::make_unique<sutil::Scene>();
+        Scene_shift( *m_source_scene, *m_scene );
+        LightSource_shift( *m_source_scene, m_params, *m_scene );
+        m_scene_config = resolved_config;
+    }
+    catch( ... )
+    {
+        unloadScene();
+        throw;
+    }
+}
+
+void RendererRuntime::reloadScene()
+{
+    if( m_scene_config.path.empty() )
+        throw std::logic_error( "RendererRuntime has no scene to reload" );
+    reloadScene( m_scene_config );
+}
+
+void RendererRuntime::reloadScene( const SceneConfig& config )
+{
+    const bool was_initialized = isInitialized();
+    const RendererConfig renderer_config = m_config;
+    loadScene( config );
+    if( was_initialized )
+        initialize( renderer_config );
 }
 
 void RendererRuntime::initialize( const RendererConfig& config )
@@ -228,6 +338,20 @@ void RendererRuntime::releaseLaunchBuffers()
 
 void RendererRuntime::reset()
 {
+    unloadScene();
+}
+
+void RendererRuntime::unloadScene()
+{
+    const bool had_scene_state =
+        m_scene != nullptr
+        || m_source_scene != nullptr
+        || m_device_params != nullptr
+        || m_params.lt.ans != nullptr
+        || m_params.pre_tracer.paths != nullptr;
+    releaseAlgorithmBuffers( m_params );
+    if( had_scene_state )
+        MyThrustOp::invalidate_scene_caches();
     releaseLaunchBuffers();
     if( m_params.lights.data )
     {
@@ -239,6 +363,7 @@ void RendererRuntime::reset()
     m_params          = {};
     m_config          = {};
     m_scene_finalized = false;
+    ++m_scene_generation;
 }
 
 } // namespace spcbpt

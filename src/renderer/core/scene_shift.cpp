@@ -4,6 +4,7 @@
 #include<optix.h> 
 #include <stb/stb_image.h>
 #include<direct.h>
+#include <filesystem>
 #include<map>
 
 sutil::Aabb get_aabb(std::vector<float3> v)
@@ -38,16 +39,26 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
     {
 
         int texWidth, texHeight, texChannels;
-        std::string name = std::string(SPCBPT_ASSETS_DIR) + "/" + Src.texture_map[i];
-        stbi_uc* pixels = stbi_load(name.c_str(),
-            &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        const std::string name = (
+            std::filesystem::path(Src.resource_root) / Src.texture_map[i]
+        ).lexically_normal().string();
+        std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> pixels(
+            stbi_load(
+                name.c_str(),
+                &texWidth,
+                &texHeight,
+                &texChannels,
+                STBI_rgb_alpha
+            ),
+            &stbi_image_free
+        );
 
 
         if (!pixels)
         {
-            std::cout << "error image loading" << name<< std::endl;
+            throw std::runtime_error("Error loading scene image: " + name);
         }
-        auto data_p = reinterpret_cast<uint32_t*>(pixels);
+        auto data_p = reinterpret_cast<uint32_t*>(pixels.get());
 
         Dst.addImage(
             texWidth,
@@ -194,7 +205,11 @@ Vec2f make_Vec2f(float x, float y)
 }
 void Scene_shift(Scene& Src, sutil::Scene& Dst)
 {
+    materialID_remap.clear();
+    lightsourceID_remap.clear();
+    sampler_remap.clear();
     Dst.removeCurrent();
+    Dst.setResourceRoot(Src.resource_root);
     if (Src.env_file != std::string(""))
     {
         Dst.setEnvFilePath(Src.env_file);
@@ -235,15 +250,15 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
 
             a.positions.push_back(HostToDeviceBuffer(
                 reinterpret_cast<float3*>(c_mesh.positions.data()),
-                num_points, 3));
+                num_points, 3, &Dst));
             a.indices.push_back(HostToDeviceBuffer(
                 reinterpret_cast<unsigned int*>(c_mesh.indices.data()),
-                c_mesh.indices.size()));
+                c_mesh.indices.size(), 1, &Dst));
 
             a.colors.push_back(BufferView<Vec4f>());
             auto BV = HostToDeviceBuffer(
                 reinterpret_cast<Vec2f*>(c_mesh.texcoords.data()),
-                num_points, 2);
+                num_points, 2, &Dst);
 
             for (int i = 0; i < GeometryData::num_textcoords; i++)
             {
@@ -254,7 +269,7 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
             if(!Src.use_geometry_normal)
                 a.normals.push_back(HostToDeviceBuffer(
                 reinterpret_cast<float3*>(c_mesh.normals.data()),
-                num_points,3));
+                num_points,3, &Dst));
             /* ********************************** */
             a.normals.push_back(BufferView<float3>());
             a.material_idx.push_back(materialID_remap[k]);
@@ -336,15 +351,15 @@ void Geometry_shift(Scene& Src, sutil::Scene& Dst)
 
         a.positions.push_back(HostToDeviceBuffer(
             reinterpret_cast<float3*>(positions.data()),
-            num_points, 3));
+            num_points, 3, &Dst));
         a.indices.push_back(HostToDeviceBuffer(
             reinterpret_cast<unsigned int*>(indices.data()),
-            indices.size()));
+            indices.size(), 1, &Dst));
 
         a.colors.push_back(BufferView<Vec4f>());
         auto BV = HostToDeviceBuffer(
             reinterpret_cast<Vec2f*>(texcoords.data()),
-            num_points, 2);
+            num_points, 2, &Dst);
 
         for (int i = 0; i < GeometryData::num_textcoords; i++)
         {
@@ -598,34 +613,43 @@ spcbpt::Texture HDRLoader::loadTexture(const float3& default_color, cudaTextureD
 
     cudaArray_t cuda_array = nullptr;
     CUDA_CHECK(cudaMallocArray(&cuda_array, &channel_desc, nx, ny));
-    CUDA_CHECK(cudaMemcpy2DToArray(cuda_array, 0, 0, buffer.data(), pitch, pitch, ny, cudaMemcpyHostToDevice));
-
-    // Create texture object
-    cudaResourceDesc res_desc = {};
-    res_desc.resType = cudaResourceTypeArray;
-    res_desc.res.array.array = cuda_array;
-
-    cudaTextureDesc default_tex_desc = {};
-    if (tex_desc == nullptr)
-    {
-        default_tex_desc.addressMode[0] = cudaAddressModeWrap;
-        default_tex_desc.addressMode[1] = cudaAddressModeWrap;
-        default_tex_desc.filterMode = cudaFilterModeLinear;
-        default_tex_desc.readMode = cudaReadModeElementType;
-        default_tex_desc.normalizedCoords = 1;
-        default_tex_desc.maxAnisotropy = 1;
-        default_tex_desc.maxMipmapLevelClamp = 99;
-        default_tex_desc.minMipmapLevelClamp = 0;
-        default_tex_desc.mipmapFilterMode = cudaFilterModePoint;
-        default_tex_desc.borderColor[0] = 1.0f;
-        default_tex_desc.sRGB = 0;  
-
-        tex_desc = &default_tex_desc;
-    }
-
-    // Create texture object
     cudaTextureObject_t cuda_tex = 0;
-    CUDA_CHECK(cudaCreateTextureObject(&cuda_tex, &res_desc, tex_desc, nullptr));
+    try
+    {
+        CUDA_CHECK(cudaMemcpy2DToArray(cuda_array, 0, 0, buffer.data(), pitch, pitch, ny, cudaMemcpyHostToDevice));
+
+        // Create texture object
+        cudaResourceDesc res_desc = {};
+        res_desc.resType = cudaResourceTypeArray;
+        res_desc.res.array.array = cuda_array;
+
+        cudaTextureDesc default_tex_desc = {};
+        if (tex_desc == nullptr)
+        {
+            default_tex_desc.addressMode[0] = cudaAddressModeWrap;
+            default_tex_desc.addressMode[1] = cudaAddressModeWrap;
+            default_tex_desc.filterMode = cudaFilterModeLinear;
+            default_tex_desc.readMode = cudaReadModeElementType;
+            default_tex_desc.normalizedCoords = 1;
+            default_tex_desc.maxAnisotropy = 1;
+            default_tex_desc.maxMipmapLevelClamp = 99;
+            default_tex_desc.minMipmapLevelClamp = 0;
+            default_tex_desc.mipmapFilterMode = cudaFilterModePoint;
+            default_tex_desc.borderColor[0] = 1.0f;
+            default_tex_desc.sRGB = 0;
+
+            tex_desc = &default_tex_desc;
+        }
+
+        CUDA_CHECK(cudaCreateTextureObject(&cuda_tex, &res_desc, tex_desc, nullptr));
+    }
+    catch (...)
+    {
+        if (cuda_tex)
+            CUDA_CHECK_NOTHROW(cudaDestroyTextureObject(cuda_tex));
+        CUDA_CHECK_NOTHROW(cudaFreeArray(cuda_array));
+        throw;
+    }
 
     spcbpt::Texture hdr_texture = { cuda_array, cuda_tex };
     return hdr_texture;

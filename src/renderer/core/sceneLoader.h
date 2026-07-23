@@ -48,6 +48,7 @@ struct Scene
 	//std::vector<Texture> textures;
 	std::map<int, std::string> texture_map;
 	std::string env_file;
+	std::string resource_root;
 	Properties properties;
     float3 eye;
     float3 lookat;
@@ -57,7 +58,7 @@ struct Scene
 	bool use_geometry_normal;
 	float env_factor;
 	float3 dirLightDir;
-	Scene() :use_geometry_normal(false) {};
+	Scene() :use_camera(false), use_geometry_normal(false) {};
 	void getMeshData(int id, std::vector<tinyobj::shape_t>& shapes, std::vector<tinyobj::material_t>& mats);
 	void getMeshData(int id);
 	bool has_envMap()const
@@ -66,5 +67,4 @@ struct Scene
 	}
 };
 
-Scene* LoadScene(const char* filename);
-
+Scene* LoadScene(const char* filename, const char* resource_root);

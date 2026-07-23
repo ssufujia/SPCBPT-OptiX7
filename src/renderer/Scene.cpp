@@ -677,6 +677,16 @@ void Scene::addImage(
     m_samplers.push_back( cuda_tex );
 }
 
+void Scene::adoptTexture( const spcbpt::Texture& texture )
+{
+    m_images.reserve( m_images.size() + ( texture.array ? 1u : 0u ) );
+    m_samplers.reserve( m_samplers.size() + ( texture.texture ? 1u : 0u ) );
+    if( texture.array )
+        m_images.push_back( texture.array );
+    if( texture.texture )
+        m_samplers.push_back( texture.texture );
+}
+
 
 CUdeviceptr Scene::getBuffer( int32_t buffer_index ) const
 {
@@ -780,31 +790,27 @@ void sutil::Scene::cleanup()
         OPTIX_CHECK( optixPipelineDestroy( m_pipeline ) );
         m_pipeline = 0;
     }
-    if( m_raygen_prog_group )
+    const auto destroyProgramGroup = []( OptixProgramGroup& group )
     {
-        OPTIX_CHECK( optixProgramGroupDestroy( m_raygen_prog_group ) );
-        m_raygen_prog_group = 0;
-    }
-    if( m_radiance_miss_group )
-    {
-        OPTIX_CHECK( optixProgramGroupDestroy( m_radiance_miss_group ) );
-        m_radiance_miss_group = 0;
-    }
-    if( m_occlusion_miss_group )
-    {
-        OPTIX_CHECK( optixProgramGroupDestroy( m_occlusion_miss_group ) );
-        m_occlusion_miss_group = 0;
-    }
-    if( m_radiance_hit_group )
-    {
-        OPTIX_CHECK( optixProgramGroupDestroy( m_radiance_hit_group ) );
-        m_radiance_hit_group = 0;
-    }
-    if( m_occlusion_hit_group )
-    {
-        OPTIX_CHECK( optixProgramGroupDestroy( m_occlusion_hit_group ) );
-        m_occlusion_hit_group = 0;
-    }
+        if( group )
+        {
+            OPTIX_CHECK( optixProgramGroupDestroy( group ) );
+            group = 0;
+        }
+    };
+    destroyProgramGroup( m_raygen_prog_group );
+    destroyProgramGroup( m_raygen_prog_pretrace );
+    destroyProgramGroup( m_radiance_miss_group );
+    destroyProgramGroup( m_occlusion_miss_group );
+    destroyProgramGroup( m_radiance_hit_group );
+    destroyProgramGroup( m_lightsource_hit_group );
+    destroyProgramGroup( m_occlusion_hit_group );
+    for( OptixProgramGroup& group : m_light_trace_ray_group )
+        destroyProgramGroup( group );
+    for( OptixProgramGroup& group : m_SPCBPT_eye_subpath_group )
+        destroyProgramGroup( group );
+    for( OptixProgramGroup& group : m_eye_subpath_group_simple )
+        destroyProgramGroup( group );
     if( m_ptx_module )
     {
         OPTIX_CHECK( optixModuleDestroy( m_ptx_module ) );
@@ -855,10 +861,24 @@ void sutil::Scene::cleanup()
         CUDA_CHECK( cudaFree( reinterpret_cast<void*>( m_sbt.hitgroupRecordBase ) ) );
         m_sbt.hitgroupRecordBase = 0;
     }
-    for( auto mesh : m_meshes )
-        CUDA_CHECK( cudaFree( reinterpret_cast<void*>( mesh->d_gas_output ) ) );
+    for( CUdeviceptr& buffer : m_gas_buffers )
+    {
+        CUDA_CHECK( cudaFree( reinterpret_cast<void*>( buffer ) ) );
+    }
+    m_gas_buffers.clear();
+    for( const auto& mesh : m_meshes )
+        mesh->d_gas_output = 0;
     m_meshes.clear();
     m_instances.clear();
+    m_materials.clear();
+    m_lights.clear();
+    m_cameras.clear();
+    dir_lights.clear();
+    m_ias_handle = 0;
+    m_sbt = {};
+    m_scene_aabb.invalidate();
+    m_env_file_name.clear();
+    m_resource_root.clear();
 }
 
 
@@ -967,6 +987,8 @@ class CuBuffer
 
 void Scene::buildMeshAccels()
 {
+    m_gas_buffers.reserve( m_gas_buffers.size() + m_meshes.size() );
+
     // Problem:
     // The memory requirements of a compacted GAS are unknown prior to building the GAS.
     // Hence, compaction of a GAS requires to build the GAS first and allocating memory for the compacted GAS afterwards.
@@ -1246,6 +1268,7 @@ void Scene::buildMeshAccels()
                 GASInfo& info = it->second;
                 batchCompactedSize += h_compactedSizes[i];
                 CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &info.mesh->d_gas_output ), h_compactedSizes[i] ) );
+                m_gas_buffers.push_back( info.mesh->d_gas_output );
                 totalTempOutputProcessedSize += info.gas_buffer_sizes.outputSizeInBytes;
                 it++;
             }
@@ -1272,7 +1295,7 @@ void Scene::buildMeshAccels()
                 tempOutputAlignmentOffset += roundUp<size_t>( info.gas_buffer_sizes.outputSizeInBytes, 256ull );
                 it++;
             }
-            d_temp_output.release();
+            m_gas_buffers.push_back( d_temp_output.release() );
         }
 
         usedCompactedOutputSize += batchCompactedSize;

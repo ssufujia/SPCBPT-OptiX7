@@ -17,7 +17,8 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.*/
 
 #include"sceneLoader.h"
-#include <spcbptConfig.h>
+
+#include <filesystem>
 
 static const int kMaxLineLength = 2048;
 std::vector<LightParameter> breakLight(LightParameter& a,int divLevel)
@@ -45,10 +46,8 @@ std::vector<LightParameter> breakLight(LightParameter& a,int divLevel)
 	return ans;
 }
 
-Scene* LoadScene(const char* filename)
+Scene* LoadScene(const char* filename, const char* resource_root)
 {
-	Scene *scene = new Scene;
-	int tex_id = 0;
 	FILE* file = fopen(filename, "r");
 
 	if (!file)
@@ -56,6 +55,10 @@ Scene* LoadScene(const char* filename)
 		printf("Couldn't open %s for reading.", filename);
 		return NULL;
 	}
+	Scene *scene = new Scene;
+	scene->resource_root = resource_root;
+	const std::filesystem::path root(scene->resource_root);
+	int tex_id = 0;
 
 	std::map<std::string, MaterialParameter> materials_map;
 	std::map<std::string, int> texture_ids;
@@ -289,12 +292,20 @@ Scene* LoadScene(const char* filename)
 
 				if (sscanf(line, " file %s", path) == 1)
 				{
-					scene->mesh_names.push_back(std::string(SPCBPT_ASSETS_DIR) + "/" + path);
-					scene->uv_mesh_names.push_back(std::string(SPCBPT_ASSETS_DIR) + "/" + path);
+					const std::filesystem::path mesh_path =
+						std::filesystem::path(path).is_absolute()
+							? std::filesystem::path(path)
+							: root / path;
+					scene->mesh_names.push_back(mesh_path.lexically_normal().string());
+					scene->uv_mesh_names.push_back(mesh_path.lexically_normal().string());
 				}
 				if (sscanf(line, " uv_file %s", path) == 1)
 				{ 
-					scene->uv_mesh_names.back() = (std::string(SPCBPT_ASSETS_DIR) + "/" + path);
+					const std::filesystem::path uv_path =
+						std::filesystem::path(path).is_absolute()
+							? std::filesystem::path(path)
+							: root / path;
+					scene->uv_mesh_names.back() = uv_path.lexically_normal().string();
 				}
 				if (sscanf(line, " material %s", path) == 1)
 				{
@@ -323,6 +334,7 @@ Scene* LoadScene(const char* filename)
 			}
 		}
 	}
+	fclose(file);
 	return scene;
 }
 

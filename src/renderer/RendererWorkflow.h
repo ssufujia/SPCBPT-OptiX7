@@ -24,7 +24,10 @@ class RendererWorkflow
     void renderFrame( uchar4* output, const std::string& raygen );
 
   private:
+    void synchronizeSceneGeneration();
+
     class Impl;
+    RendererRuntime& m_runtime;
     std::unique_ptr<Impl> m_impl;
 };
 

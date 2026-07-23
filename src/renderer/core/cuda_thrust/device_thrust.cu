@@ -3914,13 +3914,52 @@ namespace MyThrustOp
 
     }
 
+    thrust::device_vector<float> env_map_cmf;
+
+    template <typename Vector>
+    void release_vector(Vector& values)
+    {
+        Vector empty;
+        values.swap(empty);
+    }
+
+    void invalidate_scene_caches()
+    {
+        clear_training_set();
+        release_vector(neat_conns);
+        release_vector(neat_paths);
+        release_vector(sample_bias_flag);
+        release_vector(d_reference_img_buffer);
+        release_vector(tree_save.light_tree);
+        release_vector(tree_save.eye_tree);
+        release_vector(dropout_tracing_specular_tree);
+        release_vector(dropout_tracing_surface_tree);
+        release_vector(DOT_PG_data);
+        release_vector(DOT_statistics_data);
+        release_vector(DOT_statistics_record_buffer);
+        release_vector(DOT_pixelRecords);
+        release_vector(Gamma_vec);
+        release_vector(Gamma_vec_caustic);
+        release_vector(b_f_square);
+        release_vector(b_pdf0);
+        release_vector(b_pdf_peak);
+        release_vector(b_positions);
+        release_vector(b_close_set);
+        release_vector(b_label_E);
+        release_vector(b_label_eye);
+        release_vector(b_label_light);
+        release_vector(b_label_P);
+        release_vector(b_P2N_ind_d);
+        release_vector(b_P2N_ind);
+        release_vector(d_E);
+        release_vector(env_map_cmf);
+    }
+
     thrust::device_ptr<float> envMapCMFBuild(float* pmf, int size)
     {
         thrust::host_vector<float> p2(pmf, pmf + size);
-        static thrust::device_vector<float> ans = p2;
-
-
-        return ans.data();
+        env_map_cmf = p2;
+        return env_map_cmf.data();
     }
     void load_Q_file(thrust::device_ptr<float>& Q)
     { 

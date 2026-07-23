@@ -6,7 +6,12 @@
 #include"sceneLoader.h"
 #include"optixPathTracer.h"
 template<class T>
-BufferView<T> HostToDeviceBuffer(T* ptr, int count, int UniNum = 1)
+BufferView<T> HostToDeviceBuffer(
+    T* ptr,
+    int count,
+    int UniNum = 1,
+    sutil::Scene* owner = nullptr
+)
 {
     T* devPtr;
     CUDA_CHECK(cudaMalloc(
@@ -25,6 +30,8 @@ BufferView<T> HostToDeviceBuffer(T* ptr, int count, int UniNum = 1)
     ans.data = reinterpret_cast<CUdeviceptr>(devPtr);
     ans.byte_stride = sizeof(T);
     ans.elmt_byte_size = static_cast<uint16_t>(sizeof(T) / UniNum);
+    if (owner)
+        owner->trackBuffer(reinterpret_cast<CUdeviceptr>(devPtr));
     return ans;
 }
 void Geometry_shift(Scene& Src, sutil::Scene& Dst);

@@ -36,6 +36,7 @@
 #include <renderer/Camera.h>
 #include <renderer/Matrix.h>
 #include <renderer/Preprocessor.h>
+#include <renderer/Texture.h>
 
 #include <cuda_runtime.h>
 
@@ -43,6 +44,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <renderer/core/renderer_config.h>
@@ -94,6 +96,7 @@ public:
     void addMaterial( const MaterialData& mtl    )         { m_materials.push_back( mtl );      }
     void addLight   ( const Light& light    )              { m_lights.push_back( light );       }
     void addBuffer  ( const uint64_t buf_size, const void* data );
+    void trackBuffer( CUdeviceptr buffer ) { m_buffers.push_back( buffer ); }
     void addImage(
                 const int32_t width,
                 const int32_t height,
@@ -107,6 +110,7 @@ public:
                 cudaTextureFilterMode  filter_mode,
                 const int32_t          image_idx
                 );
+    void adoptTexture( const spcbpt::Texture& texture );
 
     CUdeviceptr                    getBuffer ( int32_t buffer_index  )const;
     cudaArray_t                    getImage  ( int32_t image_index   )const;
@@ -139,6 +143,8 @@ public:
     void setSpcbptPure( bool enabled ) { m_spcbpt_pure = enabled; }
     void setEnvFilePath(std::string envFileName) { m_env_file_name = envFileName; }
     std::string getEnvFilePath()const { return m_env_file_name; }
+    void setResourceRoot( std::string resourceRoot ) { m_resource_root = std::move( resourceRoot ); }
+    const std::string& getResourceRoot() const { return m_resource_root; }
     void addDirectionalLight(float3 dir, float3 intensity) { return dir_lights.push_back(std::make_pair(dir,intensity)); }
 
     std::vector<std::pair<float3, float3>> dir_lights;//directional light
@@ -155,6 +161,7 @@ private:
     std::vector<std::shared_ptr<MeshGroup> > m_meshes;
     std::vector<MaterialData>                m_materials;
     std::vector<CUdeviceptr>                 m_buffers;
+    std::vector<CUdeviceptr>                 m_gas_buffers;
     std::vector<cudaTextureObject_t>         m_samplers;
     std::vector<cudaArray_t>                 m_images;
     std::vector<Light>                       m_lights;
@@ -187,10 +194,10 @@ private:
     CUdeviceptr                          m_d_ias_output_buffer      = 0;
     bool                                 m_spcbpt_pure              = true;
     std::string                          m_env_file_name = {};
+    std::string                          m_resource_root = {};
 };
 
 
 void loadScene( const std::string& filename, Scene& scene );
 
 } // end namespace sutil
-
