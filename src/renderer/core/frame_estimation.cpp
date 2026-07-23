@@ -1,5 +1,5 @@
 #include"frame_estimation.h"
-#include<sutil/sutil.h>
+#include <renderer/ImageIO.h>
 #include<optix.h>
 namespace estimation
 { 
@@ -65,12 +65,12 @@ namespace estimation
                 uchar4 color = make_uchar4(unsigned(gamma_color.x * 255), unsigned(gamma_color.y * 255), unsigned(gamma_color.z * 255), 255); 
                 ref_img[i] = color;
             }
-            sutil::ImageBuffer outputbuffer;
-            outputbuffer.data = ref_img.data();
-            outputbuffer.width = ref_width;
-            outputbuffer.height = ref_height;
-            outputbuffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
-            sutil::saveImage("reference_load.png", outputbuffer, false);
+            spcbpt::saveRgba8Png(
+                "reference_load.png",
+                ref_img.data(),
+                static_cast<unsigned int>( ref_width ),
+                static_cast<unsigned int>( ref_height )
+            );
         }
         inFile.close();
         estimation_mode = true;

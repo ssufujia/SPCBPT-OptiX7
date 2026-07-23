@@ -1,6 +1,6 @@
 #include "scene_shift.h" 
 #include <spcbptConfig.h>
-#include<sutil/Exception.h>
+#include <renderer/Exception.h>
 #include<optix.h> 
 #include <stb/stb_image.h>
 #include<direct.h>
@@ -556,7 +556,7 @@ float* HDRLoader::raster()const
     return m_raster;
 }
 
-sutil::Texture HDRLoader::loadTexture(const float3& default_color, cudaTextureDesc* tex_desc)
+spcbpt::Texture HDRLoader::loadTexture(const float3& default_color, cudaTextureDesc* tex_desc)
 {
     std::vector<float> buffer;
     const unsigned int         nx = width();
@@ -627,6 +627,6 @@ sutil::Texture HDRLoader::loadTexture(const float3& default_color, cudaTextureDe
     cudaTextureObject_t cuda_tex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&cuda_tex, &res_desc, tex_desc, nullptr));
 
-    sutil::Texture hdr_texture = { cuda_array, cuda_tex };
+    spcbpt::Texture hdr_texture = { cuda_array, cuda_tex };
     return hdr_texture;
 }

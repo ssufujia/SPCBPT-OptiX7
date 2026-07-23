@@ -36,10 +36,10 @@
 #define SUTIL_OPTIX_MODULE_CREATE optixModuleCreate
 
 #include <renderer/core/whitted.h>
-#include <sutil/Exception.h>
+#include <renderer/Exception.h>
 #include <renderer/Matrix.h>
-#include <sutil/Quaternion.h>
-#include <sutil/Record.h>
+#include <renderer/Quaternion.h>
+#include <renderer/Record.h>
 #include <renderer/Scene.h>
 #include <spcbptConfig.h>
 

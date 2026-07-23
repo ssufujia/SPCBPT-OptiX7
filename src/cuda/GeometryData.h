@@ -29,7 +29,7 @@
 
 #include <cuda/BufferView.h>
 
-#include <sutil/vec_math.h>
+#include <renderer/vec_math.h>
 
 #ifndef __CUDACC_RTC__
 #include <cassert>

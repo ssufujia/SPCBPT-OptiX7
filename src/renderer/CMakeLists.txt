@@ -1,20 +1,22 @@
 add_library(spcbpt_renderer STATIC
+  Aabb.h
   Camera.cpp
   Camera.h
+  Exception.h
   ImageCodecs.cpp
+  ImageIO.cpp
+  ImageIO.h
   Matrix.h
   Preprocessor.h
+  Quaternion.h
+  Record.h
   Scene.cpp
   Scene.h
+  Texture.h
   vec_math.h
   "${CMAKE_CURRENT_SOURCE_DIR}/core/cuda_thrust/device_thrust.cu"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/cuda_thrust/device_thrust.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/renderer_config.h"
-)
-
-target_compile_definitions(spcbpt_renderer
-  PUBLIC SUTILAPI=
-  PRIVATE SUTIL_NO_OPENGL
 )
 
 target_include_directories(spcbpt_renderer

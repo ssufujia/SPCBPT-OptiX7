@@ -7,7 +7,6 @@ set(sutil_sources
   "${SPCBPT_SOURCE_DIR}/cuda/MaterialData.h"
   "${SPCBPT_SOURCE_DIR}/cuda/util.h"
   "${SPCBPT_SOURCE_DIR}/cuda/helpers.h"
-  Aabb.h
   CUDAOutputBuffer.h
   Exception.h
   GLDisplay.cpp
@@ -16,8 +15,6 @@ set(sutil_sources
   PPMLoader.cpp
   PPMLoader.h
   Preprocessor.h
-  Quaternion.h
-  Record.h
   sutilapi.h
   sutil.cpp
   sutil.h
@@ -38,6 +35,8 @@ target_compile_definitions(spcbpt_viewer PUBLIC
 
 target_include_directories(spcbpt_viewer
   PUBLIC
+    "${SPCBPT_SOURCE_DIR}/viewer"
+  PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 

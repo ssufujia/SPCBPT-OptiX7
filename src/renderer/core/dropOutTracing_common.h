@@ -5,7 +5,6 @@
 #include <cuda/random.h>
 #include"decisionTree/classTree_common.h"
 #include"DOT_PG_trainingParams.h"
-//#include"sutil/vec_math.h"
 //using namespace optix;
 namespace dropOut_tracing
 {

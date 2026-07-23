@@ -1,7 +1,8 @@
 #ifndef SCENE_SHIFT_H
 #define SCENE_SHIFT_H
 #include <renderer/Scene.h>
-#include<sutil/Exception.h>
+#include <renderer/Exception.h>
+#include <renderer/Texture.h>
 #include"sceneLoader.h"
 #include"optixPathTracer.h"
 template<class T>
@@ -42,7 +43,7 @@ public:
     unsigned int   height()const;
     float* raster()const;
 
-    sutil::Texture loadTexture(const float3& default_color, cudaTextureDesc* tex_desc);
+    spcbpt::Texture loadTexture(const float3& default_color, cudaTextureDesc* tex_desc);
 private:
     unsigned int   m_nx;
     unsigned int   m_ny;

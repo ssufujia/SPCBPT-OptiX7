@@ -4,7 +4,7 @@
 #define LIGHT_PARAMETER_H
 
 #include"rt_function.h"
-#include <sutil/vec_math.h> 
+#include <renderer/vec_math.h>
 enum LightType
 {
 	SPHERE, QUAD, DIRECTION,ENV, LightTypeNum

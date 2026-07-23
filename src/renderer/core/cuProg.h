@@ -30,7 +30,7 @@
 #ifndef CUPROG_H
 #define CUPROG_H
 
-#include <sutil/vec_math.h>
+#include <renderer/vec_math.h>
 #include <cmath>
 
 #include "whitted.h"

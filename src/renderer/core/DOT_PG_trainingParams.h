@@ -3,7 +3,7 @@
 #include <optix.h>
 #include <cstring>
 #include <cuda/random.h>
-#include <sutil/vec_math.h>
+#include <renderer/vec_math.h>
 #include <stdio.h>
 #include <vector>
 #include <random>

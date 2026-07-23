@@ -29,7 +29,7 @@
 #pragma once
 
 #include <vector_types.h>
-#include <sutil/vec_math.h>
+#include <renderer/vec_math.h>
 
 
 __forceinline__ __device__ float3 toSRGB( const float3& c )

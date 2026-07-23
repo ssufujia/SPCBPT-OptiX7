@@ -31,7 +31,7 @@
 #include <cuda/LocalShading.h>
 #include <cuda/helpers.h>
 #include <cuda/random.h>
-#include <sutil/vec_math.h>
+#include <renderer/vec_math.h>
 #include "BDPTVertex.h"
 #include "cuProg.h"
 #include "pathControl.h"

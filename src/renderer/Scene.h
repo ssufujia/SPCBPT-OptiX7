@@ -32,11 +32,10 @@
 #include <cuda/GeometryData.h>
 #include <cuda/Light.h>
 #include <cuda/MaterialData.h>
-#include <sutil/Aabb.h>
+#include <renderer/Aabb.h>
 #include <renderer/Camera.h>
 #include <renderer/Matrix.h>
-#include <sutil/Preprocessor.h>
-#include <sutil/sutilapi.h>
+#include <renderer/Preprocessor.h>
 
 #include <cuda_runtime.h>
 
@@ -59,8 +58,8 @@ namespace sutil
 class Scene
 {
 public:
-    SUTILAPI Scene();
-    SUTILAPI ~Scene();
+    Scene();
+    ~Scene();
 
     struct Instance
     {
@@ -89,57 +88,57 @@ public:
     };
 
 
-    SUTILAPI void addCamera  ( const Camera& camera            )    { m_cameras.push_back( camera );     }
-    SUTILAPI void addInstance( std::shared_ptr<Instance> instance ) { m_instances.push_back( instance ); }
-    SUTILAPI void addMesh    ( std::shared_ptr<MeshGroup> mesh )    { m_meshes.push_back( mesh );        }
-    SUTILAPI void addMaterial( const MaterialData& mtl    )         { m_materials.push_back( mtl );      }
-    SUTILAPI void addLight   ( const Light& light    )              { m_lights.push_back( light );       }
-    SUTILAPI void addBuffer  ( const uint64_t buf_size, const void* data );
-    SUTILAPI void addImage(
+    void addCamera  ( const Camera& camera            )    { m_cameras.push_back( camera );     }
+    void addInstance( std::shared_ptr<Instance> instance ) { m_instances.push_back( instance ); }
+    void addMesh    ( std::shared_ptr<MeshGroup> mesh )    { m_meshes.push_back( mesh );        }
+    void addMaterial( const MaterialData& mtl    )         { m_materials.push_back( mtl );      }
+    void addLight   ( const Light& light    )              { m_lights.push_back( light );       }
+    void addBuffer  ( const uint64_t buf_size, const void* data );
+    void addImage(
                 const int32_t width,
                 const int32_t height,
                 const int32_t bits_per_component,
                 const int32_t num_components,
                 const void*   data
                 );
-    SUTILAPI void addSampler(
+    void addSampler(
                 cudaTextureAddressMode address_s,
                 cudaTextureAddressMode address_t,
                 cudaTextureFilterMode  filter_mode,
                 const int32_t          image_idx
                 );
 
-    SUTILAPI CUdeviceptr                    getBuffer ( int32_t buffer_index  )const;
-    SUTILAPI cudaArray_t                    getImage  ( int32_t image_index   )const;
-    SUTILAPI cudaTextureObject_t            getSampler( int32_t sampler_index )const;
+    CUdeviceptr                    getBuffer ( int32_t buffer_index  )const;
+    cudaArray_t                    getImage  ( int32_t image_index   )const;
+    cudaTextureObject_t            getSampler( int32_t sampler_index )const;
 
     void createPTXModule(std::string fileName);
 
-    SUTILAPI void                           finalize();
-    SUTILAPI void                           cleanup();
+    void                           finalize();
+    void                           cleanup();
 
-    SUTILAPI Camera                                         camera()const;
-    SUTILAPI OptixPipeline                                  pipeline()const           { return m_pipeline;   } 
-    SUTILAPI const OptixShaderBindingTable*                 sbt()const                { return &m_sbt;       }
-    SUTILAPI OptixTraversableHandle                         traversableHandle() const { return m_ias_handle; }
-    SUTILAPI sutil::Aabb                                    aabb() const              { return m_scene_aabb; }
-    SUTILAPI OptixDeviceContext                             context() const           { return m_context;    }
-    SUTILAPI const std::vector<MaterialData>&               materials() const         { return m_materials;  }
-    SUTILAPI const std::vector<std::shared_ptr<MeshGroup>>& meshes() const            { return m_meshes;     }
-    SUTILAPI const std::vector<std::shared_ptr<Instance>>&  instances() const         { return m_instances;  }
+    Camera                                         camera()const;
+    OptixPipeline                                  pipeline()const           { return m_pipeline;   } 
+    const OptixShaderBindingTable*                 sbt()const                { return &m_sbt;       }
+    OptixTraversableHandle                         traversableHandle() const { return m_ias_handle; }
+    sutil::Aabb                                    aabb() const              { return m_scene_aabb; }
+    OptixDeviceContext                             context() const           { return m_context;    }
+    const std::vector<MaterialData>&               materials() const         { return m_materials;  }
+    const std::vector<std::shared_ptr<MeshGroup>>& meshes() const            { return m_meshes;     }
+    const std::vector<std::shared_ptr<Instance>>&  instances() const         { return m_instances;  }
 
-    SUTILAPI void                                           removeCurrent()           { m_meshes.clear(); m_instances.clear(); }
-    SUTILAPI size_t                                         ImagesSize() const        { return m_images.size(); }
-    SUTILAPI cudaTextureObject_t                            SamplerCurrent() const    { return m_samplers.back(); }
-    SUTILAPI size_t                                         MaterialsSize() const     { return m_materials.size(); }
+    void                                           removeCurrent()           { m_meshes.clear(); m_instances.clear(); }
+    size_t                                         ImagesSize() const        { return m_images.size(); }
+    cudaTextureObject_t                            SamplerCurrent() const    { return m_samplers.back(); }
+    size_t                                         MaterialsSize() const     { return m_materials.size(); }
 
-    SUTILAPI void createContext();
-    SUTILAPI void buildMeshAccels();
-    SUTILAPI void buildInstanceAccel( int rayTypeCount = RayType::RAY_TYPE_COUNT );
-    SUTILAPI void switchRaygen(std::string raygenName);
-    SUTILAPI void setEnvFilePath(std::string envFileName) { m_env_file_name = envFileName; }
-    SUTILAPI std::string getEnvFilePath()const { return m_env_file_name; }
-    SUTILAPI void addDirectionalLight(float3 dir, float3 intensity) { return dir_lights.push_back(std::make_pair(dir,intensity)); }
+    void createContext();
+    void buildMeshAccels();
+    void buildInstanceAccel( int rayTypeCount = RayType::RAY_TYPE_COUNT );
+    void switchRaygen(std::string raygenName);
+    void setEnvFilePath(std::string envFileName) { m_env_file_name = envFileName; }
+    std::string getEnvFilePath()const { return m_env_file_name; }
+    void addDirectionalLight(float3 dir, float3 intensity) { return dir_lights.push_back(std::make_pair(dir,intensity)); }
 
     std::vector<std::pair<float3, float3>> dir_lights;//directional light
 private:
@@ -189,7 +188,7 @@ private:
 };
 
 
-SUTILAPI void loadScene( const std::string& filename, Scene& scene );
+void loadScene( const std::string& filename, Scene& scene );
 
 } // end namespace sutil
 

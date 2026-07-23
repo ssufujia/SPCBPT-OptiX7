@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include <sutil/vec_math.h>
+#include <renderer/vec_math.h>
 
 struct BasicLight
 {

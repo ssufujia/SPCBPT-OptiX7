@@ -3,11 +3,6 @@ add_executable(spcbpt_smoke
 )
 add_dependencies(spcbpt_smoke spcbpt_optix_ir_deploy)
 
-target_compile_definitions(spcbpt_smoke
-  PRIVATE
-    SUTIL_NO_OPENGL
-)
-
 target_include_directories(spcbpt_smoke
   PRIVATE
     "${PROJECT_SOURCE_DIR}/third_party"
@@ -32,4 +27,31 @@ add_test(
 set_tests_properties(spcbpt.headless_smoke PROPERTIES
   LABELS "gpu;optix;smoke"
   TIMEOUT 120
+)
+
+add_executable(spcbpt_renderer_linkcheck
+  renderer_linkcheck.cpp
+)
+target_link_libraries(spcbpt_renderer_linkcheck
+  PRIVATE
+    spcbpt_renderer
+)
+if(MSVC)
+  target_link_options(spcbpt_renderer_linkcheck
+    PRIVATE
+      "$<HOST_LINK:/WHOLEARCHIVE:$<TARGET_FILE:spcbpt_renderer>>"
+  )
+endif()
+set_target_properties(spcbpt_renderer_linkcheck PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+  FOLDER "${OPTIX_IDE_FOLDER}"
+)
+
+add_test(
+  NAME spcbpt.renderer_linkcheck
+  COMMAND spcbpt_renderer_linkcheck
+)
+set_tests_properties(spcbpt.renderer_linkcheck PROPERTIES
+  LABELS "architecture;renderer"
+  TIMEOUT 30
 )

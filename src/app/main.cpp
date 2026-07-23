@@ -56,7 +56,7 @@
 #include <sutil/Scene.h> 
 #include "sceneLoader.h"
 #include "scene_shift.h"
-#include <sutil/Record.h>
+#include <renderer/Record.h>
 #include <io.h>
 
 #include <thrust/device_vector.h>

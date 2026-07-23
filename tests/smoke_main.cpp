@@ -1,6 +1,6 @@
 #include <optix_stubs.h>
 #include <spcbptConfig.h>
-#include <sutil/Exception.h>
+#include <renderer/Exception.h>
 
 #include <renderer/core/launch_params.h>
 #include <renderer/Scene.h>

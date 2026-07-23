@@ -30,8 +30,8 @@
 #include <optix.h>
 
 #include <renderer/Matrix.h>
-#include <sutil/Preprocessor.h>
-#include <sutil/vec_math.h>
+#include <renderer/Preprocessor.h>
+#include <renderer/vec_math.h>
 #include <cuda/BufferView.h>
 #include <cuda/GeometryData.h>
 #include <cuda/util.h>
