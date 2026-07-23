@@ -56,7 +56,7 @@ struct MaterialData
         pbr.clearcoat = 0.0f;
         pbr.clearcoatGloss = 1.0f;
         pbr.trans = 0;
-        pbr.eta = 1.5;
+        pbr.eta = 1.5f;
     }
 
     enum AlphaMode

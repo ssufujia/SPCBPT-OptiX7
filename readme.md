@@ -1,24 +1,43 @@
-An OptiX 7 implementation of [SPCBPT: Subspace-based Probabilistic Connections for Bidirectional Path Tracing]([SPCBPT (ssufujia.github.io)](https://ssufujia.github.io/SPCBPT/)). 
+An OptiX implementation of [SPCBPT: Subspace-based Probabilistic Connections for Bidirectional Path Tracing](https://ssufujia.github.io/SPCBPT/).
 
-### requirement (Environment on my computer)：
+### Requirements
 
-* OptiX 7.5.0
-* Cuda 11.7
-* Visual Studio 2019  
-* Cmake 3.24.2
+Verified baseline: OptiX 9.1, CUDA 12.2, MSVC x64, Ninja, and CMake 3.27+
+(clean-build verified with CMake 4.4.0). Vendored versions are listed in
+[`third_party/README.md`](third_party/README.md).
 
-### How to Build:  
+### Build
 
-* Start up cmake-gui from the Start Menu.
-* Select the "src" directory and the source code
-* Create a build directory that isn't the same as the source directory. 
-* Press "Configure" button and select the version of Visual Studio 2019.
-* Select "x64" as the platform
-* Press "OK".
-* Set OptiX_INSTALL_DIR to wherever you installed OptiX, e.g., C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.5.0 
-* Press "Configure" button again.
-* Press "generate" and then "open Project"
-* Right click the optixPathTracer project and set it as Startup project and run the renderer program (in Release).
+The repository root is the only supported CMake source directory. In-source
+builds are rejected.
+
+1. Copy `CMakeUserPresets.json.example` to `CMakeUserPresets.json`.
+2. Set local `OptiX_ROOT` and Ninja paths.
+3. Open an x64 Visual Studio Developer shell.
+4. Run:
+
+```powershell
+cmake --fresh --preset release-optix9-local
+cmake --build --preset release-optix9-local
+```
+
+The executable is `build/release-optix9/bin/optixPathTracer.exe`; native
+OptiX-IR files are deployed beside it under `bin/optix-ir/`.
+
+The renderer can start from any working directory. Use `--scene=<path>` to
+override the default bedroom scene and `--dim=<width>x<height>` to override the
+image dimensions.
+
+### Build architecture
+
+* `spcbpt_renderer`: OptiX scene/pipeline, algorithms and native CUDA;
+  no GLFW, glad, ImGui or OpenGL dependency.
+* `spcbpt_viewer`: window, input, display and UI.
+* `optixPathTracer`: application and CLI composition.
+* `spcbpt_optix_ir`: CMake-native compilation of the two OptiX shaders.
+
+Scenes live in `assets/`, dependencies in `third_party/`, and controls in
+[`docs/operation.md`](docs/operation.md).
 
 ### Difference from the paper-version code:
 

@@ -29,7 +29,7 @@
 
 #include <optix.h>
 
-#include <sutil/Matrix.h>
+#include <renderer/Matrix.h>
 #include <sutil/Preprocessor.h>
 #include <sutil/vec_math.h>
 #include <cuda/BufferView.h>

@@ -5,7 +5,11 @@
 /build-*/
 /src/build/
 
-# In-source CMake pollution
+# In-source CMake pollution (rejected by the root CMakeLists; ignored as a safety net)
+/CMakeCache.txt
+/CMakeFiles/
+/cmake_install.cmake
+/compile_commands.json
 /src/CMakeCache.txt
 /src/CMakeFiles/
 /src/CMakeScripts/
@@ -30,6 +34,10 @@
 /src/RelWithDebInfo/
 /src/MinSizeRel/
 
+# CMake user overrides (machine-local OptiX/Ninja paths, etc.)
+/CMakeUserPresets.json
+/src/CMakeUserPresets.json
+
 # IDE / editor
 .vs/
 .vscode/
@@ -42,8 +50,13 @@
 
 # Local planning / agent working notes (do not upload)
 .planning/
+.tmpDir/
 
 # OS junk
 Thumbs.db
 Desktop.ini
+
+# Runtime-generated local state and diagnostics
+/imgui.ini
+/*_lvcbpt+lighttrace.txt
 .DS_Store

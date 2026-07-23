@@ -1,0 +1,3 @@
+# False positives in vendored Dear ImGui key-enum identifiers.
+third_party/imgui/docs/CHANGELOG.txt:generic-api-key:3224
+third_party/imgui/imgui.cpp:generic-api-key:4439

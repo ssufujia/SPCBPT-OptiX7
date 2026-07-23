@@ -1,22 +1,31 @@
-[SPCBPT: Subspace-based Probabilistic Connections for Bidirectional Path Tracing]([SPCBPT (ssufujia.github.io)](https://ssufujia.github.io/SPCBPT/)) 的一个OptiX 7实现。
+[SPCBPT: Subspace-based Probabilistic Connections for Bidirectional Path Tracing](https://ssufujia.github.io/SPCBPT/) 的 OptiX 实现。
 
 ### 环境
 
-* OptiX 7.5.0
-* Cuda 11.7
-* Visual Studio 2019  
-* Cmake 3.24.2
+当前验证基线为 OptiX 9.1、CUDA 12.2、MSVC x64、Ninja 和 CMake
+3.27+；已用 CMake 4.4.0 完成 clean build。vendored 依赖版本见
+[`third_party/README.md`](third_party/README.md)。
 
 ### 构建方法
 
-* 打开cmake gui
-* 指定src文件夹为源代码路径
-* 创建build目录
-* 点击"Configure"并选择VS2019 x64平台
-* 点击“Finish”以确认配置
-* 之后可能会因为找不到OPTIX的安装路径而报错，此时将OptiX_INSTALL_DIR设为安装OPTIX7的路径，比如C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.5.0，并再次Configure
-* 点击“generate”生成项目并点击"open Project"打开项目
-* 右键点击optixPathTracer并将其设为启动项，以Release形式编译运行
+仓库根目录是唯一受支持的 CMake source root；禁止 in-source build。
+
+1. 把 `CMakeUserPresets.json.example` 复制为 `CMakeUserPresets.json`。
+2. 填写本机 `OptiX_ROOT` 和 Ninja 路径。
+3. 打开 x64 Visual Studio Developer Shell。
+4. 执行：
+
+```powershell
+cmake --fresh --preset release-optix9-local
+cmake --build --preset release-optix9-local
+```
+
+程序位于 `build/release-optix9/bin/optixPathTracer.exe`，原生 OptiX-IR
+位于同目录下的 `optix-ir/`。程序支持从任意工作目录启动；
+`--scene=<path>` 可覆盖默认 bedroom 场景。
+
+源码按 `app → viewer + renderer` 分层；场景资源位于 `assets/`，第三方源码
+位于 `third_party/`，交互说明见 [`docs/operation.md`](docs/operation.md)。
 
 ### 与论文版本的代码的差异
 

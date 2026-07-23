@@ -1,0 +1,42 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 27,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "release-optix9",
+      "displayName": "Release OptiX 9 (Ninja)",
+      "description": "Shared Release configuration. Machine paths belong in CMakeUserPresets.json.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-release-optix9",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "toolset": {
+        "value": "host=x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "SPCBPT_CUDA_ARCHITECTURES": "89",
+        "SPCBPT_OPTIX_INPUT_ARCH": "sm_89",
+        "SPCBPT_BUILD_DEMAND_LOADING": "OFF",
+        "BUILD_SHARED_LIBS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release-optix9",
+      "configurePreset": "release-optix9",
+      "targets": [
+        "optixPathTracer"
+      ]
+    }
+  ]
+}

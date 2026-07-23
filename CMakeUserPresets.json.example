@@ -1,0 +1,23 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "release-optix9-local",
+      "inherits": "release-optix9",
+      "displayName": "Release OptiX 9 (local machine)",
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "C:/path/to/ninja.exe",
+        "OptiX_ROOT": "C:/ProgramData/NVIDIA Corporation/OptiX SDK 9.1.0"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release-optix9-local",
+      "configurePreset": "release-optix9-local",
+      "targets": [
+        "optixPathTracer"
+      ]
+    }
+  ]
+}
