@@ -1,3 +1,21 @@
+add_library(spcbpt_optimal_e_optimizer STATIC
+  core/cuda_thrust/optimal_e_optimizer.cu
+  core/cuda_thrust/optimal_e_optimizer.h
+)
+target_include_directories(spcbpt_optimal_e_optimizer
+  PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/core/cuda_thrust"
+)
+target_link_libraries(spcbpt_optimal_e_optimizer
+  PUBLIC
+    CUDA::cudart_static
+)
+spcbpt_configure_cuda_target(spcbpt_optimal_e_optimizer)
+set_target_properties(spcbpt_optimal_e_optimizer PROPERTIES
+  CUDA_SEPARABLE_COMPILATION ON
+  FOLDER "${OPTIX_IDE_FOLDER}"
+)
+
 add_library(spcbpt_renderer STATIC
   Aabb.h
   Camera.cpp
@@ -10,8 +28,11 @@ add_library(spcbpt_renderer STATIC
   Preprocessor.h
   Quaternion.h
   Record.h
+  RendererConfig.cpp
+  RendererConfig.h
   RendererRuntime.cpp
   RendererRuntime.h
+  SamplingProgress.h
   RendererWorkflow.cpp
   RendererWorkflow.h
   Scene.cpp
@@ -37,7 +58,7 @@ target_link_libraries(spcbpt_renderer
   PRIVATE
     CUDA::cuda_driver
     CUDA::cudart_static
-    CUDA::cublas
+    spcbpt_optimal_e_optimizer
 )
 
 spcbpt_configure_cuda_target(spcbpt_renderer)

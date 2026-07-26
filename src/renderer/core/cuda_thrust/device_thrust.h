@@ -1,7 +1,8 @@
 #ifndef DEVICE_THRUST
 #define DEVICE_THRUST
 
-#include<vector>
+#include <string>
+#include <vector>
 
 
 #include"../BDPTVertex.h"
@@ -15,7 +16,6 @@
 #include"../PG_common.h"
 #include"../dropOutTracing_common.h"
 #include"../DOT_PG_trainingParams.h"
-void useCUDA();
 
 
 
@@ -127,8 +127,13 @@ namespace MyThrustOp
 
     void preprocess_getGamma(thrust::device_ptr<float>& Gamma, bool caustic_case = false);
     void node_label(classTree::tree_node* eye_tree, classTree::tree_node* light_tree);
-    void sample_reweight();
+    void sample_reweight(int width, int height);
     void build_optimal_E_train_data(int N_samples);
+    void save_optimal_E_snapshot(
+        const std::string& path,
+        thrust::device_ptr<float> base_distribution,
+        unsigned int experiment_seed
+    );
     void Q_zero_handle(thrust::device_ptr<float>& Q);
     void train_optimal_E(thrust::device_ptr<float>& E_ptr);
     thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma, Subspace* subspace);

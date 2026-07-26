@@ -32,6 +32,7 @@
 #include <spcbptConfig.h>
 
 #include <GLFW/glfw3.h>
+#include <imgui/backends/imgui_impl_glfw.h>
 #include <renderer/RendererRuntime.h>
 #include <renderer/RendererWorkflow.h>
 #include <sutil/CUDAOutputBuffer.h>
@@ -49,13 +50,14 @@
 #include <chrono>
 #include <cstdlib>
 #include <direct.h>
+#include <exception>
 #include <fstream>
 #include <iomanip>
 #include <io.h>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
-#include <vector>
 
 using namespace std;
 
@@ -77,12 +79,8 @@ int32_t width = 1920;
 int32_t height = 1000;
 int32_t mouse_button = -1;
 
-std::vector<std::string> render_alg = {
-    std::string( "pt" ),
-    std::string( "SPCBPT_eye" ),
-    std::string( "SPCBPT_eye_ForcePure" )
-};
-int render_alg_id = 1;
+spcbpt::RendererConfig draft_renderer_config;
+bool renderer_config_apply_requested = false;
 bool one_frame_render_only = false;
 float render_fps = 60.0f;
 
@@ -133,19 +131,20 @@ static void cursorPosCallback( GLFWwindow* window, double xpos, double ypos )
     }
 }
 
-static void windowSizeCallback( GLFWwindow* window, int32_t res_x, int32_t res_y )
+static void windowSizeCallback(
+    GLFWwindow* /*window*/,
+    int32_t res_x,
+    int32_t res_y
+)
 {
     if( minimized )
         return;
 
     sutil::ensureMinimumSize( res_x, res_y );
-    MyParams* window_params =
-        static_cast<MyParams*>( glfwGetWindowUserPointer( window ) );
-    window_params->width  = res_x;
-    window_params->height = res_y;
+    width = res_x;
+    height = res_y;
     camera_changed = true;
     resize_dirty = true;
-    renderer.markImageDirty();
 }
 
 static void windowIconifyCallback( GLFWwindow* window, int32_t iconified )
@@ -221,14 +220,19 @@ static void keyCallback(
         }
         else if( key == GLFW_KEY_SPACE )
         {
-            render_alg_id = ( render_alg_id + 1 ) % render_alg.size();
-            params.spcbpt_pure =
-                render_alg[render_alg_id] == "SPCBPT_eye_ForcePure"
-                    ? true
-                    : renderer.config().spcbpt_pure;
-            std::printf( "raygen switching to %s\n", render_alg[render_alg_id].c_str() );
-            camera_changed = true;
-            resize_dirty = true;
+            draft_renderer_config = renderer.config();
+            const int next_algorithm =
+                ( static_cast<int>( renderer.config().algorithm ) + 1 )
+                % spcbpt::RENDERER_ALGORITHM_COUNT;
+            draft_renderer_config.algorithm =
+                static_cast<spcbpt::RendererAlgorithm>( next_algorithm );
+            renderer_config_apply_requested = true;
+            std::printf(
+                "renderer switching to %s\n",
+                spcbpt::rendererAlgorithmDisplayName(
+                    draft_renderer_config.algorithm
+                )
+            );
         }
         else if( key == GLFW_KEY_P )
         {
@@ -247,7 +251,6 @@ static void keyCallback(
         camera.setEye( eye );
         camera.setLookat( lookat );
         camera_changed = true;
-        resize_dirty = true;
         renderer.markImageDirty();
     }
 }
@@ -266,21 +269,44 @@ void printUsageAndExit( const char* argv0 )
     std::cerr << "Usage  : " << argv0 << " [options]\n";
     std::cerr << "         --no-gl-interop             Disable GL interop for display\n";
     std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 1920x1000\n";
+    std::cerr << "         --config=<path>             Load renderer configuration JSON\n";
     std::cerr << "         --scene=<path>              Override the default scene file\n";
     std::cerr << "         --help | -h                 Print this usage message\n";
     std::exit( 0 );
 }
 
 void handleResize(
-    sutil::CUDAOutputBuffer<uchar4>& output_buffer,
-    MyParams& render_params
+    sutil::CUDAOutputBuffer<uchar4>& output_buffer
 )
 {
     if( !resize_dirty )
         return;
     resize_dirty = false;
-    output_buffer.resize( render_params.width, render_params.height );
-    renderer.resize( render_params.width, render_params.height );
+    spcbpt::RendererConfig pending_config = draft_renderer_config;
+    spcbpt::RendererConfig resize_config = renderer.config();
+    resize_config.width = static_cast<unsigned int>( width );
+    resize_config.height = static_cast<unsigned int>( height );
+    const spcbpt::RendererConfigChange change =
+        spcbpt::classifyRendererConfigChange(
+            renderer.config(),
+            resize_config
+        );
+    if( change == spcbpt::RendererConfigChange::Rebuild )
+    {
+        // Keep rendering the previous buffer while native dragging changes
+        // aspect ratio. The UI exposes the new size as pending; Apply performs
+        // the required synchronous preprocessing once.
+        pending_config.width = resize_config.width;
+        pending_config.height = resize_config.height;
+        draft_renderer_config = pending_config;
+        return;
+    }
+    renderer.resize( resize_config.width, resize_config.height );
+    pending_config.width = renderer.config().width;
+    pending_config.height = renderer.config().height;
+    draft_renderer_config = pending_config;
+    output_buffer.resize( renderer.config().width, renderer.config().height );
+    camera_changed = true;
 }
 
 void handleCameraUpdate( MyParams& render_params )
@@ -303,28 +329,14 @@ void updateState(
 {
     if( camera_changed || resize_dirty || one_frame_render_only )
         render_params.subframe_index = 0;
+    handleResize( output_buffer );
     handleCameraUpdate( render_params );
-    handleResize( output_buffer, render_params );
 }
 
 void estimation_setup( const string& path )
 {
-    string algorithm;
-    switch( render_alg_id )
-    {
-        case 0:
-            algorithm = "pt";
-            break;
-        case 1:
-            algorithm = "lvcbpt+lighttrace";
-            break;
-        case 2:
-            algorithm = "spcbpt";
-            break;
-        default:
-            algorithm = "error";
-            break;
-    }
+    const string algorithm =
+        spcbpt::rendererAlgorithmName( renderer.config().algorithm );
 
     string name = path.substr( path.rfind( '/' ) + 1 );
     name = name.substr( 0, name.rfind( '.' ) );
@@ -344,7 +356,7 @@ void estimation_setup( const string& path )
 void launchSubframe( sutil::CUDAOutputBuffer<uchar4>& output_buffer )
 {
     uchar4* result_buffer = output_buffer.map();
-    workflow.renderFrame( result_buffer, render_alg[render_alg_id] );
+    workflow.renderFrame( result_buffer );
     output_buffer.unmap();
 }
 
@@ -381,14 +393,70 @@ void initCameraState( const sutil::Scene& scene )
     trackball.setGimbalLock( true );
 }
 
+spcbpt::RendererConfigChange applyRendererConfig(
+    sutil::CUDAOutputBuffer<uchar4>& output_buffer
+)
+{
+    spcbpt::validateRendererConfig( draft_renderer_config );
+    const spcbpt::RendererConfig previous_config = renderer.config();
+    const spcbpt::RendererConfigChange change =
+        workflow.applyConfig( draft_renderer_config );
+
+    if( renderer.config().width != previous_config.width
+        || renderer.config().height != previous_config.height )
+    {
+        try
+        {
+            output_buffer.resize(
+                renderer.config().width,
+                renderer.config().height
+            );
+        }
+        catch( ... )
+        {
+            const std::exception_ptr resize_error = std::current_exception();
+            try
+            {
+                workflow.applyConfig( previous_config );
+                output_buffer.resize(
+                    previous_config.width,
+                    previous_config.height
+                );
+            }
+            catch( ... )
+            {
+                renderer.reset();
+                throw std::runtime_error(
+                    "Output resize failed and the previous renderer state "
+                    "could not be restored"
+                );
+            }
+            draft_renderer_config = renderer.config();
+            width = static_cast<int32_t>( previous_config.width );
+            height = static_cast<int32_t>( previous_config.height );
+            camera_changed = true;
+            handleCameraUpdate( params );
+            std::rethrow_exception( resize_error );
+        }
+        width = static_cast<int32_t>( renderer.config().width );
+        height = static_cast<int32_t>( renderer.config().height );
+    }
+
+    draft_renderer_config = renderer.config();
+    camera_changed = true;
+    handleCameraUpdate( params );
+    return change;
+}
+
 int main( int argc, char* argv[] )
 {
-    params.caustic_path_only = 1;
-    params.width = 1920;
-    params.height = 1000;
     sutil::CUDAOutputBufferType output_buffer_type =
         sutil::CUDAOutputBufferType::GL_INTEROP;
     std::string scene_override;
+    std::string renderer_config_path;
+    int parsed_width = 1920;
+    int parsed_height = 1000;
+    bool has_dimension_override = false;
 
     for( int i = 1; i < argc; ++i )
     {
@@ -401,18 +469,34 @@ int main( int argc, char* argv[] )
         {
             output_buffer_type = sutil::CUDAOutputBufferType::CUDA_DEVICE;
         }
-        else if( arg.substr( 0, 6 ) == "--dim=" )
+        else if( arg.rfind( "--dim=", 0 ) == 0 )
         {
             const std::string dimensions = arg.substr( 6 );
-            int parsed_width = 0;
-            int parsed_height = 0;
+            if( dimensions.find( 'x' ) == std::string::npos )
+            {
+                std::cerr << "--dim requires <width>x<height>\n";
+                return EXIT_FAILURE;
+            }
             sutil::parseDimensions(
                 dimensions.c_str(),
                 parsed_width,
                 parsed_height
             );
-            params.width = parsed_width;
-            params.height = parsed_height;
+            if( parsed_width <= 0 || parsed_height <= 0 )
+            {
+                std::cerr << "--dim requires positive dimensions\n";
+                return EXIT_FAILURE;
+            }
+            has_dimension_override = true;
+        }
+        else if( arg.rfind( "--config=", 0 ) == 0 )
+        {
+            renderer_config_path = arg.substr( 9 );
+            if( renderer_config_path.empty() )
+            {
+                std::cerr << "--config requires a non-empty path\n";
+                return EXIT_FAILURE;
+            }
         }
         else if( arg.rfind( "--scene=", 0 ) == 0 )
         {
@@ -437,16 +521,31 @@ int main( int argc, char* argv[] )
             scene_config.path = scene_override;
         const string& scene_path = scene_config.path;
 
-        const unsigned int render_width = params.width;
-        const unsigned int render_height = params.height;
-        width = static_cast<int32_t>( render_width );
-        height = static_cast<int32_t>( render_height );
+        spcbpt::RendererConfig renderer_config;
+        renderer_config.width = 1920;
+        renderer_config.height = 1000;
+        if( !renderer_config_path.empty() )
+            renderer_config =
+                spcbpt::loadRendererConfig( renderer_config_path );
+        if( has_dimension_override )
+        {
+            renderer_config.width =
+                static_cast<unsigned int>( parsed_width );
+            renderer_config.height =
+                static_cast<unsigned int>( parsed_height );
+        }
+        spcbpt::validateRendererConfig( renderer_config );
+        draft_renderer_config = renderer_config;
+        const std::string renderer_config_save_path =
+            renderer_config_path.empty()
+                ? "renderer_config.json"
+                : renderer_config_path;
+        width = static_cast<int32_t>( renderer_config.width );
+        height = static_cast<int32_t>( renderer_config.height );
 
         renderer.loadScene( scene_config );
-        spcbpt::RendererConfig renderer_config;
-        renderer_config.width  = render_width;
-        renderer_config.height = render_height;
         renderer.initialize( renderer_config );
+        params.caustic_path_only = 1;
         sutil::Scene& scene = renderer.scene();
 
         initCameraState( scene );
@@ -459,13 +558,16 @@ int main( int argc, char* argv[] )
             params.estimate_pr.ready = true;
         }
 
-        workflow.initializeAlgorithmState();
         handleCameraUpdate( params );
-        std::printf(
-            "Preprocessing (training) — window opens after this finishes...\n"
-        );
-        std::fflush( stdout );
-        workflow.runPreprocessing();
+        if( spcbpt::requiresRendererPreprocessing( renderer_config ) )
+        {
+            workflow.initializeAlgorithmState();
+            std::printf(
+                "Preprocessing (training) — window opens after this finishes...\n"
+            );
+            std::fflush( stdout );
+            workflow.runPreprocessing();
+        }
 
         std::printf( "Creating GL window %dx%d\n", width, height );
         std::fflush( stdout );
@@ -476,6 +578,7 @@ int main( int argc, char* argv[] )
         glfwSetWindowIconifyCallback( window, windowIconifyCallback );
         glfwSetKeyCallback( window, keyCallback );
         glfwSetScrollCallback( window, scrollCallback );
+        ImGui_ImplGlfw_InstallCallbacks( window );
         glfwSetWindowUserPointer( window, &params );
         glfwShowWindow( window );
         glfwFocusWindow( window );
@@ -491,15 +594,13 @@ int main( int argc, char* argv[] )
             std::chrono::duration<double> render_time( 0.0 );
             std::chrono::duration<double> display_time( 0.0 );
             std::chrono::duration<double> sum_render_time( 0.0 );
-            bool setting_changed = false;
+            std::string config_status;
 
             do
             {
                 auto start = std::chrono::steady_clock::now();
                 glfwPollEvents();
                 updateState( output_buffer, params );
-                if( setting_changed )
-                    params.subframe_index = 0;
                 if( params.subframe_index == 0 )
                     sum_render_time = std::chrono::duration<double>();
 
@@ -518,19 +619,88 @@ int main( int argc, char* argv[] )
                 end = std::chrono::steady_clock::now();
                 display_time += end - start;
 
-                setting_changed = sutil::displayStatsControls(
+                const sutil::RendererControlsResult controls =
+                    sutil::displayStatsControls(
                     state_update_time,
                     render_time,
                     display_time,
+                    draft_renderer_config,
+                    draft_renderer_config != renderer.config(),
+                    config_status.c_str(),
                     params.eye_subspace_visualize,
                     params.light_subspace_visualize,
                     params.caustic_path_only,
                     params.specular_subspace_visualize,
                     params.caustic_prob_visualize,
                     params.PG_grid_visualize,
-                    params.pg_params.pg_enable,
                     params.error_heat_visual
                 );
+                bool accumulation_reset_after_render = false;
+                if( controls.visualization_changed )
+                {
+                    renderer.resetAccumulation();
+                    accumulation_reset_after_render = true;
+                }
+                if( controls.apply_requested
+                    || renderer_config_apply_requested )
+                {
+                    renderer_config_apply_requested = false;
+                    bool apply_may_reset_accumulation = false;
+                    try
+                    {
+                        spcbpt::validateRendererConfig( draft_renderer_config );
+                        apply_may_reset_accumulation =
+                            spcbpt::classifyRendererConfigChange(
+                                renderer.config(),
+                                draft_renderer_config
+                            ) != spcbpt::RendererConfigChange::None;
+                        const spcbpt::RendererConfigChange change =
+                            applyRendererConfig( output_buffer );
+                        accumulation_reset_after_render =
+                            accumulation_reset_after_render
+                            || change != spcbpt::RendererConfigChange::None;
+                        config_status =
+                            std::string( "Applied " )
+                            + spcbpt::rendererAlgorithmDisplayName(
+                                renderer.config().algorithm
+                            );
+                    }
+                    catch( const std::exception& error )
+                    {
+                        accumulation_reset_after_render =
+                            accumulation_reset_after_render
+                            || apply_may_reset_accumulation;
+                        if( !renderer.isInitialized() )
+                            throw;
+                        config_status =
+                            std::string( "Apply failed: " ) + error.what();
+                    }
+                }
+                if( controls.save_requested )
+                {
+                    try
+                    {
+                        if( draft_renderer_config != renderer.config() )
+                        {
+                            config_status =
+                                "Apply pending changes before saving";
+                        }
+                        else
+                        {
+                            spcbpt::saveRendererConfig(
+                                renderer_config_save_path,
+                                renderer.config()
+                            );
+                            config_status =
+                                "Saved " + renderer_config_save_path;
+                        }
+                    }
+                    catch( const std::exception& error )
+                    {
+                        config_status =
+                            std::string( "Save failed: " ) + error.what();
+                    }
+                }
                 render_fps =
                     1.0f
                     / static_cast<float>(
@@ -588,7 +758,8 @@ int main( int argc, char* argv[] )
 
                 render_time_record = sum_render_time.count();
                 render_frame_record = params.subframe_index;
-                ++params.subframe_index;
+                if( !accumulation_reset_after_render )
+                    ++params.subframe_index;
             } while( !glfwWindowShouldClose( window ) );
             renderer.synchronize();
         }

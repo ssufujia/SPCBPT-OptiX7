@@ -144,6 +144,23 @@ RT_FUNCTION uchar4 get_error_heat(float4 ref, float3 current)
     return make_color(hsv2rgb(((-int(diff) + 240) % 360), 1.0f, 1.0f));
 }
 
+RT_FUNCTION unsigned int experimentSeededFrame( int frame )
+{
+    const unsigned int experiment_seed = Tracer::params.experiment_seed;
+    if( experiment_seed == 0 )
+        return static_cast<unsigned int>( frame );
+
+    unsigned int combined = static_cast<unsigned int>( frame );
+    combined ^= experiment_seed + 0x9e3779b9u
+        + ( combined << 6 ) + ( combined >> 2 );
+    combined ^= combined >> 16;
+    combined *= 0x85ebca6bu;
+    combined ^= combined >> 13;
+    combined *= 0xc2b2ae35u;
+    combined ^= combined >> 16;
+    return combined;
+}
+
 
 extern "C" __global__ void __raygen__pinhole()
 {
@@ -159,7 +176,10 @@ extern "C" __global__ void __raygen__pinhole()
     float3 normalizeV = normalize(V);
 
     /* Generate camera ray */
-    unsigned int seed = tea<4>( launch_idx.y * launch_dims.x + launch_idx.x, subframe_index );
+    unsigned int seed = tea<4>(
+        launch_idx.y * launch_dims.x + launch_idx.x,
+        experimentSeededFrame( subframe_index )
+    );
 
     /* The center of each pixel is at fraction(0.5f, 0.5f) */
     const float2 subpixel_jitter =
@@ -392,7 +412,10 @@ extern "C" __global__ void __raygen__SPCBPT()
     float3 normalizeV = normalize(V); 
     // Generate camera ray
     //
-    unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    unsigned int seed = tea<4>(
+        launch_idx.y * launch_dims.x + launch_idx.x,
+        experimentSeededFrame( subframe_index )
+    );
 
     // The center of each pixel is at fraction (0.5,0.5)
     const float2 subpixel_jitter =
@@ -749,7 +772,10 @@ extern "C" __global__ void __raygen__SPCBPT_no_rmis()
     float3 normalizeV = normalize(V);
     // Generate camera ray
     //
-    unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    unsigned int seed = tea<4>(
+        launch_idx.y * launch_dims.x + launch_idx.x,
+        experimentSeededFrame( subframe_index )
+    );
 
     // The center of each pixel is at fraction (0.5,0.5)
     const float2 subpixel_jitter =
@@ -920,7 +946,10 @@ extern "C" __global__ void __raygen__shift_combine()
 
     float3 normalizeV = normalize(V);
     // Generate camera ray
-    unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    unsigned int seed = tea<4>(
+        launch_idx.y * launch_dims.x + launch_idx.x,
+        experimentSeededFrame( subframe_index )
+    );
 
     // The center of each pixel is at fraction (0.5,0.5)
     const float2 subpixel_jitter =
@@ -1365,7 +1394,10 @@ extern "C" __global__ void __raygen__lightTrace()
     const uint3  launch_idx = optixGetLaunchIndex();
     const uint3  launch_dims = optixGetLaunchDimensions();
     const int    subframe_index = Tracer::params.lt.launch_frame;
-    unsigned int seed = tea<4>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    unsigned int seed = tea<4>(
+        launch_idx.y * launch_dims.x + launch_idx.x,
+        experimentSeededFrame( subframe_index )
+    );
     curandState rn_seed = Tracer::params.lt.rand_state[launch_idx.y * launch_dims.x + launch_idx.x];
     curand_init(seed, launch_idx.y * launch_dims.x + launch_idx.x, 0, &rn_seed);
 
@@ -1711,7 +1743,10 @@ extern "C" __global__ void __raygen__TrainData()
     const uint3  launch_dims = optixGetLaunchDimensions();
     const PreTraceParams& pretracer_params = Tracer::params.pre_tracer;
     const int    subframe_index = pretracer_params.iteration;
-    unsigned int seed = tea<16>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    unsigned int seed = tea<16>(
+        launch_idx.y * launch_dims.x + launch_idx.x,
+        experimentSeededFrame( subframe_index )
+    );
     //if (launch_idx.x == 0 && launch_idx.y == 0)printf("subframe_index %d\n", subframe_index);
 
     const float3 eye = Tracer::params.eye;
@@ -1871,7 +1906,10 @@ extern "C" __global__ void __raygen__TrainData_V2()
     const uint3  launch_dims = optixGetLaunchDimensions();
     const PreTraceParams& pretracer_params = Tracer::params.pre_tracer;
     const int    subframe_index = pretracer_params.iteration;
-    unsigned int seed = tea<16>(launch_idx.y * launch_dims.x + launch_idx.x, subframe_index);
+    unsigned int seed = tea<16>(
+        launch_idx.y * launch_dims.x + launch_idx.x,
+        experimentSeededFrame( subframe_index )
+    );
 
 
     const float3 eye = Tracer::params.eye;

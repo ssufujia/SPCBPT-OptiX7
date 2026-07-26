@@ -1,5 +1,6 @@
 #pragma once
 
+#include <renderer/RendererConfig.h>
 #include <renderer/Scene.h>
 #include <renderer/core/launch_params.h>
 
@@ -30,19 +31,6 @@ struct SceneConfig
     static SceneConfig defaultScene();
 };
 
-struct RendererConfig
-{
-    unsigned int width                   = 64;
-    unsigned int height                  = 64;
-    int          active_path_depth       = 12;
-    int          connection_count        = 1;
-    bool         spcbpt_pure              = true;
-    bool         rmis_enabled             = true;
-    bool         path_guiding_enabled     = false;
-    bool         path_guiding_self_train  = true;
-    bool         path_guiding_more_training = false;
-};
-
 class RendererRuntime
 {
   public:
@@ -58,8 +46,8 @@ class RendererRuntime
     void unloadScene();
     void initialize( const RendererConfig& config );
     void resize( unsigned int width, unsigned int height );
+    void resetAccumulation();
     void markImageDirty();
-    void renderFrame( uchar4* output, const std::string& raygen = "pt" );
     void uploadParams();
     void synchronize();
     void reset();
@@ -78,6 +66,9 @@ class RendererRuntime
     const sutil::Scene& scene() const;
 
   private:
+    friend void renderConfiguredFrame( RendererRuntime&, uchar4* );
+
+    void renderFrame( uchar4* output );
     void releaseLaunchBuffers();
 
     MyParams                       m_params        = {};

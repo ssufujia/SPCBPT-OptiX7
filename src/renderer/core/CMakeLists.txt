@@ -35,8 +35,7 @@ target_include_directories(spcbpt_renderer PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-# Runtime loads only raygen + hit (see Scene::createPTXModule).
-# optixPathTracer.cu is leftover NVIDIA sample code and is not loaded.
+# Runtime loads only these two shaders (see Scene::createPTXModule).
 set(optix_path_tracer_shaders
   raygen.cu
   hit_program.cu

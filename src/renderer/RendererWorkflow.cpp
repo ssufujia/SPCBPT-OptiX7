@@ -1,6 +1,7 @@
 #include <renderer/RendererWorkflow.h>
 
 #include <renderer/RendererRuntime.h>
+#include <renderer/SamplingProgress.h>
 #include <spcbptConfig.h>
 
 #include <renderer/core/PG_host.h>
@@ -16,6 +17,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <cstring>
 #include <stdexcept>
@@ -27,6 +29,69 @@ namespace spcbpt
 
 namespace
 {
+
+struct InteractiveRendererState
+{
+    float3 eye;
+    float3 camera_u;
+    float3 camera_v;
+    float3 camera_w;
+    float camera_aspect_ratio;
+    bool eye_subspace_visualize;
+    bool light_subspace_visualize;
+    bool caustic_path_only;
+    bool specular_subspace_visualize;
+    bool caustic_prob_visualize;
+    bool pg_grid_visualize;
+    bool error_heat_visual;
+    EstimationParams estimation;
+};
+
+InteractiveRendererState captureInteractiveState(
+    const MyParams& params
+)
+{
+    return {
+        params.eye,
+        params.U,
+        params.V,
+        params.W,
+        static_cast<float>( params.width ) / params.height,
+        params.eye_subspace_visualize,
+        params.light_subspace_visualize,
+        params.caustic_path_only,
+        params.specular_subspace_visualize,
+        params.caustic_prob_visualize,
+        params.PG_grid_visualize,
+        params.error_heat_visual,
+        params.estimate_pr
+    };
+}
+
+void restoreInteractiveState(
+    MyParams& params,
+    const InteractiveRendererState& state,
+    const RendererConfig& config
+)
+{
+    const float next_aspect_ratio =
+        static_cast<float>( config.width ) / config.height;
+    const float aspect_ratio_scale =
+        next_aspect_ratio / state.camera_aspect_ratio;
+    params.eye = state.eye;
+    params.U = state.camera_u * aspect_ratio_scale;
+    params.V = state.camera_v;
+    params.W = state.camera_w;
+    params.eye_subspace_visualize = state.eye_subspace_visualize;
+    params.light_subspace_visualize = state.light_subspace_visualize;
+    params.caustic_path_only = state.caustic_path_only;
+    params.specular_subspace_visualize =
+        state.specular_subspace_visualize;
+    params.caustic_prob_visualize = state.caustic_prob_visualize;
+    params.PG_grid_visualize = state.pg_grid_visualize;
+    params.error_heat_visual = state.error_heat_visual;
+    params.estimate_pr = state.estimation;
+}
 
 int lightTraceElementCount( const LightTraceParams& params )
 {
@@ -114,6 +179,11 @@ void freeCudaAllocation( T*& pointer )
 
 } // namespace
 
+void renderConfiguredFrame( RendererRuntime& runtime, uchar4* output )
+{
+    runtime.renderFrame( output );
+}
+
 class RendererWorkflow::Impl
 {
   public:
@@ -180,19 +250,30 @@ class RendererWorkflow::Impl
         preprocessing_complete = true;
     }
 
-    void renderFrame( uchar4* output, const std::string& raygen )
+    void captureOptimalEProblem( const std::string& output_path )
     {
-        const bool advanced_raygen =
-            raygen == "SPCBPT_eye" || raygen == "SPCBPT_eye_ForcePure";
-        if( advanced_raygen )
+        if( !algorithm_state_initialized )
+            throw std::logic_error( "RendererWorkflow::initializeAlgorithmState must be called first" );
+        if( output_path.empty() )
+            throw std::invalid_argument( "Optimal E capture path is empty" );
+
+        pathGuidingParamsSetup();
+        dropOutTracingParamsSetup();
+        preprocessing( &output_path );
+    }
+
+    void renderFrame( uchar4* output )
+    {
+        const RendererAlgorithm algorithm = runtime.config().algorithm;
+        if( isAdvancedRendererAlgorithm( algorithm ) )
         {
             if( !preprocessing_complete )
-                throw std::logic_error( "Advanced SPCBPT rendering requires preprocessing" );
+                throw std::logic_error( "Advanced LVCBPT rendering requires preprocessing" );
             launchLVCTrace();
             updateDropOutTracingParams();
             updateDropOutTracingCombineWeight();
         }
-        runtime.renderFrame( output, raygen );
+        renderConfiguredFrame( runtime, output );
     }
 
     std::uint64_t sceneGeneration() const { return scene_generation; }
@@ -469,6 +550,15 @@ class RendererWorkflow::Impl
             );
         setLightImage();
         params.sampler = sampler;
+        if( optimal_gamma )
+        {
+            subspace_info.CMFGamma = thrust::raw_pointer_cast(
+                MyThrustOp::Gamma2CMFGamma(
+                    optimal_gamma,
+                    params.sampler.subspace
+                )
+            );
+        }
 
         if( !params.spcbpt_pure )
         {
@@ -544,9 +634,15 @@ class RendererWorkflow::Impl
                 int current_sample_count = 0;
                 int accumulated_sample_count = 0;
                 int accumulated_iterations = 0;
+                detail::SamplingProgressGuard progress_guard;
                 while( current_sample_count + accumulated_sample_count < target_path )
                 {
-                    current_sample_count += launchPretrace();
+                    const int added_samples = launchPretrace();
+                    progress_guard.record(
+                        added_samples,
+                        "Path-guiding self-training"
+                    );
+                    current_sample_count += added_samples;
                     ++accumulated_iterations;
                     if( current_sample_count > batch_sample_count )
                     {
@@ -609,9 +705,15 @@ class RendererWorkflow::Impl
             {
                 MyThrustOp::clear_training_set();
                 int current_sample_count = 0;
+                detail::SamplingProgressGuard progress_guard;
                 while( current_sample_count < batch_sample_count )
                 {
-                    current_sample_count += launchPretrace();
+                    const int added_samples = launchPretrace();
+                    progress_guard.record(
+                        added_samples,
+                        "Path-guiding training"
+                    );
+                    current_sample_count += added_samples;
                     std::printf(
                         "regenerate data for pg %d %zu\n",
                         current_sample_count,
@@ -639,8 +741,16 @@ class RendererWorkflow::Impl
                 training_materials.clear();
                 MyThrustOp::clear_training_set();
                 int current_sample_count = 0;
+                detail::SamplingProgressGuard progress_guard;
                 while( current_sample_count < batch_sample_count )
-                    current_sample_count += launchPretrace();
+                {
+                    const int added_samples = launchPretrace();
+                    progress_guard.record(
+                        added_samples,
+                        "Path-guiding online training"
+                    );
+                    current_sample_count += added_samples;
+                }
                 std::printf( "online training for pg batch %d \n", i );
                 pg_trainer.set_training_set( MyThrustOp::get_data_for_path_guiding() );
                 pg_trainer.online_training();
@@ -691,8 +801,16 @@ class RendererWorkflow::Impl
         MyThrustOp::clear_training_set();
         constexpr int target_sample_count = 100000;
         int current_sample_count = 0;
+        detail::SamplingProgressGuard progress_guard;
         while( current_sample_count < target_sample_count )
-            current_sample_count += launchPretrace();
+        {
+            const int added_samples = launchPretrace();
+            progress_guard.record(
+                added_samples,
+                "Proxy preprocessing"
+            );
+            current_sample_count += added_samples;
+        }
 
         std::vector<classTree::divide_weight> unlabeled_samples =
             MyThrustOp::getCausticCentroidCandidate( false, 100000 );
@@ -797,12 +915,6 @@ class RendererWorkflow::Impl
 
     void updateDropOutTracingCombineWeight()
     {
-        if( combine_train_iteration > 0
-            && combine_train_iteration > dropOut_tracing::iteration_stop_learning )
-        {
-            return;
-        }
-        ++combine_train_iteration;
         if( params.spcbpt_pure )
             return;
         if( !combine_state_initialized )
@@ -830,6 +942,12 @@ class RendererWorkflow::Impl
             dot_params.pixel_dirty = false;
             return;
         }
+        if( combine_train_iteration > 0
+            && combine_train_iteration > dropOut_tracing::iteration_stop_learning )
+        {
+            return;
+        }
+        ++combine_train_iteration;
 
         const thrust::host_vector<dropOut_tracing::pixelRecord> records =
             MyThrustOp::DOT_get_pixelRecords();
@@ -1224,15 +1342,26 @@ class RendererWorkflow::Impl
         );
     }
 
-    void preprocessing()
+    void preprocessing( const std::string* capture_path = nullptr )
     {
         MyThrustOp::clear_training_set();
         constexpr int target_sample_count = 1000000;
         int current_sample_count = 0;
+        detail::SamplingProgressGuard camera_progress_guard;
         while( current_sample_count < target_sample_count )
-            current_sample_count += launchPretrace();
+        {
+            const int added_samples = launchPretrace();
+            camera_progress_guard.record(
+                added_samples,
+                "LVCBPT camera-path preprocessing"
+            );
+            current_sample_count += added_samples;
+        }
 
-        MyThrustOp::sample_reweight();
+        MyThrustOp::sample_reweight(
+            static_cast<int>( params.width ),
+            static_cast<int>( params.height )
+        );
         std::vector<classTree::divide_weight> unlabeled_samples =
             MyThrustOp::get_weighted_point_for_tree_building( true, 10000 );
         classTree::tree eye_tree = classTree::buildTreeBaseOnExistSample()(
@@ -1256,16 +1385,22 @@ class RendererWorkflow::Impl
 
         constexpr int target_q_samples = 2000000;
         int current_q_samples = 0;
+        detail::SamplingProgressGuard light_progress_guard;
         thrust::device_ptr<float> q_star = nullptr;
         while( current_q_samples < target_q_samples )
         {
             launchLVCTrace();
-            current_q_samples += MyThrustOp::preprocess_getQ(
+            const int added_samples = MyThrustOp::preprocess_getQ(
                 thrust::device_pointer_cast( params.lt.ans ),
                 thrust::device_pointer_cast( params.lt.validState ),
                 lightTraceElementCount( params.lt ),
                 q_star
             );
+            light_progress_guard.record(
+                added_samples,
+                "LVCBPT light-path preprocessing"
+            );
+            current_q_samples += added_samples;
             updateDropOutTracingParams();
         }
         MyThrustOp::Q_zero_handle( q_star );
@@ -1274,7 +1409,21 @@ class RendererWorkflow::Impl
         thrust::device_ptr<float> gamma;
         MyThrustOp::build_optimal_E_train_data( target_sample_count );
         MyThrustOp::preprocess_getGamma( gamma );
+        if( capture_path )
+        {
+            MyThrustOp::save_optimal_E_snapshot(
+                *capture_path,
+                gamma,
+                params.experiment_seed
+            );
+            std::printf(
+                "Optimal E problem snapshot saved to %s\n",
+                capture_path->c_str()
+            );
+            return;
+        }
         MyThrustOp::train_optimal_E( gamma );
+        optimal_gamma = gamma;
 
         subspace_info.Q = thrust::raw_pointer_cast( q_star );
         subspace_info.CMFGamma = thrust::raw_pointer_cast(
@@ -1313,6 +1462,7 @@ class RendererWorkflow::Impl
     bool algorithm_state_initialized = false;
     bool preprocessing_complete = false;
     std::uint64_t scene_generation = 0;
+    thrust::device_ptr<float> optimal_gamma = nullptr;
 
     int combine_train_iteration = 0;
     bool combine_state_initialized = false;
@@ -1363,10 +1513,75 @@ void RendererWorkflow::runPreprocessing()
     m_impl->runPreprocessing();
 }
 
-void RendererWorkflow::renderFrame( uchar4* output, const std::string& raygen )
+void RendererWorkflow::captureOptimalEProblem( const std::string& output_path )
 {
     synchronizeSceneGeneration();
-    m_impl->renderFrame( output, raygen );
+    m_impl->captureOptimalEProblem( output_path );
+}
+
+RendererConfigChange RendererWorkflow::applyConfig( const RendererConfig& config )
+{
+    validateRendererConfig( config );
+    const RendererConfig previous_config = m_runtime.config();
+    const RendererConfigChange change =
+        classifyRendererConfigChange( previous_config, config );
+    if( change == RendererConfigChange::None )
+        return change;
+    if( change == RendererConfigChange::Resize )
+    {
+        m_runtime.resize( config.width, config.height );
+        return change;
+    }
+
+    const InteractiveRendererState interactive_state =
+        captureInteractiveState( m_runtime.params() );
+    const SceneConfig scene_config = m_runtime.sceneConfig();
+    const auto rebuild = [&]( const RendererConfig& target_config )
+    {
+        m_runtime.loadScene( scene_config );
+        m_runtime.initialize( target_config );
+        restoreInteractiveState(
+            m_runtime.params(),
+            interactive_state,
+            target_config
+        );
+        synchronizeSceneGeneration();
+        if( requiresRendererPreprocessing( target_config ) )
+        {
+            m_impl->initializeAlgorithmState();
+            m_impl->runPreprocessing();
+        }
+        m_runtime.resetAccumulation();
+    };
+
+    try
+    {
+        rebuild( config );
+    }
+    catch( ... )
+    {
+        const std::exception_ptr apply_error = std::current_exception();
+        try
+        {
+            rebuild( previous_config );
+        }
+        catch( ... )
+        {
+            m_runtime.reset();
+            throw std::runtime_error(
+                "Renderer config apply failed and the previous renderer state "
+                "could not be restored"
+            );
+        }
+        std::rethrow_exception( apply_error );
+    }
+    return change;
+}
+
+void RendererWorkflow::renderFrame( uchar4* output )
+{
+    synchronizeSceneGeneration();
+    m_impl->renderFrame( output );
 }
 
 } // namespace spcbpt

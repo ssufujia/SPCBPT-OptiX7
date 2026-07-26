@@ -5425,7 +5425,7 @@ mesh
 
 mesh
 {
-	file bathroom_b\geo-fake\lightrim_0.obj
+	file bathroom_b\geo-fake\lightrim_o.obj
 	material WoodBSDF
 
 }

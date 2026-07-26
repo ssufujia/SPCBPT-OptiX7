@@ -207,6 +207,7 @@ struct DeviceLaunchParams
     unsigned int             width;
     unsigned int             height;
     unsigned int             subframe_index;
+    unsigned int             experiment_seed;
     float4*                  accum_buffer;
     uchar4*                  frame_buffer;
     int                      active_path_depth;

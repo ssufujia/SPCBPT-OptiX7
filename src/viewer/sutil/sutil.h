@@ -32,6 +32,7 @@
 #include "sutilapi.h"
 
 #include <cuda_runtime.h>
+#include <renderer/RendererConfig.h>
 #include <vector_types.h>
 
 #include <cstdlib>
@@ -105,16 +106,25 @@ SUTILAPI void displayStats( std::chrono::duration<double>& state_update_time,
                             std::chrono::duration<double>& render_time,
                             std::chrono::duration<double>& display_time );
 
-SUTILAPI bool displayStatsControls(std::chrono::duration<double>& state_update_time,
+struct RendererControlsResult
+{
+    bool visualization_changed = false;
+    bool apply_requested       = false;
+    bool save_requested        = false;
+};
+
+SUTILAPI RendererControlsResult displayStatsControls(std::chrono::duration<double>& state_update_time,
     std::chrono::duration<double>& render_time,
     std::chrono::duration<double>& display_time,
+    spcbpt::RendererConfig& draft_config,
+    bool config_dirty,
+    const char* config_status,
     bool& eye_subspace_visualize,
     bool& light_subspace_visualize,
     bool& caustic_path_only,
     bool& specular_subspace_visualize,
     bool& caustic_prob_visualize,
     bool & PG_grid_visualize,
-    bool & PD_enable,
     bool & error_heat_visual
     );
 
@@ -161,4 +171,3 @@ SUTILAPI void ensureMinimumSize(
 SUTILAPI void reportErrorMessage( const char* message );
 
 } // end namespace sutil
-

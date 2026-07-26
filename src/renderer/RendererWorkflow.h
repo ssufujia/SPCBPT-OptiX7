@@ -1,5 +1,7 @@
 #pragma once
 
+#include <renderer/RendererConfig.h>
+
 #include <memory>
 #include <string>
 
@@ -21,7 +23,9 @@ class RendererWorkflow
 
     void initializeAlgorithmState();
     void runPreprocessing();
-    void renderFrame( uchar4* output, const std::string& raygen );
+    void captureOptimalEProblem( const std::string& output_path );
+    RendererConfigChange applyConfig( const RendererConfig& config );
+    void renderFrame( uchar4* output );
 
   private:
     void synchronizeSceneGeneration();

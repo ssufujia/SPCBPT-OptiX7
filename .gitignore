@@ -55,8 +55,15 @@
 # OS junk
 Thumbs.db
 Desktop.ini
+__pycache__/
+*.py[cod]
 
 # Runtime-generated local state and diagnostics
 /imgui.ini
+/renderer.json
+/renderer_config.json
+/*_pt.txt
+/*_lvcbpt.txt
+/*_lvcbpt_proxy_experimental.txt
 /*_lvcbpt+lighttrace.txt
 .DS_Store

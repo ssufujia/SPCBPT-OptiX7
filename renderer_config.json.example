@@ -1,0 +1,12 @@
+{
+  "width": 1280,
+  "height": 720,
+  "active_path_depth": 12,
+  "connection_count": 1,
+  "algorithm": "lvcbpt_proxy_experimental",
+  "path_guiding": {
+    "enabled": true,
+    "self_train": true,
+    "more_training": false
+  }
+}

@@ -10,6 +10,8 @@
 #include <cuda_runtime.h>
 #include <optix_stubs.h>
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <stdexcept>
 #include <vector>
@@ -54,6 +56,21 @@ SceneConfig resolveSceneConfig( const SceneConfig& config )
     return resolved;
 }
 
+bool isGltfScene( const std::filesystem::path& path )
+{
+    std::string extension = path.extension().string();
+    std::transform(
+        extension.begin(),
+        extension.end(),
+        extension.begin(),
+        []( unsigned char character )
+        {
+            return static_cast<char>( std::tolower( character ) );
+        }
+    );
+    return extension == ".glb" || extension == ".gltf";
+}
+
 template <typename T>
 void freeDevicePointer( T*& pointer )
 {
@@ -83,6 +100,20 @@ void releaseAlgorithmBuffers( MyParams& params )
     params.sky = {};
 }
 
+const char* mainRaygenName( RendererAlgorithm algorithm )
+{
+    switch( algorithm )
+    {
+        case RendererAlgorithm::PathTracing:
+            return "pt";
+        case RendererAlgorithm::Lvcbpt:
+            return "SPCBPT_eye_ForcePure";
+        case RendererAlgorithm::LvcbptProxyExperimental:
+            return "SPCBPT_eye";
+    }
+    throw std::logic_error( "Unknown renderer algorithm" );
+}
+
 } // namespace
 
 RendererRuntime::RendererRuntime() = default;
@@ -110,26 +141,35 @@ void RendererRuntime::loadScene( const SceneConfig& config )
     unloadScene();
     try
     {
-        m_source_scene.reset( LoadScene(
-            resolved_config.path.c_str(),
-            resolved_config.resource_root.c_str()
-        ) );
-        if( !m_source_scene )
-            throw std::runtime_error( "Scene loader returned no scene" );
-
-        if( resolved_config.camera_override )
+        m_scene = std::make_unique<sutil::Scene>();
+        if( isGltfScene( resolved_config.path ) )
         {
-            const SceneCameraOverride& camera = *resolved_config.camera_override;
-            m_source_scene->eye = camera.eye;
-            m_source_scene->lookat = camera.lookat;
-            m_source_scene->up = camera.up;
-            m_source_scene->fov = camera.fov_y;
-            m_source_scene->use_camera = true;
+            sutil::loadScene( resolved_config.path, *m_scene );
+            m_scene->setResourceRoot( resolved_config.resource_root );
+        }
+        else
+        {
+            m_source_scene.reset( LoadScene(
+                resolved_config.path.c_str(),
+                resolved_config.resource_root.c_str()
+            ) );
+            if( !m_source_scene )
+                throw std::runtime_error( "Scene loader returned no scene" );
+
+            if( resolved_config.camera_override )
+            {
+                const SceneCameraOverride& camera = *resolved_config.camera_override;
+                m_source_scene->eye = camera.eye;
+                m_source_scene->lookat = camera.lookat;
+                m_source_scene->up = camera.up;
+                m_source_scene->fov = camera.fov_y;
+                m_source_scene->use_camera = true;
+            }
+
+            Scene_shift( *m_source_scene, *m_scene );
+            LightSource_shift( *m_source_scene, m_params, *m_scene );
         }
 
-        m_scene = std::make_unique<sutil::Scene>();
-        Scene_shift( *m_source_scene, *m_scene );
-        LightSource_shift( *m_source_scene, m_params, *m_scene );
         m_scene_config = resolved_config;
     }
     catch( ... )
@@ -159,22 +199,15 @@ void RendererRuntime::initialize( const RendererConfig& config )
 {
     if( !m_scene )
         throw std::logic_error( "RendererRuntime::loadScene must be called first" );
-    if( config.width == 0 || config.height == 0 )
-        throw std::invalid_argument( "Renderer dimensions must be non-zero" );
-    if( config.active_path_depth <= 0
-        || config.active_path_depth > SPCBPT_DEVICE_MAX_PATH_DEPTH )
-    {
-        throw std::invalid_argument(
-            "Active path depth must be in [1, "
-            + std::to_string( SPCBPT_DEVICE_MAX_PATH_DEPTH ) + "]"
-        );
-    }
-    if( config.connection_count <= 0 )
-        throw std::invalid_argument( "Connection count must be positive" );
-    if( m_scene_finalized && config.spcbpt_pure != m_config.spcbpt_pure )
+    validateRendererConfig( config );
+
+    const bool spcbpt_pure = !usesProxyRendererAlgorithm( config.algorithm );
+    if( m_scene_finalized
+        && spcbpt_pure
+            != !usesProxyRendererAlgorithm( m_config.algorithm ) )
     {
         throw std::logic_error(
-            "SPCBPT algorithm mode cannot change after scene finalization"
+            "Proxy renderer mode cannot change after scene finalization"
         );
     }
 
@@ -182,7 +215,7 @@ void RendererRuntime::initialize( const RendererConfig& config )
 
     if( !m_scene_finalized )
     {
-        m_scene->setSpcbptPure( config.spcbpt_pure );
+        m_scene->setSpcbptPure( spcbpt_pure );
         m_scene->finalize();
         m_scene_finalized = true;
     }
@@ -193,11 +226,12 @@ void RendererRuntime::initialize( const RendererConfig& config )
     m_params.active_path_depth = config.active_path_depth;
     m_params.connection_count  = config.connection_count;
     m_params.subframe_index    = 0;
+    m_params.experiment_seed   = 0;
     m_params.frame_buffer      = nullptr;
     m_params.miss_color        = make_float3( 0.1f );
     m_params.handle            = m_scene->traversableHandle();
-    m_params.spcbpt_pure       = config.spcbpt_pure;
-    m_params.rmis_enabled      = config.rmis_enabled;
+    m_params.spcbpt_pure       = spcbpt_pure;
+    m_params.rmis_enabled      = 1;
 
     std::vector<MaterialData::Pbr> materials;
     materials.reserve( m_scene->materials().size() );
@@ -235,24 +269,58 @@ void RendererRuntime::initialize( const RendererConfig& config )
     camera.UVWFrame( m_params.U, m_params.V, m_params.W );
 }
 
+void RendererRuntime::resetAccumulation()
+{
+    if( !isInitialized() )
+        throw std::logic_error( "RendererRuntime::initialize must be called first" );
+    CUDA_CHECK( cudaMemset(
+        m_params.accum_buffer,
+        0,
+        static_cast<size_t>( m_params.width )
+            * m_params.height * sizeof( float4 )
+    ) );
+    m_params.subframe_index = 0;
+    markImageDirty();
+}
+
 void RendererRuntime::resize( unsigned int width, unsigned int height )
 {
     if( !isInitialized() )
         throw std::logic_error( "RendererRuntime::initialize must be called first" );
-    if( width == 0 || height == 0 )
-        throw std::invalid_argument( "Renderer dimensions must be non-zero" );
 
-    CUDA_CHECK( cudaFree( m_params.accum_buffer ) );
-    m_params.accum_buffer = nullptr;
+    RendererConfig resized_config = m_config;
+    resized_config.width = width;
+    resized_config.height = height;
+    validateRendererConfig( resized_config );
+    if( width == m_config.width && height == m_config.height )
+        return;
+
+    float4* resized_accumulation = nullptr;
     CUDA_CHECK( cudaMalloc(
-        reinterpret_cast<void**>( &m_params.accum_buffer ),
+        reinterpret_cast<void**>( &resized_accumulation ),
         static_cast<size_t>( width ) * height * sizeof( float4 )
     ) );
-    m_config.width  = width;
-    m_config.height = height;
-    m_params.width  = width;
+    try
+    {
+        CUDA_CHECK( cudaMemset(
+            resized_accumulation,
+            0,
+            static_cast<size_t>( width ) * height * sizeof( float4 )
+        ) );
+    }
+    catch( ... )
+    {
+        CUDA_CHECK_NOTHROW( cudaFree( resized_accumulation ) );
+        throw;
+    }
+
+    CUDA_CHECK_NOTHROW( cudaFree( m_params.accum_buffer ) );
+    m_params.accum_buffer = resized_accumulation;
+    m_params.width = width;
     m_params.height = height;
-    m_params.dot_params.pixel_dirty = true;
+    m_params.subframe_index = 0;
+    m_config = resized_config;
+    markImageDirty();
 }
 
 void RendererRuntime::markImageDirty()
@@ -260,14 +328,14 @@ void RendererRuntime::markImageDirty()
     m_params.dot_params.pixel_dirty = true;
 }
 
-void RendererRuntime::renderFrame( uchar4* output, const std::string& raygen )
+void RendererRuntime::renderFrame( uchar4* output )
 {
     if( !isInitialized() )
         throw std::logic_error( "RendererRuntime::initialize must be called first" );
     if( !output )
         throw std::invalid_argument( "Frame output pointer is null" );
 
-    m_scene->switchRaygen( raygen );
+    m_scene->switchRaygen( mainRaygenName( m_config.algorithm ) );
     m_params.frame_buffer = output;
     uploadParams();
 
