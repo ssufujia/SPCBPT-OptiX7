@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <limits>
@@ -37,10 +38,13 @@ RendererAlgorithm parseAlgorithm( const std::string& name )
 bool isAllowedTopLevelKey( const std::string& key )
 {
     return key == "width"
+        || key == "scene"
         || key == "height"
         || key == "active_path_depth"
         || key == "connection_count"
         || key == "algorithm"
+        || key == "caustic_path_only"
+        || key == "optimal_e"
         || key == "path_guiding";
 }
 
@@ -49,6 +53,11 @@ bool isAllowedPathGuidingKey( const std::string& key )
     return key == "enabled"
         || key == "self_train"
         || key == "more_training";
+}
+
+bool isAllowedOptimalEKey( const std::string& key )
+{
+    return key == "learning_rate" || key == "iterations";
 }
 
 void validateTopLevelKeys( const nlohmann::json& json )
@@ -122,6 +131,24 @@ int readInteger( const nlohmann::json& json, const char* key, int fallback )
     return static_cast<int>( value );
 }
 
+float readFloat( const nlohmann::json& json, const char* key, float fallback )
+{
+    const auto field = json.find( key );
+    if( field == json.end() )
+        return fallback;
+    if( !field->is_number() )
+        throw std::invalid_argument( std::string( key ) + " must be a number" );
+
+    const double value = field->get<double>();
+    if( !std::isfinite( value )
+        || value < -std::numeric_limits<float>::max()
+        || value > std::numeric_limits<float>::max() )
+    {
+        throw std::invalid_argument( std::string( key ) + " is out of range" );
+    }
+    return static_cast<float>( value );
+}
+
 bool readBoolean( const nlohmann::json& json, const char* key, bool fallback )
 {
     const auto field = json.find( key );
@@ -151,6 +178,8 @@ RendererConfig parseRendererConfig( const nlohmann::json& json )
     validateTopLevelKeys( json );
 
     RendererConfig config;
+    config.scene_path =
+        readString( json, "scene", config.scene_path );
     config.width = readUnsignedInteger( json, "width", config.width );
     config.height = readUnsignedInteger( json, "height", config.height );
     config.active_path_depth =
@@ -162,6 +191,12 @@ RendererConfig parseRendererConfig( const nlohmann::json& json )
         "algorithm",
         rendererAlgorithmName( config.algorithm )
     ) );
+    config.caustic_path_only =
+        readBoolean(
+            json,
+            "caustic_path_only",
+            config.caustic_path_only
+        );
 
     const auto path_guiding = json.find( "path_guiding" );
     if( path_guiding != json.end() )
@@ -191,6 +226,32 @@ RendererConfig parseRendererConfig( const nlohmann::json& json )
                 "more_training",
                 config.path_guiding_more_training
             );
+    }
+
+    const auto optimal_e = json.find( "optimal_e" );
+    if( optimal_e != json.end() )
+    {
+        if( !optimal_e->is_object() )
+            throw std::invalid_argument( "optimal_e must be an object" );
+        for( auto field = optimal_e->begin(); field != optimal_e->end(); ++field )
+        {
+            if( !isAllowedOptimalEKey( field.key() ) )
+            {
+                throw std::invalid_argument(
+                    "Unknown optimal_e key: " + field.key()
+                );
+            }
+        }
+        config.optimal_e_learning_rate = readFloat(
+            *optimal_e,
+            "learning_rate",
+            config.optimal_e_learning_rate
+        );
+        config.optimal_e_iterations = readInteger(
+            *optimal_e,
+            "iterations",
+            config.optimal_e_iterations
+        );
     }
 
     validateRendererConfig( config );
@@ -259,14 +320,18 @@ void replaceFileAtomically(
 
 bool operator==( const RendererConfig& lhs, const RendererConfig& rhs )
 {
-    return lhs.width == rhs.width
+    return lhs.scene_path == rhs.scene_path
+        && lhs.width == rhs.width
         && lhs.height == rhs.height
         && lhs.active_path_depth == rhs.active_path_depth
         && lhs.connection_count == rhs.connection_count
         && lhs.algorithm == rhs.algorithm
         && lhs.path_guiding_enabled == rhs.path_guiding_enabled
         && lhs.path_guiding_self_train == rhs.path_guiding_self_train
-        && lhs.path_guiding_more_training == rhs.path_guiding_more_training;
+        && lhs.path_guiding_more_training == rhs.path_guiding_more_training
+        && lhs.caustic_path_only == rhs.caustic_path_only
+        && lhs.optimal_e_learning_rate == rhs.optimal_e_learning_rate
+        && lhs.optimal_e_iterations == rhs.optimal_e_iterations;
 }
 
 bool operator!=( const RendererConfig& lhs, const RendererConfig& rhs )
@@ -320,6 +385,8 @@ bool requiresRendererPreprocessing( const RendererConfig& config )
 
 void validateRendererConfig( const RendererConfig& config )
 {
+    if( config.scene_path.empty() )
+        throw std::invalid_argument( "Renderer scene path must not be empty" );
     if( config.width == 0 || config.height == 0 )
         throw std::invalid_argument( "Renderer dimensions must be non-zero" );
     if( config.width > MAX_RENDER_WIDTH || config.height > MAX_RENDER_HEIGHT )
@@ -344,6 +411,21 @@ void validateRendererConfig( const RendererConfig& config )
         throw std::invalid_argument(
             "Connection count must be in [1, "
             + std::to_string( MAX_CONNECTION_COUNT ) + "]"
+        );
+    }
+    if( !std::isfinite( config.optimal_e_learning_rate )
+        || config.optimal_e_learning_rate <= 0.0f )
+    {
+        throw std::invalid_argument(
+            "Optimal-E learning rate must be finite and positive"
+        );
+    }
+    if( config.optimal_e_iterations <= 0
+        || config.optimal_e_iterations > MAX_OPTIMAL_E_ITERATIONS )
+    {
+        throw std::invalid_argument(
+            "Optimal-E iterations must be in [1, "
+            + std::to_string( MAX_OPTIMAL_E_ITERATIONS ) + "]"
         );
     }
     rendererAlgorithmName( config.algorithm );
@@ -403,17 +485,26 @@ void saveRendererConfig(
 {
     validateRendererConfig( config );
     const nlohmann::json json = {
+        { "scene", config.scene_path },
         { "width", config.width },
         { "height", config.height },
         { "active_path_depth", config.active_path_depth },
         { "connection_count", config.connection_count },
         { "algorithm", rendererAlgorithmName( config.algorithm ) },
+        { "caustic_path_only", config.caustic_path_only },
         {
             "path_guiding",
             {
                 { "enabled", config.path_guiding_enabled },
                 { "self_train", config.path_guiding_self_train },
                 { "more_training", config.path_guiding_more_training }
+            }
+        },
+        {
+            "optimal_e",
+            {
+                { "learning_rate", config.optimal_e_learning_rate },
+                { "iterations", config.optimal_e_iterations }
             }
         }
     };

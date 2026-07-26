@@ -45,8 +45,17 @@ cmake --build --preset release-optix9-local
 可执行文件位于 `build/release-optix9/bin/optixPathTracer.exe`；原生
 OptiX-IR 文件会部署到同级的 `bin/optix-ir/`。
 
-渲染器可以从任意工作目录启动。使用 `--scene=<path>` 覆盖默认 Bedroom
-场景，使用 `--dim=<width>x<height>` 覆盖图像尺寸。
+普通运行不需要传参数：先把 `renderer_config.json.example` 复制为
+`renderer_config.json`，然后在仓库根目录直接启动：
+
+```powershell
+.\build\release-optix9\bin\optixPathTracer.exe
+```
+
+程序默认读取当前目录的 `renderer_config.json`，并在启动时打印实际配置
+来源、场景、算法、尺寸、路径模式、path guiding 与 Optimal-E 训练参数。
+`--config`、`--scene`、`--dim` 只用于临时覆盖；完整字段说明见
+[`docs/operation.md`](docs/operation.md)。
 
 ## 构建目标
 

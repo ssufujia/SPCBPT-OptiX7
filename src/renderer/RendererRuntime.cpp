@@ -232,6 +232,7 @@ void RendererRuntime::initialize( const RendererConfig& config )
     m_params.handle            = m_scene->traversableHandle();
     m_params.spcbpt_pure       = spcbpt_pure;
     m_params.rmis_enabled      = 1;
+    m_params.caustic_path_only = config.caustic_path_only;
 
     std::vector<MaterialData::Pbr> materials;
     materials.reserve( m_scene->materials().size() );

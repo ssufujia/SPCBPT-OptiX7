@@ -1,4 +1,5 @@
 #include <renderer/RendererConfig.h>
+#include <optimal_e_optimizer.h>
 #include <renderer/SamplingProgress.h>
 
 #include <chrono>
@@ -87,6 +88,10 @@ void checkStrictJson( const std::filesystem::path& path )
     requireInvalidJson( path, R"({"algorithm": 1})" );
     requireInvalidJson( path, R"({"path_guiding": {"enabled": 1}})" );
     requireInvalidJson( path, R"({"path_guiding": {"self_trian": true}})" );
+    requireInvalidJson( path, R"({"optimal_e": {"learning_rate": 0}})" );
+    requireInvalidJson( path, R"({"optimal_e": {"iterations": 1.5}})" );
+    requireInvalidJson( path, R"({"optimal_e": {"iterations": 10001}})" );
+    requireInvalidJson( path, R"({"optimal_e": {"future_option": true}})" );
     requireInvalidJson( path, R"({"width": 64} trailing)" );
 }
 
@@ -95,6 +100,10 @@ void checkConfigBehavior()
     using namespace spcbpt;
 
     RendererConfig config;
+    require(
+        !config.scene_path.empty(),
+        "Default renderer scene path must not be empty"
+    );
     require(
         config.algorithm == RendererAlgorithm::LvcbptProxyExperimental,
         "Default renderer algorithm changed"
@@ -106,6 +115,17 @@ void checkConfigBehavior()
     require(
         config.path_guiding_self_train,
         "Default renderer config must enable path-guiding self-training"
+    );
+    require(
+        !config.caustic_path_only,
+        "Default renderer config must include full paths"
+    );
+    require(
+        config.optimal_e_learning_rate
+                == PRODUCTION_OPTIMAL_E_LEARNING_RATE
+            && config.optimal_e_iterations
+                == PRODUCTION_OPTIMAL_E_ITERATIONS,
+        "Default Optimal-E training settings changed"
     );
     require(
         requiresRendererPreprocessing( config ),
@@ -319,7 +339,11 @@ int main()
         checkStrictJson( path );
 
         spcbpt::RendererConfig config;
+        config.scene_path = "cornell_box/cornell.scene";
         config.path_guiding_enabled = true;
+        config.caustic_path_only = true;
+        config.optimal_e_learning_rate = 0.5f;
+        config.optimal_e_iterations = 40;
         spcbpt::saveRendererConfig( path, config );
         require(
             spcbpt::loadRendererConfig( path ) == config,

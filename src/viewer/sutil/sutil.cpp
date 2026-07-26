@@ -694,7 +694,6 @@ RendererControlsResult displayStatsControls(std::chrono::duration<double>& state
     const char* config_status,
     bool &eye_subspace_visualize, 
     bool &light_subspace_visualize, 
-    bool &caustic_path_only, 
     bool &specular_subspace_visualize,
     bool &caustic_prob_visualize,
     bool & PG_grid_visualize,
@@ -794,6 +793,14 @@ RendererControlsResult displayStatsControls(std::chrono::duration<double>& state
                 &draft_config.path_guiding_more_training
             );
         }
+        ImGui::InputFloat(
+            "Optimal-E initial learning rate",
+            &draft_config.optimal_e_learning_rate
+        );
+        ImGui::InputInt(
+            "Optimal-E iterations",
+            &draft_config.optimal_e_iterations
+        );
 
         if (config_dirty)
             ImGui::TextUnformatted("Pending changes");
@@ -806,7 +813,10 @@ RendererControlsResult displayStatsControls(std::chrono::duration<double>& state
     if (ImGui::CollapsingHeader("debugMode", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (ImGui::Checkbox("eye subspace visible", &eye_subspace_visualize)) result.visualization_changed = true;
         if (ImGui::Checkbox("light subspace visible", &light_subspace_visualize)) result.visualization_changed = true;
-        if (ImGui::Checkbox("caustic_path_only", &caustic_path_only))result.visualization_changed = true;
+        ImGui::Checkbox(
+            "Caustic paths only (debug)",
+            &draft_config.caustic_path_only
+        );
         if (ImGui::Checkbox("specular_subspace_visualize", &specular_subspace_visualize))result.visualization_changed = true;
         if (ImGui::Checkbox("caustic_prob_visualize", &caustic_prob_visualize))result.visualization_changed = true;
         if (ImGui::Checkbox("PG_grid_visualize", &PG_grid_visualize))result.visualization_changed = true;

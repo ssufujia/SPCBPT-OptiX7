@@ -135,7 +135,11 @@ namespace MyThrustOp
         unsigned int experiment_seed
     );
     void Q_zero_handle(thrust::device_ptr<float>& Q);
-    void train_optimal_E(thrust::device_ptr<float>& E_ptr);
+    void train_optimal_E(
+        thrust::device_ptr<float>& E_ptr,
+        float learning_rate,
+        int iterations
+    );
     thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma, Subspace* subspace);
 
 

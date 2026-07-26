@@ -84,7 +84,7 @@ void restoreInteractiveState(
     params.W = state.camera_w;
     params.eye_subspace_visualize = state.eye_subspace_visualize;
     params.light_subspace_visualize = state.light_subspace_visualize;
-    params.caustic_path_only = state.caustic_path_only;
+    params.caustic_path_only = config.caustic_path_only;
     params.specular_subspace_visualize =
         state.specular_subspace_visualize;
     params.caustic_prob_visualize = state.caustic_prob_visualize;
@@ -1422,7 +1422,11 @@ class RendererWorkflow::Impl
             );
             return;
         }
-        MyThrustOp::train_optimal_E( gamma );
+        MyThrustOp::train_optimal_E(
+            gamma,
+            runtime.config().optimal_e_learning_rate,
+            runtime.config().optimal_e_iterations
+        );
         optimal_gamma = gamma;
 
         subspace_info.Q = thrust::raw_pointer_cast( q_star );

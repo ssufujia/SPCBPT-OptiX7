@@ -1423,7 +1423,11 @@ namespace MyThrustOp
 
     }
 
-    void train_optimal_E(thrust::device_ptr<float>& E_ptr)
+    void train_optimal_E(
+        thrust::device_ptr<float>& E_ptr,
+        float learning_rate,
+        int iterations
+    )
     {
         d_E.assign(E_ptr, E_ptr + NUM_SUBSPACE * NUM_SUBSPACE);
         const spcbpt::OptimalEOptimizerResult result =
@@ -1432,8 +1436,8 @@ namespace MyThrustOp
                 thrust::raw_pointer_cast(d_E.data()),
                 {
                     CONSERVATIVE_RATE,
-                    spcbpt::PRODUCTION_OPTIMAL_E_LEARNING_RATE,
-                    20,
+                    learning_rate,
+                    iterations,
                     12,
                     1e-8f
                 }

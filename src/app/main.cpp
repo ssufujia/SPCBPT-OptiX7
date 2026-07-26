@@ -51,6 +51,7 @@
 #include <cstdlib>
 #include <direct.h>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <io.h>
@@ -268,9 +269,9 @@ void printUsageAndExit( const char* argv0 )
 {
     std::cerr << "Usage  : " << argv0 << " [options]\n";
     std::cerr << "         --no-gl-interop             Disable GL interop for display\n";
-    std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 1920x1000\n";
-    std::cerr << "         --config=<path>             Load renderer configuration JSON\n";
-    std::cerr << "         --scene=<path>              Override the default scene file\n";
+    std::cerr << "         --dim=<width>x<height>      Override configured image dimensions\n";
+    std::cerr << "         --config=<path>             Override renderer_config.json\n";
+    std::cerr << "         --scene=<path>              Override the configured scene file\n";
     std::cerr << "         --help | -h                 Print this usage message\n";
     std::exit( 0 );
 }
@@ -516,14 +517,14 @@ int main( int argc, char* argv[] )
 
     try
     {
-        spcbpt::SceneConfig scene_config = spcbpt::SceneConfig::defaultScene();
-        if( !scene_override.empty() )
-            scene_config.path = scene_override;
-        const string& scene_path = scene_config.path;
-
         spcbpt::RendererConfig renderer_config;
         renderer_config.width = 1920;
         renderer_config.height = 1000;
+        if( renderer_config_path.empty()
+            && std::filesystem::exists( "renderer_config.json" ) )
+        {
+            renderer_config_path = "renderer_config.json";
+        }
         if( !renderer_config_path.empty() )
             renderer_config =
                 spcbpt::loadRendererConfig( renderer_config_path );
@@ -535,6 +536,40 @@ int main( int argc, char* argv[] )
                 static_cast<unsigned int>( parsed_height );
         }
         spcbpt::validateRendererConfig( renderer_config );
+
+        spcbpt::SceneConfig scene_config = spcbpt::SceneConfig::defaultScene();
+        scene_config.path = renderer_config.scene_path;
+        if( !scene_override.empty() )
+            scene_config.path = scene_override;
+        const string& scene_path = scene_config.path;
+
+        std::cout
+            << "Renderer config: "
+            << ( renderer_config_path.empty()
+                ? "built-in defaults (renderer_config.json not found)"
+                : renderer_config_path )
+            << "\n  scene: " << scene_path
+            << "\n  algorithm: "
+            << spcbpt::rendererAlgorithmDisplayName( renderer_config.algorithm )
+            << "\n  image: " << renderer_config.width << 'x'
+            << renderer_config.height
+            << ", path depth " << renderer_config.active_path_depth
+            << ", connections " << renderer_config.connection_count
+            << "\n  path mode: "
+            << ( renderer_config.caustic_path_only
+                ? "caustic-only (debug)"
+                : "full paths" )
+            << "\n  path guiding: "
+            << ( renderer_config.path_guiding_enabled ? "enabled" : "disabled" )
+            << ", self-train "
+            << ( renderer_config.path_guiding_self_train ? "enabled" : "disabled" )
+            << ", extra training "
+            << ( renderer_config.path_guiding_more_training ? "enabled" : "disabled" )
+            << "\n  Optimal-E: learning rate "
+            << renderer_config.optimal_e_learning_rate
+            << ", iterations " << renderer_config.optimal_e_iterations
+            << '\n';
+
         draft_renderer_config = renderer_config;
         const std::string renderer_config_save_path =
             renderer_config_path.empty()
@@ -545,7 +580,6 @@ int main( int argc, char* argv[] )
 
         renderer.loadScene( scene_config );
         renderer.initialize( renderer_config );
-        params.caustic_path_only = 1;
         sutil::Scene& scene = renderer.scene();
 
         initCameraState( scene );
@@ -629,7 +663,6 @@ int main( int argc, char* argv[] )
                     config_status.c_str(),
                     params.eye_subspace_visualize,
                     params.light_subspace_visualize,
-                    params.caustic_path_only,
                     params.specular_subspace_visualize,
                     params.caustic_prob_visualize,
                     params.PG_grid_visualize,

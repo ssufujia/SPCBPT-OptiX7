@@ -121,7 +121,6 @@ SUTILAPI RendererControlsResult displayStatsControls(std::chrono::duration<doubl
     const char* config_status,
     bool& eye_subspace_visualize,
     bool& light_subspace_visualize,
-    bool& caustic_path_only,
     bool& specular_subspace_visualize,
     bool& caustic_prob_visualize,
     bool & PG_grid_visualize,
