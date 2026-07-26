@@ -7,6 +7,8 @@
 namespace spcbpt
 {
 
+inline constexpr float PRODUCTION_OPTIMAL_E_LEARNING_RATE = 1.0f;
+
 struct OptimalEProblem
 {
     int num_paths;
@@ -26,7 +28,7 @@ struct OptimalEProblem
 struct OptimalEOptimizerOptions
 {
     float conservative_rate = 0.1f;
-    float learning_rate = 1.0f;
+    float learning_rate = PRODUCTION_OPTIMAL_E_LEARNING_RATE;
     int   iterations = 20;
     int   max_backtracking_steps = 12;
     float epsilon = 1e-8f;

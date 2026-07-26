@@ -15,14 +15,19 @@
   仍优于 PyTorch，说明替换时应暂时保留 mirror fallback。
 - 修复后的旧 CUDA normalized-sigmoid Adam 使用历史 `lr=0.01` 时平均降低
   `6.59%`；只把学习率对齐到 `0.05` 后达到 `19.55%`。
+- 后续 sweep 将 production mirror 的学习率提高到 `1.0` 后，平均降幅达到
+  `18.89%`，与旧 CUDA Adam `lr=0.05` 的 `19.55%` 已属同一水平。
+- 同口径的 33 组墙钟样本中，mirror `lr=1.0` 平均耗时 `0.277850 s`，
+  旧 CUDA Adam `lr=0.05` 为 `0.280028 s`；mirror 约快 `0.8%`。
 - 对齐步长的旧 CUDA 与 PyTorch 已很接近，但 PyTorch 在 114/114 组的
   final loss 都更低；差距平均为初始 loss 的 `1.08` 个百分点。
 
-因此，PyTorch 的主要价值已经明确：它证明 **softmax 参数化 + Adam + 合适
-步长** 比当前 mirror 策略更适合这批数据。结果不支持为了这一个固定概率矩阵
-把完整 LibTorch 放进 renderer；更合适的下一步是在现有 CUDA objective/
-gradient 上实现同款 softmax-logits Adam，并在过渡期取 Adam/mirror 中较低
-objective 的结果。后端选型的完整理由见
+因此当前生产端保留实现更简单、同口径稍快的 CUDA mirror，并固定使用
+`learning_rate=1.0`。PyTorch 的主要价值仍是数学参考：它证明
+**softmax 参数化 + Adam + 合适步长** 能在这批数据上取得略低 loss，但结果
+不支持为了这一个固定概率矩阵把完整 LibTorch 放进 renderer。若未来画质或
+更大数据集证明这点 loss 差异值得追求，再在现有 CUDA objective/gradient
+上实现 softmax-logits Adam。后端选型的完整理由见
 [Optimal E 生产优化后端选择](optimal-e-production-backend.md)。
 
 ## 数据范围
@@ -170,15 +175,30 @@ runtime 才能取得好结果。
 方差/MSE 会显著扩大实验成本；它适合作为生产替换完成后的最终渲染验收，
 不是决定后端依赖的前置条件。
 
-## 时间数据的限制
+## 生产选型计时
 
-- production CUDA `0.270 s/组` 是 validator 完整进程墙钟；
-- PyTorch `3.49 s/组` 包含 snapshot 读取、两项 cross-check、20-step
-  optimizer 和结果写出；
-- fixed legacy CUDA 约 `0.051 s/组` 只计内部 20-step optimizer loop。
+旧记录中的 production CUDA `0.270 s/组` 是 validator 完整进程墙钟，而
+fixed legacy CUDA `0.051 s/组` 只计内部 20-step optimizer loop，不能直接
+用于选型。为此补做了同一计时边界的配对实验：
 
-三者计时边界不同，不能用这些数字声称某个 kernel 快多少倍。它们只说明相对
-平均 `7.82 s/组` 的真实路径采集，保留一个短期 mirror fallback 成本可控。
+- 从 11 个场景各取一份真实 snapshot；
+- 两个可执行程序各预热一次；
+- 都运行 20 optimizer steps，每个场景重复 3 次；
+- 统一统计独立 validator 进程完整墙钟，共 33 组配对样本。
+
+| 方法 | 学习率 | 平均墙钟 | 中位墙钟 | 配对胜出 |
+|---|---:|---:|---:|---:|
+| Production CUDA mirror | 1.0 | **0.277850 s** | **0.276097 s** | **17 / 33** |
+| Fixed legacy CUDA Adam | 0.05 | 0.280028 s | 0.280416 s | 16 / 33 |
+
+mirror 平均耗时约为 legacy 的 `99.22%`，本轮均值低约 `0.8%`；但胜负仅
+`17:16`，应理解为两者速度基本持平，不能据此声称稳定或显著加速。这不是纯
+kernel profile，而是两条实际 validator 调用链的公平端到端计时。结合两者
+最终 loss 降幅接近，当前没有为了速度切换算法的依据，因此保留实现更简单的
+mirror `lr=1.0`。
+
+PyTorch `3.49 s/组` 仍包含 snapshot 读取、两项 cross-check、20-step
+optimizer 和结果写出，作用是离线参考，不参与生产 CUDA 后端的速度选择。
 
 ## 复现入口
 

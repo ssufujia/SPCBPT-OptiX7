@@ -1432,7 +1432,7 @@ namespace MyThrustOp
                 thrust::raw_pointer_cast(d_E.data()),
                 {
                     CONSERVATIVE_RATE,
-                    1.0f,
+                    spcbpt::PRODUCTION_OPTIMAL_E_LEARNING_RATE,
                     20,
                     12,
                     1e-8f

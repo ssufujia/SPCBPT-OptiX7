@@ -25,6 +25,7 @@ constexpr int NUM_EYE = 2;
 constexpr int NUM_LIGHT = 5;
 constexpr int ACTIVE_LIGHT_COUNT = 4;
 constexpr float CONSERVATIVE_RATE = 0.1f;
+static_assert( spcbpt::PRODUCTION_OPTIMAL_E_LEARNING_RATE == 1.0f );
 
 void require( bool condition, const std::string& message )
 {
@@ -618,7 +619,8 @@ int main( int argc, char* argv[] )
         std::string result_path;
         std::string candidate_q_path;
         std::string candidate_objective_path;
-        float learning_rate = 1.0f;
+        float learning_rate =
+            spcbpt::PRODUCTION_OPTIMAL_E_LEARNING_RATE;
         for( int index = 1; index < argc; ++index )
         {
             const std::string argument = argv[index];

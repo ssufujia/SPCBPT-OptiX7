@@ -12,64 +12,59 @@ CUDA mirror descent，初始学习率为 `1.0`。
 实验脚本和回归测试随仓库提交；约 3.49 GiB 的原始 snapshot、候选矩阵和日志
 仅保存在本地 ignored `build/experiments/`，不上传 GitHub。
 
-This repository is an OptiX implementation of
-[SPCBPT: Subspace-based Probabilistic Connections for Bidirectional Path Tracing](https://ssufujia.github.io/SPCBPT/).
+本仓库是论文
+[SPCBPT：基于子空间概率连接的双向路径追踪](https://ssufujia.github.io/SPCBPT/)
+的 OptiX 实验实现。当前实现以验证渲染流程、数据结构和 Blender 接入为主，
+不以完整复现论文全部算法为目标。
 
-## Requirements
+在 11 个场景真实 snapshot 上补做的 33 组同口径计时中，CUDA mirror
+`lr=1.0` 平均耗时 `0.277850 s`，旧 CUDA Adam `lr=0.05` 为
+`0.280028 s`。两者速度和 loss 降幅都接近，没有为了速度切换算法的依据，
+因此生产端保留实现更简单的 mirror。
 
-Verified baseline: OptiX 9.1, CUDA 12.2, MSVC x64, Ninja, and CMake 3.27+
-(clean-build verified with CMake 4.4.0). Vendored versions are listed in
-[`third_party/README.md`](third_party/README.md).
+## 环境要求
 
-## Build
+已验证的基线环境为 OptiX 9.1、CUDA 12.2、MSVC x64、Ninja 和
+CMake 3.27 以上版本；全新构建另使用 CMake 4.4.0 验证通过。仓库内第三方
+依赖版本见 [`third_party/README.md`](third_party/README.md)。
 
-The repository root is the only supported CMake source directory. In-source
-builds are rejected.
+## 构建
 
-1. Copy `CMakeUserPresets.json.example` to `CMakeUserPresets.json`.
-2. Set local `OptiX_ROOT` and Ninja paths.
-3. Open an x64 Visual Studio Developer shell.
-4. Run:
+仓库根目录是唯一支持的 CMake 源码入口，项目会拒绝源码内构建。
+
+1. 将 `CMakeUserPresets.json.example` 复制为 `CMakeUserPresets.json`。
+2. 填写本机的 `OptiX_ROOT` 和 Ninja 路径。
+3. 打开 x64 Visual Studio Developer PowerShell。
+4. 执行：
 
 ```powershell
 cmake --fresh --preset release-optix9-local
 cmake --build --preset release-optix9-local
 ```
 
-The executable is `build/release-optix9/bin/optixPathTracer.exe`; native
-OptiX-IR files are deployed beside it under `bin/optix-ir/`.
+可执行文件位于 `build/release-optix9/bin/optixPathTracer.exe`；原生
+OptiX-IR 文件会部署到同级的 `bin/optix-ir/`。
 
-The renderer can start from any working directory. Use `--scene=<path>` to
-override the default bedroom scene and `--dim=<width>x<height>` to override the
-image dimensions.
+渲染器可以从任意工作目录启动。使用 `--scene=<path>` 覆盖默认 Bedroom
+场景，使用 `--dim=<width>x<height>` 覆盖图像尺寸。
 
-## Build architecture
+## 构建目标
 
-- `spcbpt_renderer`: OptiX scene/pipeline, algorithms and native CUDA;
-  no GLFW, glad, ImGui or OpenGL dependency.
-- `spcbpt_viewer`: window, input, display and UI.
-- `optixPathTracer`: application and CLI composition.
-- `spcbpt_optix_ir`: CMake-native compilation of the two OptiX shaders.
+- `spcbpt_renderer`：OptiX 场景、pipeline、算法和原生 CUDA；不依赖
+  GLFW、glad、ImGui 或 OpenGL。
+- `spcbpt_viewer`：窗口、输入、显示与界面。
+- `optixPathTracer`：应用入口和 CLI 组装。
+- `spcbpt_optix_ir`：由 CMake 原生编译的两个 OptiX shader。
 
-Scenes live in `assets/`, dependencies in `third_party/`, and controls in
-[`docs/operation.md`](docs/operation.md).
+场景资源位于 `assets/`，第三方依赖位于 `third_party/`，运行与界面操作见
+[`docs/operation.md`](docs/operation.md)。
 
-## Difference from the paper-version code
+## 与论文版本的差异
 
-Due to various reasons, some details of this implementation are slightly
-different from the paper-version code.
-
-- This implementation disables the t = 1 strategy, i.e., the strategy of
-  light sub-path connecting to the eye sub-path directly, because it is
-  usually of low efficiency.
-- The parts of cross-iteration reuse of light sub-path, environment map, and
-  transparent material are not yet completed.
-- Direction is ignored in the classification. Position and normal are more
-  important in most cases.
-- Subspace Sampling Matrix is trained from an initial matrix built from the
-  full contribution integral of the paths in the corresponding subspace pair
-  to speed up the training.
-- Paths for training are traced by a simple unidirectional path tracer with
-  NEE implementation.
-- The over-bright fireflies are slightly more than in the paper-version code;
-  this remains future work.
+- 当前禁用 `t=1` 策略，即光源子路径直接连接相机的策略，因为它通常效率较低。
+- 跨迭代复用光源子路径、环境贴图和透明材质尚未完整实现。
+- 子空间分类暂不考虑方向；多数场景中位置和法线更重要。
+- 子空间采样矩阵从对应子空间对路径完整贡献积分构造的初始矩阵开始训练，
+  以加快收敛。
+- 训练路径由带 NEE 的简单单向路径追踪器生成。
+- 过亮 firefly 仍比论文版本略多，后续再处理。
