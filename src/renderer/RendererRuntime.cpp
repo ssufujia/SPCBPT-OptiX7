@@ -146,6 +146,16 @@ void RendererRuntime::loadScene( const SceneConfig& config )
         {
             sutil::loadScene( resolved_config.path, *m_scene );
             m_scene->setResourceRoot( resolved_config.resource_root );
+            if( resolved_config.camera_override )
+            {
+                const SceneCameraOverride& source = *resolved_config.camera_override;
+                sutil::Camera camera;
+                camera.setEye( source.eye );
+                camera.setLookat( source.lookat );
+                camera.setUp( source.up );
+                camera.setFovY( source.fov_y );
+                m_scene->setCamera( camera );
+            }
         }
         else
         {

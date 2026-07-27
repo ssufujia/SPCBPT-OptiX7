@@ -91,6 +91,13 @@ public:
 
 
     void addCamera  ( const Camera& camera            )    { m_cameras.push_back( camera );     }
+    void setCamera  ( const Camera& camera            )
+    {
+        if( m_cameras.empty() )
+            m_cameras.push_back( camera );
+        else
+            m_cameras.front() = camera;
+    }
     void addInstance( std::shared_ptr<Instance> instance ) { m_instances.push_back( instance ); }
     void addMesh    ( std::shared_ptr<MeshGroup> mesh )    { m_meshes.push_back( mesh );        }
     void addMaterial( const MaterialData& mtl    )         { m_materials.push_back( mtl );      }

@@ -215,7 +215,12 @@ RT_FUNCTION void ColorTexSample(const LocalGeometry& geom, MaterialData::Pbr& pb
         const float3 base_color_tex_linear = Tracer::linearize(make_float3(base_color_tex));
         //const float3 base_color_tex_linear = make_float3(base_color_tex);
 
-        base_color = make_float4(base_color_tex_linear.x, base_color_tex_linear.y, base_color_tex_linear.z, base_color_tex.w);
+        base_color = make_float4(
+            base_color.x * base_color_tex_linear.x,
+            base_color.y * base_color_tex_linear.y,
+            base_color.z * base_color_tex_linear.z,
+            base_color.w * base_color_tex.w
+        );
     }
     pbr.base_color = base_color;
 

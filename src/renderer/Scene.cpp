@@ -69,7 +69,10 @@ namespace
 
 std::string loadOptixIr( const char* sourceFile )
 {
-    const std::string path = std::string( SPCBPT_OPTIX_IR_DIR )
+    const char* environment_dir = std::getenv( "SPCBPT_OPTIX_IR_DIR" );
+    const char* optix_ir_dir =
+        environment_dir && environment_dir[0] ? environment_dir : SPCBPT_OPTIX_IR_DIR;
+    const std::string path = std::string( optix_ir_dir )
         + "/" + sourceFile + ".optixir";
 
     std::ifstream input( path, std::ios::binary | std::ios::ate );
@@ -420,6 +423,7 @@ void loadScene( const std::string& filename, Scene& scene )
         parseTextureInfo( scene, gltf_material.pbrMetallicRoughness.metallicRoughnessTexture, mtl.pbr.metallic_roughness_tex );
         parseTextureInfo( scene, gltf_material.normalTexture, mtl.normal_tex );
         parseTextureInfo( scene, gltf_material.emissiveTexture, mtl.emissive_tex );
+        mtl.pbr.brdf = mtl.normal_tex.tex != 0;
 
         {
             const auto roughness_it = gltf_material.values.find( "roughnessFactor" );
@@ -463,6 +467,15 @@ void loadScene( const std::string& filename, Scene& scene )
             {
                 std::cerr << "\tUsing default base color factor\n";
             }
+        }
+        const auto emissive_strength =
+            gltf_material.extensions.find( "KHR_materials_emissive_strength" );
+        if( emissive_strength != gltf_material.extensions.end()
+            && emissive_strength->second.Has( "emissiveStrength" ) )
+        {
+            mtl.emissive_factor *= static_cast<float>(
+                emissive_strength->second.Get( "emissiveStrength" ).GetNumberAsDouble()
+            );
         }
 
         scene.addMaterial( mtl );
