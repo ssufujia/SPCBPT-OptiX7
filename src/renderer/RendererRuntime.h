@@ -45,6 +45,7 @@ class RendererRuntime
     void reloadScene( const SceneConfig& config );
     void unloadScene();
     void initialize( const RendererConfig& config );
+    void updateCamera( const SceneCameraOverride& camera );
     void resize( unsigned int width, unsigned int height );
     void resetAccumulation();
     void markImageDirty();

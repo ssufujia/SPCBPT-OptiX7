@@ -33,6 +33,7 @@ struct SmokeOptions
     unsigned int experiment_seed = 0;
     bool        validate_frame = false;
     bool        reload_check = false;
+    bool        camera_update_check = false;
     bool        default_mode_init = false;
 };
 
@@ -143,6 +144,10 @@ SmokeOptions parseOptions( int argc, char* argv[] )
         {
             options.reload_check = true;
         }
+        else if( arg == "--camera-update-check" )
+        {
+            options.camera_update_check = true;
+        }
         else if( arg == "--default-mode-init" )
         {
             options.default_mode_init = true;
@@ -185,6 +190,7 @@ SmokeOptions parseOptions( int argc, char* argv[] )
         {
             throw std::invalid_argument(
                 "Usage: spcbpt_smoke [--scene=<path>] [--reload-check] "
+                "[--camera-update-check] "
                 "[--default-mode-init] "
                 "[--export-optimal-e=<path>] "
                 "[--eye=<x,y,z> --lookat=<x,y,z> --up=<x,y,z> --fov=<degrees>] "
@@ -326,6 +332,46 @@ int main( int argc, char* argv[] )
             workflow.runPreprocessing();
         }
         workflow.renderFrame( frame.get() );
+
+        if( options.camera_update_check )
+        {
+            const std::uint64_t generation = runtime.sceneGeneration();
+            runtime.params().subframe_index = 17;
+            const spcbpt::SceneCameraOverride camera{
+                make_float3( 2.0f, 3.0f, 4.0f ),
+                make_float3( 0.0f, 1.0f, 0.0f ),
+                make_float3( 0.0f, 1.0f, 0.0f ),
+                50.0f
+            };
+            runtime.updateCamera( camera );
+            if( runtime.sceneGeneration() != generation )
+                throw std::runtime_error( "Camera update rebuilt the scene" );
+            if( runtime.params().subframe_index != 0 )
+                throw std::runtime_error( "Camera update kept stale accumulation" );
+            if( runtime.params().eye.x != camera.eye.x
+                || runtime.params().eye.y != camera.eye.y
+                || runtime.params().eye.z != camera.eye.z )
+            {
+                throw std::runtime_error( "Camera update did not reach launch params" );
+            }
+            const float3 square_u = runtime.params().U;
+            runtime.params().subframe_index = 17;
+            runtime.resize( SMOKE_WIDTH * 2, SMOKE_HEIGHT );
+            const float3 wide_u = runtime.params().U;
+            const auto length = []( const float3& value ) {
+                return std::sqrt(
+                    value.x * value.x + value.y * value.y + value.z * value.z
+                );
+            };
+            if( runtime.sceneGeneration() != generation )
+                throw std::runtime_error( "Resize rebuilt the scene" );
+            if( runtime.params().subframe_index != 0 )
+                throw std::runtime_error( "Resize kept stale accumulation" );
+            if( std::abs( length( wide_u ) / length( square_u ) - 2.0f ) > 1e-4f )
+                throw std::runtime_error( "Resize did not update camera aspect ratio" );
+            runtime.resize( SMOKE_WIDTH, SMOKE_HEIGHT );
+            workflow.renderFrame( frame.get() );
+        }
 
         if( options.reload_check )
         {

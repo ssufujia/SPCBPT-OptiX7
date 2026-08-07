@@ -20,13 +20,12 @@ target_compile_definitions(optixPathTracer
 target_link_libraries(optixPathTracer
   PRIVATE
     spcbpt_common
-    spcbpt_renderer
     spcbpt_viewer
     glfw
     glad
     imgui
     CUDA::cuda_driver
-    CUDA::cudart_static
+    ${SPCBPT_CUDART_TARGET}
     CUDA::curand
 )
 

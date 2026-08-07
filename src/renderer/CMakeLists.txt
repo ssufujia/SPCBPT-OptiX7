@@ -8,11 +8,12 @@ target_include_directories(spcbpt_optimal_e_optimizer
 )
 target_link_libraries(spcbpt_optimal_e_optimizer
   PUBLIC
-    CUDA::cudart_static
+    ${SPCBPT_CUDART_TARGET}
 )
 spcbpt_configure_cuda_target(spcbpt_optimal_e_optimizer)
 set_target_properties(spcbpt_optimal_e_optimizer PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
+  CUDA_RESOLVE_DEVICE_SYMBOLS ON
   FOLDER "${OPTIX_IDE_FOLDER}"
 )
 
@@ -57,13 +58,14 @@ target_link_libraries(spcbpt_renderer
     spcbpt_common
   PRIVATE
     CUDA::cuda_driver
-    CUDA::cudart_static
+    ${SPCBPT_CUDART_TARGET}
     spcbpt_optimal_e_optimizer
 )
 
 spcbpt_configure_cuda_target(spcbpt_renderer)
 set_target_properties(spcbpt_renderer PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
+  CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 
 set_property(TARGET spcbpt_renderer PROPERTY FOLDER "${OPTIX_IDE_FOLDER}")

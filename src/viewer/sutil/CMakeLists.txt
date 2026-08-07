@@ -41,7 +41,7 @@ target_link_libraries(spcbpt_viewer
     glad
     imgui
     CUDA::cuda_driver
-    CUDA::cudart_static
+    ${SPCBPT_CUDART_TARGET}
 )
 
 if(WIN32)

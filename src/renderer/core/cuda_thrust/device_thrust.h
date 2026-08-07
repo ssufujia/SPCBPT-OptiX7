@@ -153,6 +153,7 @@ namespace MyThrustOp
 
     void clear_training_set();
     void invalidate_scene_caches();
+    void release_process_caches();
     std::vector<classTree::divide_weight> getCausticCentroidCandidate(bool eye_side, int max_size);
 
 

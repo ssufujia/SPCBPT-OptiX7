@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <stdexcept>
 #include <vector>
@@ -69,6 +70,34 @@ bool isGltfScene( const std::filesystem::path& path )
         }
     );
     return extension == ".glb" || extension == ".gltf";
+}
+
+void validateCameraOverride( const SceneCameraOverride& camera )
+{
+    const float3 direction = camera.lookat - camera.eye;
+    constexpr float MIN_LENGTH_SQUARED = 1.0e-12f;
+    const auto finite3 = []( const float3& value )
+    {
+        return std::isfinite( value.x )
+            && std::isfinite( value.y )
+            && std::isfinite( value.z );
+    };
+    if( !finite3( camera.eye )
+        || !finite3( camera.lookat )
+        || !finite3( camera.up )
+        || !std::isfinite( camera.fov_y ) )
+    {
+        throw std::invalid_argument( "Camera override contains a non-finite value" );
+    }
+    if( dot( direction, direction ) <= MIN_LENGTH_SQUARED )
+        throw std::invalid_argument( "Camera eye and lookat must differ" );
+    if( dot( camera.up, camera.up ) <= MIN_LENGTH_SQUARED )
+        throw std::invalid_argument( "Camera up vector must be non-zero" );
+    const float3 side = cross( direction, camera.up );
+    if( dot( side, side ) <= MIN_LENGTH_SQUARED )
+        throw std::invalid_argument( "Camera direction and up vector must not be parallel" );
+    if( camera.fov_y <= 0.0f || camera.fov_y >= 180.0f )
+        throw std::invalid_argument( "Camera field of view must be between 0 and 180 degrees" );
 }
 
 template <typename T>
@@ -131,6 +160,8 @@ SceneConfig SceneConfig::defaultScene()
 void RendererRuntime::loadScene( const SceneConfig& config )
 {
     const SceneConfig resolved_config = resolveSceneConfig( config );
+    if( resolved_config.camera_override )
+        validateCameraOverride( *resolved_config.camera_override );
     if( !std::filesystem::is_regular_file( resolved_config.path ) )
     {
         throw std::runtime_error(
@@ -294,6 +325,29 @@ void RendererRuntime::resetAccumulation()
     markImageDirty();
 }
 
+void RendererRuntime::updateCamera( const SceneCameraOverride& source )
+{
+    if( !isInitialized() )
+        throw std::logic_error( "RendererRuntime::initialize must be called first" );
+    validateCameraOverride( source );
+
+    sutil::Camera camera = m_scene->camera();
+    camera.setEye( source.eye );
+    camera.setLookat( source.lookat );
+    camera.setUp( source.up );
+    camera.setFovY( source.fov_y );
+    camera.setAspectRatio(
+        static_cast<float>( m_params.width ) / m_params.height
+    );
+    m_scene->setCamera( camera );
+    m_scene_config.camera_override = source;
+    m_params.eye = camera.eye();
+    camera.UVWFrame( m_params.U, m_params.V, m_params.W );
+    resetAccumulation();
+    uploadParams();
+    synchronize();
+}
+
 void RendererRuntime::resize( unsigned int width, unsigned int height )
 {
     if( !isInitialized() )
@@ -330,6 +384,11 @@ void RendererRuntime::resize( unsigned int width, unsigned int height )
     m_params.width = width;
     m_params.height = height;
     m_params.subframe_index = 0;
+    sutil::Camera camera = m_scene->camera();
+    camera.setAspectRatio( static_cast<float>( width ) / height );
+    m_scene->setCamera( camera );
+    m_params.eye = camera.eye();
+    camera.UVWFrame( m_params.U, m_params.V, m_params.W );
     m_config = resized_config;
     markImageDirty();
 }

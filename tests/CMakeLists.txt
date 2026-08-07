@@ -47,6 +47,15 @@ set_tests_properties(spcbpt.reload_smoke PROPERTIES
   TIMEOUT 120
 )
 
+add_test(
+  NAME spcbpt.camera_update_smoke
+  COMMAND spcbpt_smoke --camera-update-check
+)
+set_tests_properties(spcbpt.camera_update_smoke PROPERTIES
+  LABELS "gpu;optix;smoke;camera"
+  TIMEOUT 120
+)
+
 add_executable(spcbpt_renderer_linkcheck
   renderer_linkcheck.cpp
 )
@@ -97,7 +106,7 @@ add_executable(spcbpt_optimal_e_optimizer_test
 target_link_libraries(spcbpt_optimal_e_optimizer_test
   PRIVATE
     spcbpt_optimal_e_optimizer
-    CUDA::cudart_static
+    ${SPCBPT_CUDART_TARGET}
 )
 spcbpt_configure_cuda_target(spcbpt_optimal_e_optimizer_test)
 set_target_properties(spcbpt_optimal_e_optimizer_test PROPERTIES

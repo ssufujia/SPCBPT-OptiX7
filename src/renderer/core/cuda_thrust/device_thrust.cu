@@ -37,6 +37,39 @@ typedef thrust::host_vector<bool> thrust_host_bool;
 
 namespace MyThrustOp
 {
+    struct TransientDeviceCaches
+    {
+        thrust_dev_int lvc_subspace_info;
+        thrust_dev_float lvc_weight;
+        thrust_dev_float lvc_cmf;
+        thrust_dev_int lvc_jump;
+        thrust::device_vector<Subspace> lvc_subspaces;
+        thrust_dev_int glossy_subspace_info;
+        thrust_dev_float glossy_weight;
+        thrust_dev_int glossy_indexes;
+        thrust_dev_int glossy_subspace_bias;
+        thrust_dev_int glossy_subspace_vertex_count;
+        thrust_dev_int preprocess_subspace_info;
+        thrust_dev_float preprocess_weight;
+        thrust_dev_float caustic_fraction;
+        thrust::device_vector<path_guiding::quad_tree_node> quad_tree;
+        thrust::device_vector<path_guiding::Spatio_tree_node> spatio_tree;
+        thrust_dev_float dot_caustic_fraction;
+        thrust_dev_float dot_cmf_gamma;
+        thrust_dev_float loaded_e;
+        thrust_dev_float loaded_q;
+        thrust_dev_float cmf_gamma;
+        thrust::device_vector<float4> reference_image;
+    };
+
+    TransientDeviceCaches& transient_device_caches()
+    {
+        // Intentionally keep the empty host control block alive until process exit;
+        // CUDA storage is explicitly released by the scene/session cleanup paths.
+        static auto* caches = new TransientDeviceCaches();
+        return *caches;
+    }
+
     template<typename T>
     struct debug_print
     {
@@ -169,10 +202,13 @@ namespace MyThrustOp
         SubspaceSampler sampler;
         thrust_dev_bool d_validState(validState, validState + countRange);
         thrust::host_vector<BDPTVertex> h_vertices(vertices, vertices + countRange);
-        static thrust_dev_int d_Vsubspace_info(countRange);
+        auto& caches = transient_device_caches();
+        auto& d_Vsubspace_info = caches.lvc_subspace_info;
         static thrust_host_int h_Vsubspace_info(countRange);
-        static thrust_dev_float d_weight(countRange);
+        auto& d_weight = caches.lvc_weight;
         static thrust_host_float h_weight(countRange);
+        d_Vsubspace_info.resize(countRange);
+        d_weight.resize(countRange);
          
         //thrust_host_bool h_validState = d_validState;
         //thrust_dev_bool d_validState_glossy(countRange);
@@ -226,9 +262,9 @@ namespace MyThrustOp
             }
         }
          
-        static thrust_dev_float ans_cmf;
-        static thrust_dev_int ans_jump;
-        static thrust::device_vector<Subspace> ans_subspace(NUM_SUBSPACE);
+        auto& ans_cmf = caches.lvc_cmf;
+        auto& ans_jump = caches.lvc_jump;
+        auto& ans_subspace = caches.lvc_subspaces;
         
         static thrust_host_float h_cmf;
         static thrust_host_int h_jump;
@@ -284,13 +320,22 @@ namespace MyThrustOp
         return sampler;
     }
 
-    thrust_dev_float glossy_subspace_Q(
-        dropOut_tracing::default_specularSubSpaceNumber,
-        0
-    );
+    thrust_dev_float glossy_subspace_Q;
+    void ensure_glossy_subspace_Q()
+    {
+        if( glossy_subspace_Q.size()
+            != dropOut_tracing::default_specularSubSpaceNumber )
+        {
+            glossy_subspace_Q.assign(
+                dropOut_tracing::default_specularSubSpaceNumber,
+                0.0f
+            );
+        }
+    }
     int glossy_launch_count = 0;
     SubspaceSampler LVC_Process_glossyOnly(thrust::device_ptr<BDPTVertex> vertices, thrust::device_ptr<bool> validState, int countRange, BufferView<MaterialData::Pbr> mats)
     {
+        ensure_glossy_subspace_Q();
         SubspaceSampler sampler;
         thrust_dev_bool d_validState(validState, validState + countRange);
         thrust_host_bool h_validState = d_validState;
@@ -304,9 +349,12 @@ namespace MyThrustOp
         thrust_host_bool h_valid_glossy = d_valid_glossy;
 
 
-        static thrust_dev_int d_Vsubspace_info(countRange);
+        auto& caches = transient_device_caches();
+        auto& d_Vsubspace_info = caches.glossy_subspace_info;
         static thrust_host_int h_Vsubspace_info(countRange);
-        static thrust_dev_float d_weight(countRange); 
+        auto& d_weight = caches.glossy_weight;
+        d_Vsubspace_info.resize(countRange);
+        d_weight.resize(countRange);
         //int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>());
         //copy necessary info------subspace info 
         {
@@ -357,14 +405,15 @@ namespace MyThrustOp
             if(DOT_DEBUG_INFO_ENABLE)
                 printf("get %d vertex at specular subspace %d\n", h_subspace_vertex_count[i], i);
         }
-        static thrust_dev_int d_indexes;
+        auto& d_indexes = caches.glossy_indexes;
         d_indexes = h_indexes_rearrange;
         // printf("glossy vertices number %d\n", h_indexes_rearrange.size());
         sampler.glossy_count = h_indexes_rearrange.size();
         sampler.glossy_index = thrust::raw_pointer_cast(d_indexes.data());
 
-        static thrust_dev_int d_glossy_subspace_bias;
-        static thrust_dev_int d_glossy_subsapce_number_vertex;
+        auto& d_glossy_subspace_bias = caches.glossy_subspace_bias;
+        auto& d_glossy_subsapce_number_vertex =
+            caches.glossy_subspace_vertex_count;
         d_glossy_subspace_bias = h_vertex_bias;
         d_glossy_subsapce_number_vertex = h_subspace_vertex_count;
         sampler.glossy_subspace_num = thrust::raw_pointer_cast(d_glossy_subsapce_number_vertex.data());
@@ -384,16 +433,23 @@ namespace MyThrustOp
 
     float* DOT_get_Q()
     {
+        ensure_glossy_subspace_Q();
         return thrust::raw_pointer_cast(glossy_subspace_Q.data());
     }
 
 
     static thrust_host_float h_Q_vec(NUM_SUBSPACE);
     static thrust_dev_float Q_vec;
-    static thrust_dev_int optimal_E_active_light(NUM_SUBSPACE, 1);
+    static thrust_dev_int optimal_E_active_light;
     static int optimal_E_active_light_count = NUM_SUBSPACE;
+    void ensure_optimal_E_active_light()
+    {
+        if( optimal_E_active_light.size() != NUM_SUBSPACE )
+            optimal_E_active_light.assign( NUM_SUBSPACE, 1 );
+    }
     void Q_zero_handle(thrust::device_ptr<float>& Q)
     {
+        ensure_optimal_E_active_light();
         thrust_host_int h_active_light(NUM_SUBSPACE, 0);
         optimal_E_active_light_count = 0;
         for (int i = 0; i < NUM_SUBSPACE; i++)
@@ -433,10 +489,13 @@ namespace MyThrustOp
         thrust_dev_bool d_validState(validState, validState + countRange);
         thrust_host_bool h_validState = d_validState;
         
-        static thrust_dev_int d_Vsubspace_info(countRange);
+        auto& caches = transient_device_caches();
+        auto& d_Vsubspace_info = caches.preprocess_subspace_info;
         static thrust_host_int h_Vsubspace_info(countRange);
-        static thrust_dev_float d_weight(countRange);
+        auto& d_weight = caches.preprocess_weight;
         static thrust_host_float h_weight(countRange);
+        d_Vsubspace_info.resize(countRange);
+        d_weight.resize(countRange);
 
         int valid_count = thrust::count_if(validState, validState + countRange, identical_transform<bool>());  
         int path_count = thrust::count_if(
@@ -534,11 +593,11 @@ namespace MyThrustOp
         neat_conns.resize(0);
         neat_paths.resize(0);
     }
-    thrust::device_vector<float4> d_reference_img_buffer;
     float4* reference_h2d(thrust::host_vector<float4> h_ref)
-    {  
-        d_reference_img_buffer = h_ref;
-        return thrust::raw_pointer_cast(d_reference_img_buffer.data());
+    {
+        auto& reference_image = transient_device_caches().reference_image;
+        reference_image = h_ref;
+        return thrust::raw_pointer_cast(reference_image.data());
     }
 
     int valid_sample_gather(thrust::device_ptr<preTracePath> raw_paths, int maxPathSize, 
@@ -547,7 +606,6 @@ namespace MyThrustOp
         int sample_count = thrust::count_if(raw_paths, raw_paths + maxPathSize, valid_op<preTracePath>());
         int node_count = thrust::count_if(raw_conns, raw_conns + maxConns, valid_op<preTraceConnection>());
         
-        static thrust::device_vector<int> sample_bias_flag(maxConns);
         sample_bias_flag.reserve(maxConns);
         sample_bias_flag.resize(maxConns);
 
@@ -901,7 +959,7 @@ namespace MyThrustOp
     void get_caustic_frac(thrust::device_ptr<float>& frac)
     {
         thrust_host_float h_frac(NUM_SUBSPACE);
-        static thrust_dev_float d_frac;
+        auto& d_frac = transient_device_caches().caustic_fraction;
         thrust::fill(h_frac.begin(), h_frac.end(), 0);
 
         thrust::host_vector<preTracePath> h_neat_paths = neat_paths;
@@ -950,7 +1008,7 @@ namespace MyThrustOp
     path_guiding::quad_tree_node* quad_tree_to_device(path_guiding::quad_tree_node* a, int size)
     {
         thrust::host_vector<path_guiding::quad_tree_node> h_vec(a, a + size);
-        static thrust::device_vector<path_guiding::quad_tree_node> d_vec;
+        auto& d_vec = transient_device_caches().quad_tree;
         d_vec = h_vec;
         return thrust::raw_pointer_cast(d_vec.data());
     }
@@ -958,7 +1016,7 @@ namespace MyThrustOp
     path_guiding::Spatio_tree_node* spatio_tree_to_device(path_guiding::Spatio_tree_node* a, int size)
     {
         thrust::host_vector<path_guiding::Spatio_tree_node> h_vec(a, a + size);
-        static thrust::device_vector<path_guiding::Spatio_tree_node> d_vec;
+        auto& d_vec = transient_device_caches().spatio_tree;
         d_vec = h_vec;
         return thrust::raw_pointer_cast(d_vec.data());
     }
@@ -1028,7 +1086,7 @@ namespace MyThrustOp
 
     float* DOT_causticFrac_to_device(thrust::host_vector<float> DOT_h_frac)
     {
-        static thrust_dev_float d_frac;
+        auto& d_frac = transient_device_caches().dot_caustic_fraction;
         d_frac = DOT_h_frac;
         return thrust::raw_pointer_cast(d_frac.data());
     }
@@ -1036,7 +1094,7 @@ namespace MyThrustOp
     float* DOT_causticCMFGamma_to_device(thrust::host_vector<float> DOT_h_GAMMA)
     { 
         thrust_host_float p = DOT_h_GAMMA;
-        static thrust_dev_float d_cmf_gamma(dropOut_tracing::default_specularSubSpaceNumber * NUM_SUBSPACE);
+        auto& d_cmf_gamma = transient_device_caches().dot_cmf_gamma;
         d_cmf_gamma = DOT_h_GAMMA;
         for (int i = 0; i < NUM_SUBSPACE; i++)
         {
@@ -1338,6 +1396,7 @@ namespace MyThrustOp
     };
     void build_optimal_E_train_data(int N_samples)
     {
+        ensure_optimal_E_active_light();
         thrust::device_vector<int> ids(acc_num_samples);
         thrust::transform(neat_paths.begin(), neat_paths.end(), ids.begin(), get_sample_light_id(thrust::raw_pointer_cast(neat_conns.data())));
         thrust::sort(ids.begin(), ids.end(), thrust::greater<int>());
@@ -1497,7 +1556,8 @@ namespace MyThrustOp
                 id_eye++;
             }
         }
-        static thrust::device_vector<float> E_dev = h_E;
+        auto& E_dev = transient_device_caches().loaded_e;
+        E_dev = h_E;
         printf("load E size %zu\n", E_dev.size());
         Gamma = E_dev.data();
 
@@ -1518,9 +1578,7 @@ namespace MyThrustOp
         release_vector(neat_conns);
         release_vector(neat_paths);
         release_vector(sample_bias_flag);
-        // The reference image belongs to the estimator, not to a scene.
-        // Keeping it alive makes the captured EstimationParams pointer stable
-        // across config-driven reloads of the same scene.
+        release_vector(Q_vec);
         release_vector(tree_save.light_tree);
         release_vector(tree_save.eye_tree);
         release_vector(dropout_tracing_specular_tree);
@@ -1537,14 +1595,38 @@ namespace MyThrustOp
         release_vector(b_label_E);
         release_vector(b_P2N_ind_d);
         release_vector(d_E);
+        release_vector(optimal_E_active_light);
+        optimal_E_active_light_count = NUM_SUBSPACE;
         optimal_E_problem = {};
         release_vector(env_map_cmf);
-        thrust::fill(
-            glossy_subspace_Q.begin(),
-            glossy_subspace_Q.end(),
-            0.0f
-        );
+        release_vector(glossy_subspace_Q);
+        auto& caches = transient_device_caches();
+        release_vector(caches.lvc_subspace_info);
+        release_vector(caches.lvc_weight);
+        release_vector(caches.lvc_cmf);
+        release_vector(caches.lvc_jump);
+        release_vector(caches.lvc_subspaces);
+        release_vector(caches.glossy_subspace_info);
+        release_vector(caches.glossy_weight);
+        release_vector(caches.glossy_indexes);
+        release_vector(caches.glossy_subspace_bias);
+        release_vector(caches.glossy_subspace_vertex_count);
+        release_vector(caches.preprocess_subspace_info);
+        release_vector(caches.preprocess_weight);
+        release_vector(caches.caustic_fraction);
+        release_vector(caches.quad_tree);
+        release_vector(caches.spatio_tree);
+        release_vector(caches.dot_caustic_fraction);
+        release_vector(caches.dot_cmf_gamma);
+        release_vector(caches.loaded_e);
+        release_vector(caches.loaded_q);
+        release_vector(caches.cmf_gamma);
         glossy_launch_count = 0;
+    }
+
+    void release_process_caches()
+    {
+        release_vector(transient_device_caches().reference_image);
     }
 
     thrust::device_ptr<float> envMapCMFBuild(float* pmf, int size)
@@ -1565,7 +1647,8 @@ namespace MyThrustOp
             h_Q.push_back(value);
             printf("Q2 %zu %f\n",h_Q.size() - 1, value);
         }
-        static thrust::device_vector<float> Q_dev = h_Q;
+        auto& Q_dev = transient_device_caches().loaded_q;
+        Q_dev = h_Q;
         printf("load Q size %zu\n",Q_dev.size());
         Q = Q_dev.data();
     }
@@ -1573,8 +1656,8 @@ namespace MyThrustOp
     thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma,Subspace* subspace)
     {
         thrust_host_float p(Gamma, Gamma + NUM_SUBSPACE * NUM_SUBSPACE);
-        static thrust_dev_float d_CMFGamma;
-        static thrust_dev_float d_CMFGamma_caustic;
+        auto& caches = transient_device_caches();
+        auto& d_CMFGamma = caches.cmf_gamma;
         thrust_dev_float& d_cmf_gamma = d_CMFGamma;
 
         thrust::device_vector<Subspace> d_a(subspace, subspace + NUM_SUBSPACE);
