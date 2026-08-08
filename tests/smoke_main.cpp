@@ -35,6 +35,7 @@ struct SmokeOptions
     bool        reload_check = false;
     bool        camera_update_check = false;
     bool        default_mode_init = false;
+    bool        cancel_preprocessing_check = false;
 };
 
 float3 parseFloat3( const std::string& value, const char* option_name )
@@ -152,6 +153,10 @@ SmokeOptions parseOptions( int argc, char* argv[] )
         {
             options.default_mode_init = true;
         }
+        else if( arg == "--cancel-preprocessing-check" )
+        {
+            options.cancel_preprocessing_check = true;
+        }
         else if( arg == "--validate-frame" )
         {
             options.validate_frame = true;
@@ -192,6 +197,7 @@ SmokeOptions parseOptions( int argc, char* argv[] )
                 "Usage: spcbpt_smoke [--scene=<path>] [--reload-check] "
                 "[--camera-update-check] "
                 "[--default-mode-init] "
+                "[--cancel-preprocessing-check] "
                 "[--export-optimal-e=<path>] "
                 "[--eye=<x,y,z> --lookat=<x,y,z> --up=<x,y,z> --fov=<degrees>] "
                 "[--experiment-seed=<uint32>] [--validate-frame]"
@@ -209,6 +215,15 @@ SmokeOptions parseOptions( int argc, char* argv[] )
     {
         throw std::invalid_argument(
             "--default-mode-init cannot be combined with reload or export"
+        );
+    }
+    if( options.cancel_preprocessing_check
+        && ( options.default_mode_init
+             || options.reload_check
+             || !options.optimal_e_export_path.empty() ) )
+    {
+        throw std::invalid_argument(
+            "--cancel-preprocessing-check cannot be combined with other modes"
         );
     }
     const int camera_option_count =
@@ -281,7 +296,9 @@ int main( int argc, char* argv[] )
         if( !options.default_mode_init )
         {
             renderer_config.algorithm =
-                options.reload_check || !options.optimal_e_export_path.empty()
+                options.reload_check
+                    || options.cancel_preprocessing_check
+                    || !options.optimal_e_export_path.empty()
                 ? spcbpt::RendererAlgorithm::Lvcbpt
                 : spcbpt::RendererAlgorithm::PathTracing;
             renderer_config.path_guiding_enabled = false;
@@ -322,6 +339,30 @@ int main( int argc, char* argv[] )
             workflow.captureOptimalEProblem( options.optimal_e_export_path );
             std::cout << "SPCBPT optimal-E capture passed: "
                       << options.optimal_e_export_path << '\n';
+            return EXIT_SUCCESS;
+        }
+        if( options.cancel_preprocessing_check )
+        {
+            workflow.initializeAlgorithmState();
+            bool cancelled = false;
+            int cancellation_checks = 0;
+            try
+            {
+                workflow.runPreprocessing( [&cancellation_checks]
+                {
+                    return ++cancellation_checks >= 2;
+                } );
+            }
+            catch( const std::runtime_error& error )
+            {
+                cancelled = std::string( error.what() )
+                    == "Renderer preprocessing was cancelled";
+            }
+            if( !cancelled )
+                throw std::runtime_error( "Preprocessing ignored cancellation" );
+            if( cancellation_checks < 2 )
+                throw std::runtime_error( "Preprocessing only checked cancellation at entry" );
+            std::cout << "SPCBPT preprocessing cancellation passed\n";
             return EXIT_SUCCESS;
         }
 

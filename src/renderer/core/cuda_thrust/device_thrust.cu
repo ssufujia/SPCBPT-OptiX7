@@ -1485,7 +1485,8 @@ namespace MyThrustOp
     void train_optimal_E(
         thrust::device_ptr<float>& E_ptr,
         float learning_rate,
-        int iterations
+        int iterations,
+        std::function<bool()> should_cancel
     )
     {
         d_E.assign(E_ptr, E_ptr + NUM_SUBSPACE * NUM_SUBSPACE);
@@ -1498,7 +1499,8 @@ namespace MyThrustOp
                     learning_rate,
                     iterations,
                     12,
-                    1e-8f
+                    1e-8f,
+                    should_cancel
                 }
             );
         printf(

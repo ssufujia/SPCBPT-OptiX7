@@ -1010,6 +1010,13 @@ OptimalEOptimizerResult optimizeOptimalE(
     if( !std::isfinite( options.epsilon ) || options.epsilon <= 0.0f )
         throw std::invalid_argument( "Optimal E epsilon must be positive" );
 
+    const auto throwIfCancelled = [&options]
+    {
+        if( options.should_cancel && options.should_cancel() )
+            throw std::runtime_error( "Optimal E optimization was cancelled" );
+    };
+
+    throwIfCancelled();
     normalizeOptimalERows(
         base_distribution,
         problem.num_eye,
@@ -1019,6 +1026,7 @@ OptimalEOptimizerResult optimizeOptimalE(
             ? problem.active_light_count
             : problem.num_light
     );
+    throwIfCancelled();
 
     const int matrix_size = problem.num_eye * problem.num_light;
     thrust::device_vector<float> gradient( matrix_size );
@@ -1028,18 +1036,21 @@ OptimalEOptimizerResult optimizeOptimalE(
         base_distribution,
         options.conservative_rate
     );
+    throwIfCancelled();
     const float initial_objective = current_objective;
     float learning_rate = options.learning_rate;
     int accepted_steps = 0;
 
     for( int iteration = 0; iteration < options.iterations; ++iteration )
     {
+        throwIfCancelled();
         computeGradient(
             problem,
             base_distribution,
             thrust::raw_pointer_cast( gradient.data() ),
             options.conservative_rate
         );
+        throwIfCancelled();
         const auto gradient_begin = gradient.begin();
         if( thrust::count_if(
                 gradient_begin,
@@ -1063,6 +1074,7 @@ OptimalEOptimizerResult optimizeOptimalE(
              attempt < options.max_backtracking_steps;
              ++attempt )
         {
+            throwIfCancelled();
             thrust::copy(
                 previous.begin(),
                 previous.end(),
@@ -1082,6 +1094,7 @@ OptimalEOptimizerResult optimizeOptimalE(
                 base_distribution,
                 options.conservative_rate
             );
+            throwIfCancelled();
             if( std::isfinite( candidate_objective )
                 && candidate_objective <= current_objective )
             {

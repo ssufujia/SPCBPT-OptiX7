@@ -1,6 +1,7 @@
 #ifndef DEVICE_THRUST
 #define DEVICE_THRUST
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -138,7 +139,8 @@ namespace MyThrustOp
     void train_optimal_E(
         thrust::device_ptr<float>& E_ptr,
         float learning_rate,
-        int iterations
+        int iterations,
+        std::function<bool()> should_cancel = {}
     );
     thrust::device_ptr<float> Gamma2CMFGamma(thrust::device_ptr<float> Gamma, Subspace* subspace);
 

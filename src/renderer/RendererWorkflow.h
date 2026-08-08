@@ -2,6 +2,7 @@
 
 #include <renderer/RendererConfig.h>
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -22,7 +23,7 @@ class RendererWorkflow
     RendererWorkflow& operator=( const RendererWorkflow& ) = delete;
 
     void initializeAlgorithmState();
-    void runPreprocessing();
+    void runPreprocessing( std::function<bool()> should_cancel = {} );
     void captureOptimalEProblem( const std::string& output_path );
     RendererConfigChange applyConfig( const RendererConfig& config );
     void renderFrame( uchar4* output );

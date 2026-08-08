@@ -481,6 +481,9 @@ void loadScene( const std::string& filename, Scene& scene )
         scene.addMaterial( mtl );
     }
 
+    const int32_t imported_material_count = static_cast<int32_t>( model.materials.size() );
+    int32_t default_material_idx = -1;
+
     //
     // Meshes
     //
@@ -503,7 +506,23 @@ void loadScene( const std::string& filename, Scene& scene )
             }
             
             mesh->indices.push_back( bufferViewFromGLTF<uint32_t>( model, scene, gltf_primitive.indices ) );
-            mesh->material_idx.push_back( gltf_primitive.material );
+
+            int32_t material_idx = gltf_primitive.material;
+            if( material_idx == -1 )
+            {
+                if( default_material_idx == -1 )
+                {
+                    default_material_idx = static_cast<int32_t>( scene.MaterialsSize() );
+                    scene.addMaterial( MaterialData() );
+                    std::cerr << "\tUsing generated default material\n";
+                }
+                material_idx = default_material_idx;
+            }
+            else if( material_idx < 0 || material_idx >= imported_material_count )
+            {
+                throw Exception( "glTF primitive material index is invalid" );
+            }
+            mesh->material_idx.push_back( material_idx );
             std::cerr << "\t\tNum triangles: " << mesh->indices.back().count / 3 << std::endl;
 
             assert( gltf_primitive.attributes.find( "POSITION" ) != gltf_primitive.attributes.end() );

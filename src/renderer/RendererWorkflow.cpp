@@ -237,17 +237,31 @@ class RendererWorkflow::Impl
         }
     }
 
-    void runPreprocessing()
+    void runPreprocessing( std::function<bool()> should_cancel )
     {
         if( !algorithm_state_initialized )
             throw std::logic_error( "RendererWorkflow::initializeAlgorithmState must be called first" );
         if( preprocessing_complete )
             throw std::logic_error( "RendererWorkflow preprocessing has already completed" );
 
-        pathGuidingParamsSetup();
-        dropOutTracingParamsSetup();
-        preprocessing();
-        preprocessing_complete = true;
+        cancellation_check = std::move( should_cancel );
+        try
+        {
+            throwIfCancelled();
+            pathGuidingParamsSetup();
+            throwIfCancelled();
+            dropOutTracingParamsSetup();
+            throwIfCancelled();
+            preprocessing();
+            throwIfCancelled();
+            preprocessing_complete = true;
+            cancellation_check = {};
+        }
+        catch( ... )
+        {
+            cancellation_check = {};
+            throw;
+        }
     }
 
     void captureOptimalEProblem( const std::string& output_path )
@@ -280,6 +294,12 @@ class RendererWorkflow::Impl
 
   private:
     static constexpr int TRAIN_CAPACITY = 30000;
+
+    void throwIfCancelled() const
+    {
+        if( cancellation_check && cancellation_check() )
+            throw std::runtime_error( "Renderer preprocessing was cancelled" );
+    }
 
     std::vector<int> surroundsIndex( int index, const envInfo& infos ) const
     {
@@ -516,6 +536,7 @@ class RendererWorkflow::Impl
 
     void launchLightTrace()
     {
+        throwIfCancelled();
         ++lt_params.launch_frame;
         runtime.uploadParams();
 
@@ -532,10 +553,12 @@ class RendererWorkflow::Impl
             1
         ) );
         runtime.synchronize();
+        throwIfCancelled();
     }
 
     void launchLVCTrace()
     {
+        throwIfCancelled();
         if( !params.spcbpt_pure )
             dot_params.discard_ratio = dot_params.discard_ratio_next;
 
@@ -573,10 +596,12 @@ class RendererWorkflow::Impl
             params.sampler.glossy_subspace_bias = sampler.glossy_subspace_bias;
             params.sampler.glossy_subspace_num  = sampler.glossy_subspace_num;
         }
+        throwIfCancelled();
     }
 
     int launchPretrace()
     {
+        throwIfCancelled();
         ++pr_params.iteration;
         runtime.uploadParams();
 
@@ -593,17 +618,21 @@ class RendererWorkflow::Impl
             1
         ) );
         runtime.synchronize();
+        throwIfCancelled();
 
-        return MyThrustOp::valid_sample_gather(
+        const int valid_samples = MyThrustOp::valid_sample_gather(
             thrust::device_pointer_cast( pr_params.paths ),
             pr_params.num_core,
             thrust::device_pointer_cast( pr_params.conns ),
             preTraceElementCount( pr_params )
         );
+        throwIfCancelled();
+        return valid_samples;
     }
 
     void pathGuidingParamsSetup()
     {
+        throwIfCancelled();
         constexpr int pg_training_data_batch = 10;
         constexpr int pg_training_data_online_batch = 0;
         constexpr int batch_sample_count = 1000000;
@@ -682,6 +711,7 @@ class RendererWorkflow::Impl
                     split_limit,
                     static_cast<int>( training_materials.size() )
                 );
+                throwIfCancelled();
                 params.pg_params.spatio_trees = MyThrustOp::spatio_tree_to_device(
                     pg_trainer.s_tree.nodes.data(),
                     static_cast<int>( pg_trainer.s_tree.nodes.size() )
@@ -734,7 +764,10 @@ class RendererWorkflow::Impl
             pg_trainer.set_training_set( training_materials );
             pg_trainer.init( runtime.scene().aabb() );
             for( int i = 0; i < build_iteration_max; ++i )
+            {
                 pg_trainer.build_tree();
+                throwIfCancelled();
+            }
 
             for( int i = 0; i < pg_training_data_online_batch; ++i )
             {
@@ -772,6 +805,7 @@ class RendererWorkflow::Impl
         params.pg_params.epsilon_lum = 0.001f;
         params.pg_params.guide_ratio = 0.5f;
         pr_params.PG_mode = false;
+        throwIfCancelled();
     }
 
     void dropOutTracingParamsInit()
@@ -784,6 +818,7 @@ class RendererWorkflow::Impl
 
     void dropOutTracingParamsSetup()
     {
+        throwIfCancelled();
         if( params.spcbpt_pure )
             return;
 
@@ -819,6 +854,7 @@ class RendererWorkflow::Impl
             dot_params.specularSubSpaceNumber - 1,
             1
         );
+        throwIfCancelled();
         dot_params.specularSubSpace = MyThrustOp::DOT_specular_tree_to_device(
             specular_subspace.v,
             specular_subspace.size
@@ -831,6 +867,7 @@ class RendererWorkflow::Impl
             dot_params.surfaceSubSpaceNumber - 1,
             1
         );
+        throwIfCancelled();
         dot_params.surfaceSubSpace = MyThrustOp::DOT_surface_tree_to_device(
             normal_surface_subspace.v,
             normal_surface_subspace.size
@@ -886,6 +923,7 @@ class RendererWorkflow::Impl
         }
         dot_params.is_init = true;
         dot_params.selection_const = 0.0f;
+        throwIfCancelled();
     }
 
     void initializeCombineWeightState()
@@ -1344,6 +1382,7 @@ class RendererWorkflow::Impl
 
     void preprocessing( const std::string* capture_path = nullptr )
     {
+        throwIfCancelled();
         MyThrustOp::clear_training_set();
         constexpr int target_sample_count = 1000000;
         int current_sample_count = 0;
@@ -1362,6 +1401,7 @@ class RendererWorkflow::Impl
             static_cast<int>( params.width ),
             static_cast<int>( params.height )
         );
+        throwIfCancelled();
         std::vector<classTree::divide_weight> unlabeled_samples =
             MyThrustOp::get_weighted_point_for_tree_building( true, 10000 );
         classTree::tree eye_tree = classTree::buildTreeBaseOnExistSample()(
@@ -1369,6 +1409,7 @@ class RendererWorkflow::Impl
             NUM_SUBSPACE,
             0
         );
+        throwIfCancelled();
 
         unlabeled_samples =
             MyThrustOp::get_weighted_point_for_tree_building( false, 10000 );
@@ -1377,11 +1418,13 @@ class RendererWorkflow::Impl
             NUM_SUBSPACE - NUM_SUBSPACE_LIGHTSOURCE,
             0
         );
+        throwIfCancelled();
 
         subspace_info.eye_tree =
             MyThrustOp::eye_tree_to_device( eye_tree.v, eye_tree.size );
         subspace_info.light_tree =
             MyThrustOp::light_tree_to_device( light_tree.v, light_tree.size );
+        throwIfCancelled();
 
         constexpr int target_q_samples = 2000000;
         int current_q_samples = 0;
@@ -1402,6 +1445,7 @@ class RendererWorkflow::Impl
             );
             current_q_samples += added_samples;
             updateDropOutTracingParams();
+            throwIfCancelled();
         }
         MyThrustOp::Q_zero_handle( q_star );
         MyThrustOp::node_label( subspace_info.eye_tree, subspace_info.light_tree );
@@ -1409,6 +1453,7 @@ class RendererWorkflow::Impl
         thrust::device_ptr<float> gamma;
         MyThrustOp::build_optimal_E_train_data( target_sample_count );
         MyThrustOp::preprocess_getGamma( gamma );
+        throwIfCancelled();
         if( capture_path )
         {
             MyThrustOp::save_optimal_E_snapshot(
@@ -1425,8 +1470,10 @@ class RendererWorkflow::Impl
         MyThrustOp::train_optimal_E(
             gamma,
             runtime.config().optimal_e_learning_rate,
-            runtime.config().optimal_e_iterations
+            runtime.config().optimal_e_iterations,
+            cancellation_check
         );
+        throwIfCancelled();
         optimal_gamma = gamma;
 
         subspace_info.Q = thrust::raw_pointer_cast( q_star );
@@ -1453,6 +1500,7 @@ class RendererWorkflow::Impl
             subspace_info.caustic_ratio =
                 thrust::raw_pointer_cast( caustic_ratio );
         }
+        throwIfCancelled();
     }
 
     RendererRuntime& runtime;
@@ -1489,6 +1537,7 @@ class RendererWorkflow::Impl
 
     std::vector<std::vector<std::vector<std::vector<float2>>>> train_vector;
     std::vector<std::vector<std::vector<bool>>> train_finish;
+    std::function<bool()> cancellation_check;
 };
 
 RendererWorkflow::RendererWorkflow( RendererRuntime& runtime )
@@ -1511,10 +1560,10 @@ void RendererWorkflow::initializeAlgorithmState()
     m_impl->initializeAlgorithmState();
 }
 
-void RendererWorkflow::runPreprocessing()
+void RendererWorkflow::runPreprocessing( std::function<bool()> should_cancel )
 {
     synchronizeSceneGeneration();
-    m_impl->runPreprocessing();
+    m_impl->runPreprocessing( std::move( should_cancel ) );
 }
 
 void RendererWorkflow::captureOptimalEProblem( const std::string& output_path )
@@ -1553,7 +1602,7 @@ RendererConfigChange RendererWorkflow::applyConfig( const RendererConfig& config
         if( requiresRendererPreprocessing( target_config ) )
         {
             m_impl->initializeAlgorithmState();
-            m_impl->runPreprocessing();
+            m_impl->runPreprocessing( {} );
         }
         m_runtime.resetAccumulation();
     };

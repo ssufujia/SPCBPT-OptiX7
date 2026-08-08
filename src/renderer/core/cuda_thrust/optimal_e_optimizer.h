@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,7 @@ struct OptimalEOptimizerOptions
     int   iterations = PRODUCTION_OPTIMAL_E_ITERATIONS;
     int   max_backtracking_steps = 12;
     float epsilon = 1e-8f;
+    std::function<bool()> should_cancel;
 };
 
 struct OptimalEOptimizerResult

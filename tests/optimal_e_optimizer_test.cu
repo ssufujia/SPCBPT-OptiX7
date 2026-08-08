@@ -594,6 +594,38 @@ int runSyntheticTest()
             "inactive optimized column must remain zero"
         );
 
+        int cancellation_checks = 0;
+        bool cancelled = false;
+        thrust::copy( normalized.begin(), normalized.end(), base_distribution.begin() );
+        try
+        {
+            spcbpt::optimizeOptimalE(
+                problem,
+                thrust::raw_pointer_cast( base_distribution.data() ),
+                {
+                    CONSERVATIVE_RATE,
+                    0.5f,
+                    20,
+                    12,
+                    static_cast<float>( EPSILON ),
+                    [&cancellation_checks]
+                    {
+                        return ++cancellation_checks >= 7;
+                    }
+                }
+            );
+        }
+        catch( const std::runtime_error& error )
+        {
+            cancelled = std::string( error.what() )
+                == "Optimal E optimization was cancelled";
+        }
+        require( cancelled, "optimizer must observe mid-run cancellation" );
+        require(
+            cancellation_checks >= 7,
+            "optimizer cancellation test must reach a backtracking safe point"
+        );
+
         std::cout
             << "Optimal E optimizer test passed: "
             << initial_loss << " -> " << result.final_objective

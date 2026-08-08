@@ -39,6 +39,15 @@ set_tests_properties(spcbpt.default_mode_init PROPERTIES
 )
 
 add_test(
+  NAME spcbpt.preprocessing_cancel
+  COMMAND spcbpt_smoke --cancel-preprocessing-check
+)
+set_tests_properties(spcbpt.preprocessing_cancel PROPERTIES
+  LABELS "gpu;optix;smoke;cancellation"
+  TIMEOUT 120
+)
+
+add_test(
   NAME spcbpt.reload_smoke
   COMMAND spcbpt_smoke --reload-check
 )
