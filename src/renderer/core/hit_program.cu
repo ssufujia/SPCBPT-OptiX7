@@ -11,49 +11,31 @@
 #include "pathControl.h"
 #include "rmis.h"
 
+static __forceinline__ __device__ float materialAlpha(
+    const Tracer::HitGroupData* hit_group_data )
+{
+    float alpha = hit_group_data->material_data.pbr.base_color.w;
+    if( hit_group_data->material_data.pbr.base_color_tex )
+    {
+        const LocalGeometry geom = getLocalGeometry( hit_group_data->geometry_data );
+        alpha *= sampleTexture<float4>(
+            hit_group_data->material_data.pbr.base_color_tex, geom ).w;
+    }
+    return alpha;
+}
+
 extern "C" __global__ void __anyhit__radiance()
 {
-    //optixIgnoreIntersection();
-    return;
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
-    if (hit_group_data->material_data.pbr.base_color_tex)
-    {
-        const LocalGeometry geom = getLocalGeometry(hit_group_data->geometry_data);
-        const float         base_alpha = sampleTexture<float4>(hit_group_data->material_data.pbr.base_color_tex, geom).w;
-        // force mask mode, even for blend mode, as we don't do recursive traversal.
-        if (base_alpha < hit_group_data->material_data.alpha_cutoff)
-            optixIgnoreIntersection();
-    }
+    if( materialAlpha( hit_group_data ) < hit_group_data->material_data.alpha_cutoff )
+        optixIgnoreIntersection();
 }
 
 extern "C" __global__ void __anyhit__occlusion()
 {
-    Tracer::setPayloadOcclusion(0.f);
-    return;
-    optixTerminateRay();
     const Tracer::HitGroupData* hit_group_data = reinterpret_cast<Tracer::HitGroupData*>(optixGetSbtDataPointer());
-    if (hit_group_data->material_data.pbr.base_color_tex)
-    {
-        const LocalGeometry geom = getLocalGeometry(hit_group_data->geometry_data);
-        const float         base_alpha = sampleTexture<float4>(hit_group_data->material_data.pbr.base_color_tex, geom).w;
-
-        if (hit_group_data->material_data.alpha_mode != MaterialData::ALPHA_MODE_OPAQUE)
-        {
-            if (hit_group_data->material_data.alpha_mode == MaterialData::ALPHA_MODE_MASK)
-            {
-                if (base_alpha < hit_group_data->material_data.alpha_cutoff)
-                    optixIgnoreIntersection();
-            }
-
-            float attenuation = Tracer::getPayloadOcclusion() * (1.f - base_alpha);
-
-            if (attenuation > 0.f)
-            {
-                Tracer::setPayloadOcclusion(attenuation);
-                optixIgnoreIntersection();
-            }
-        }
-    }
+    if( materialAlpha( hit_group_data ) < hit_group_data->material_data.alpha_cutoff )
+        optixIgnoreIntersection();
 }
 
 extern "C" __global__ void __closesthit__occlusion()
@@ -225,6 +207,19 @@ RT_FUNCTION void ColorTexSample(const LocalGeometry& geom, MaterialData::Pbr& pb
     pbr.base_color = base_color;
 
     return;
+}
+
+RT_FUNCTION float3 EmissiveTexSample(const LocalGeometry& geom, const MaterialData& material)
+{
+    float3 emission = material.emissive_factor;
+    if (material.emissive_tex)
+    {
+        const float3 texel = make_float3(
+            sampleTexture<float4>(material.emissive_tex, geom)
+        );
+        emission *= Tracer::linearize(texel);
+    }
+    return emission;
 }
 
 
@@ -540,7 +535,10 @@ extern "C" __global__ void __closesthit__radiance()
     float3 N = geom.Ng; 
     currentPbr.shade_normal = Tracer::params.materials[hit_group_data->material_data.id].brdf == true ? NormalTexSample(geom, hit_group_data->material_data) : geom.N;
     float3 in_dir = -prd->ray_direction;
-    float3 result = make_float3(0.0f);
+    float3 result = prd->throughput * EmissiveTexSample(
+        geom,
+        hit_group_data->material_data
+    );
 
     float rr_rate = Tracer::rrRate(currentPbr);
     prd->glossy_bounce = Shift::glossy(currentPbr) ? prd->glossy_bounce : false;

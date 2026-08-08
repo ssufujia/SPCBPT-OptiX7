@@ -125,6 +125,7 @@ void Material_shift(Scene& Src, sutil::Scene& Dst)
         if (light.lightType != LightType::QUAD)
             continue;
         MaterialData mtl;
+        mtl.type = MaterialData::LIGHT;
         mtl.emissive_factor = Src.lights[i].emission;
         mtl.light_id = i;
         lightsourceID_remap[i] = static_cast<int>(Dst.MaterialsSize());

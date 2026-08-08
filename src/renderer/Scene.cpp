@@ -391,6 +391,8 @@ void loadScene( const std::string& filename, Scene& scene )
         else if( gltf_material.alphaMode == "BLEND" )
         {
             mtl.alpha_mode = MaterialData::ALPHA_MODE_BLEND;
+            // Approximate BLEND as binary coverage until opacity accumulation exists.
+            mtl.alpha_cutoff = 0.5f;
         }
         else if( gltf_material.alphaMode == "OPAQUE" )
         {
@@ -449,6 +451,36 @@ void loadScene( const std::string& filename, Scene& scene )
             {
                 std::cerr << "\tUsing default metallic factor\n";
             }
+        }
+
+        const auto transmission =
+            gltf_material.extensions.find( "KHR_materials_transmission" );
+        if( transmission != gltf_material.extensions.end() )
+        {
+            if( transmission->second.Has( "transmissionTexture" ) )
+                throw Exception( "glTF transmission textures are not supported" );
+            if( transmission->second.Has( "transmissionFactor" ) )
+            {
+                const float factor = static_cast<float>(
+                    transmission->second.Get( "transmissionFactor" ).GetNumberAsDouble()
+                );
+                if( factor < 0.0f || factor > 1.0f )
+                    throw Exception( "glTF transmission factor is invalid" );
+                mtl.pbr.trans = factor;
+                std::cerr << "\tTransmission: " << mtl.pbr.trans << "\n";
+            }
+        }
+
+        const auto ior = gltf_material.extensions.find( "KHR_materials_ior" );
+        if( ior != gltf_material.extensions.end() && ior->second.Has( "ior" ) )
+        {
+            const float value = static_cast<float>(
+                ior->second.Get( "ior" ).GetNumberAsDouble()
+            );
+            if( value < 1.0f )
+                throw Exception( "glTF index of refraction is invalid" );
+            mtl.pbr.eta = value;
+            std::cerr << "\tIOR: " << mtl.pbr.eta << "\n";
         }
 
         {
@@ -1883,7 +1915,7 @@ void Scene::switchRaygen(std::string raygenName)
                             /// <summary>
                             /// radiance ray or other types
                             /// </summary>
-                            if (mat_idx >= 0 && (length(m_materials[mat_idx].emissive_factor) > 0))
+                            if (mat_idx >= 0 && m_materials[mat_idx].type == MaterialData::LIGHT)
                             {
                                 //OPTIX_CHECK(optixSbtRecordPackHeader(m_lightsource_hit_group, &rec));
                                 OPTIX_CHECK(optixSbtRecordPackHeader(*hit_groups[RayHitType::RAYHIT_TYPE_LIGHTSOURCE][j], &rec));
@@ -1981,7 +2013,7 @@ void Scene::createSBT()
                 HitGroupRecord rec = {};
                 const int32_t mat_idx = mesh->material_idx[i];
                 {
-                    if (mat_idx >= 0 && (length(m_materials[mat_idx].emissive_factor) > 0))
+                    if (mat_idx >= 0 && m_materials[mat_idx].type == MaterialData::LIGHT)
                     {
                         OPTIX_CHECK(optixSbtRecordPackHeader(m_lightsource_hit_group, &rec));
                     }

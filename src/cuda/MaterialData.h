@@ -35,7 +35,8 @@ struct MaterialData
 {
     enum Type
     {
-        PBR = 0
+        PBR = 0,
+        LIGHT = 1
     };
 
     MaterialData()
