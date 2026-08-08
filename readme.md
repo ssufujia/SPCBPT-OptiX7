@@ -65,8 +65,20 @@ OptiX-IR 文件会部署到同级的 `bin/optix-ir/`。
 - `optixPathTracer`：应用入口和 CLI 组装。
 - `spcbpt_optix_ir`：由 CMake 原生编译的两个 OptiX shader。
 
+嵌入 Blender 等只需要渲染核心的宿主可设置
+`-DSPCBPT_BUILD_VIEWER=OFF -DBUILD_TESTING=OFF`。此模式不配置 GLFW、
+Dear ImGui、glad 或 OpenGL，只生成 `spcbpt_renderer` 与 OptiX-IR 相关目标；
+如需核心测试，可单独保留 `BUILD_TESTING=ON`。
+
 场景资源位于 `assets/`，第三方依赖位于 `third_party/`，运行与界面操作见
 [`docs/operation.md`](docs/operation.md)。
+
+## 许可证
+
+项目原创代码按 BSD-3-Clause 许可；源文件中已有的 NVIDIA 等版权声明及
+`third_party/` 自带许可证继续有效。`assets/` 不属于可再分发的 renderer-core
+源码快照；除非单个资产明确附带许可证，本项目不授予其再分发权。
+完整边界见 [`LICENSE`](LICENSE) 与 [`NOTICE.md`](NOTICE.md)。
 
 ## 与论文版本的差异
 
